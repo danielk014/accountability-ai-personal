@@ -564,12 +564,12 @@ function _gymId() {
 const GYM_TOOLS = [
   {
     name: "gym_get_data",
-    description: "Get the user's current gym data: all exercises on each day with their sets and weight progress history.",
+    description: "Get the user's current gym data. ALWAYS call this first before answering questions or giving advice, so you have accurate current information.",
     input_schema: { type: "object", properties: {} },
   },
   {
     name: "gym_add_exercise",
-    description: "Add a new exercise to push, pull, or legs day.",
+    description: "Add a new exercise to push, pull, or legs day. Call this immediately when the user asks to add an exercise — do not just say you added it.",
     input_schema: {
       type: "object",
       properties: {
@@ -704,6 +704,8 @@ ${gymContext}`;
         max_tokens: 2048,
         system: systemPrompt,
         tools: GYM_TOOLS,
+        // Force tool use on first turn so the AI must call a tool rather than just talking
+        tool_choice: turn === 0 ? { type: "any" } : { type: "auto" },
         messages,
       }),
     });
