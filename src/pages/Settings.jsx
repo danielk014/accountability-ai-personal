@@ -215,6 +215,24 @@ function PeopleSection({ items, onAdd, onDelete, onUpdate }) {
   );
 }
 
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function FilesSection({ files = [], profile, saveMutation }) {
   const [open, setOpen] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
@@ -225,8 +243,18 @@ function FilesSection({ files = [], profile, saveMutation }) {
     if (!file) return;
     setIsUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      const newFiles = [...files, { name: file.name, url: file_url, uploaded_at: new Date().toISOString() }];
+      const isText = file.type === 'text/plain' || file.type === 'text/csv'
+        || file.name.endsWith('.txt') || file.name.endsWith('.csv');
+      let content, type;
+      if (isText) {
+        content = await readFileAsText(file);
+        type = 'text';
+      } else {
+        // PDF and other binary files stored as base64
+        content = await readFileAsDataUrl(file);
+        type = file.type || 'application/octet-stream';
+      }
+      const newFiles = [...files, { name: file.name, content, type, uploaded_at: new Date().toISOString() }];
       if (profile?.id) {
         await saveMutation.mutateAsync({ context_files: newFiles });
         toast.success("File uploaded!");
@@ -280,8 +308,8 @@ function FilesSection({ files = [], profile, saveMutation }) {
             className="w-full py-2.5 rounded-xl border border-dashed border-cyan-300 text-sm text-cyan-500 hover:bg-cyan-50 disabled:opacity-50 transition flex items-center justify-center gap-1.5">
             {isUploading ? <><Loader2 className="w-4 h-4 animate-spin" />Uploading...</> : <><Upload className="w-4 h-4" />Upload file</>}
           </button>
-          <input ref={fileInputRef} type="file" onChange={handleFileSelect} className="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" />
-          <p className="text-xs text-slate-400 text-center">PDF, Word, Excel, CSV, TXT</p>
+          <input ref={fileInputRef} type="file" onChange={handleFileSelect} className="hidden" accept=".txt,.csv,.pdf" />
+          <p className="text-xs text-slate-400 text-center">TXT and CSV files are read directly by the AI. For PDFs, paste content in chat.</p>
         </div>
       )}
     </div>

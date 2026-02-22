@@ -85,6 +85,24 @@ function TextSection({ section, items, onAdd, onDelete, onUpdate }) {
   );
 }
 
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function FilesSection({ files = [], profile, saveMutation, queryClient }) {
   const [open, setOpen] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
@@ -93,22 +111,24 @@ function FilesSection({ files = [], profile, saveMutation, queryClient }) {
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setIsUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      
-      const newFiles = [...files, {
-        name: file.name,
-        url: file_url,
-        uploaded_at: new Date().toISOString()
-      }];
-
+      const isText = file.type === 'text/plain' || file.type === 'text/csv'
+        || file.name.endsWith('.txt') || file.name.endsWith('.csv');
+      let content, type;
+      if (isText) {
+        content = await readFileAsText(file);
+        type = 'text';
+      } else {
+        content = await readFileAsDataUrl(file);
+        type = file.type || 'application/octet-stream';
+      }
+      const newFiles = [...files, { name: file.name, content, type, uploaded_at: new Date().toISOString() }];
       if (profile?.id) {
         await saveMutation.mutateAsync({ context_files: newFiles });
         toast.success("File uploaded!");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to upload file");
     } finally {
       setIsUploading(false);
@@ -182,7 +202,7 @@ function FilesSection({ files = [], profile, saveMutation, queryClient }) {
             type="file"
             onChange={handleFileSelect}
             className="hidden"
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
+            accept=".txt,.csv,.pdf"
           />
           <p className="text-xs text-slate-400 text-center">PDF, Word, Excel, CSV, TXT</p>
         </div>
