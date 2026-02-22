@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { localDB } from '@/api/localDB';
 import { queryClientInstance } from '@/lib/query-client';
-import { setCurrentUser, clearCurrentUser, getUserPrefix } from '@/lib/userStore';
+import { setCurrentUser, clearCurrentUser } from '@/lib/userStore';
 
 const AuthContext = createContext();
 
@@ -40,13 +40,6 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback(() => {
-    // Wipe all user-scoped localStorage keys before clearing the prefix
-    const prefix = getUserPrefix();
-    if (prefix) {
-      Object.keys(localStorage)
-        .filter(k => k.startsWith(prefix))
-        .forEach(k => localStorage.removeItem(k));
-    }
     clearCurrentUser();
     localDB.auth.logout();
     queryClientInstance.clear();
