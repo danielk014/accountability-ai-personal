@@ -119,6 +119,14 @@ const POMO_MODES = [
 ];
 function padTwo(n) { return String(n).padStart(2, "0"); }
 
+const POMO_KEY = 'pomo_state_v1';
+function loadPomoState() {
+  try { return JSON.parse(localStorage.getItem(POMO_KEY) || 'null'); } catch { return null; }
+}
+function savePomoState(state) {
+  try { localStorage.setItem(POMO_KEY, JSON.stringify(state)); } catch {}
+}
+
 function PomodoroWidget() {
   const [modeKey, setModeKey] = useState("focus");
   const [durations, setDurations] = useState({ focus: 25, short: 5, long: 15 });
@@ -128,63 +136,138 @@ function PomodoroWidget() {
   const [showSettings, setShowSettings] = useState(false);
   const [settingDraft, setSettingDraft] = useState({ focus: 25, short: 5, long: 15 });
   const intervalRef = useRef(null);
+  // Wall-clock refs so we can recover exact remaining time across navigation
+  const startTimeRef = useRef(null);    // Date.now() when the current run began
+  const secsAtStartRef = useRef(null);  // secondsLeft at that moment
 
   const mode = POMO_MODES.find(m => m.key === modeKey);
   const totalSeconds = durations[modeKey] * 60;
   const progress = 1 - secondsLeft / totalSeconds;
 
+  // ── Restore persisted state on mount ──────────────────────────────────────
+  useEffect(() => {
+    const saved = loadPomoState();
+    if (!saved) return;
+    const d = saved.durations || { focus: 25, short: 5, long: 15 };
+    const mk = saved.modeKey || "focus";
+    setDurations(d);
+    setSettingDraft(d);
+    setModeKey(mk);
+    setSessions(saved.sessions || 0);
+
+    if (saved.running && saved.startTime != null && saved.secsAtStart != null) {
+      const elapsed = Math.floor((Date.now() - saved.startTime) / 1000);
+      const remaining = saved.secsAtStart - elapsed;
+      if (remaining > 0) {
+        // Timer was running while we were away — resume with correct time
+        startTimeRef.current = saved.startTime;
+        secsAtStartRef.current = saved.secsAtStart;
+        setSecondsLeft(remaining);
+        setRunning(true);
+      } else {
+        // Timer finished while navigated away
+        setSecondsLeft(0);
+        setRunning(false);
+        if (mk === "focus") setSessions(s => s + 1);
+        savePomoState({ ...saved, running: false, secondsLeft: 0, startTime: null, secsAtStart: null });
+      }
+    } else {
+      setSecondsLeft(saved.secondsLeft ?? (d[mk] || 25) * 60);
+      setRunning(false);
+    }
+  }, []); // only on mount
+
+  // ── Persist state whenever something meaningful changes ────────────────────
   useEffect(() => {
     if (running) {
+      savePomoState({
+        modeKey, durations, sessions,
+        running: true,
+        startTime: startTimeRef.current,
+        secsAtStart: secsAtStartRef.current,
+      });
+    } else {
+      savePomoState({ modeKey, durations, sessions, running: false, secondsLeft });
+    }
+  }, [modeKey, durations, sessions, running, secondsLeft]);
+
+  // ── Wall-clock-based timer interval ───────────────────────────────────────
+  useEffect(() => {
+    if (running) {
+      // Set refs only when starting fresh (not when restoring from localStorage)
+      if (startTimeRef.current === null) {
+        startTimeRef.current = Date.now();
+        secsAtStartRef.current = secondsLeft;
+      }
       intervalRef.current = setInterval(() => {
-        setSecondsLeft(s => {
-          if (s <= 1) {
-            clearInterval(intervalRef.current);
-            setRunning(false);
-            if (modeKey === "focus") setSessions(n => n + 1);
-            try {
-              const ctx = new (window.AudioContext || window.webkitAudioContext)();
-              [0, 0.3, 0.6].forEach(offset => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain); gain.connect(ctx.destination);
-                osc.frequency.value = 880;
-                gain.gain.setValueAtTime(0.3, ctx.currentTime + offset);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.4);
-                osc.start(ctx.currentTime + offset);
-                osc.stop(ctx.currentTime + offset + 0.4);
-              });
-            } catch {}
-            return 0;
-          }
-          return s - 1;
-        });
-      }, 1000);
+        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        const remaining = (secsAtStartRef.current || 0) - elapsed;
+        if (remaining <= 0) {
+          clearInterval(intervalRef.current);
+          setSecondsLeft(0);
+          setRunning(false);
+          startTimeRef.current = null;
+          secsAtStartRef.current = null;
+          if (modeKey === "focus") setSessions(n => n + 1);
+          try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            [0, 0.3, 0.6].forEach(offset => {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.connect(gain); gain.connect(ctx.destination);
+              osc.frequency.value = 880;
+              gain.gain.setValueAtTime(0.3, ctx.currentTime + offset);
+              gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.4);
+              osc.start(ctx.currentTime + offset);
+              osc.stop(ctx.currentTime + offset + 0.4);
+            });
+          } catch {}
+        } else {
+          setSecondsLeft(remaining);
+        }
+      }, 500);
     } else {
       clearInterval(intervalRef.current);
+      startTimeRef.current = null;
+      secsAtStartRef.current = null;
     }
     return () => clearInterval(intervalRef.current);
   }, [running, modeKey]);
 
   function switchMode(key) {
+    startTimeRef.current = null;
+    secsAtStartRef.current = null;
     setModeKey(key);
     setRunning(false);
     setSecondsLeft(durations[key] * 60);
   }
 
-  function reset() { setRunning(false); setSecondsLeft(durations[modeKey] * 60); }
+  function reset() {
+    startTimeRef.current = null;
+    secsAtStartRef.current = null;
+    setRunning(false);
+    setSecondsLeft(durations[modeKey] * 60);
+  }
 
   function skip() {
+    startTimeRef.current = null;
+    secsAtStartRef.current = null;
     setRunning(false);
     if (modeKey === "focus") {
       const n = sessions + 1;
       setSessions(n);
-      switchMode(n % 4 === 0 ? "long" : "short");
+      const nextMode = n % 4 === 0 ? "long" : "short";
+      setModeKey(nextMode);
+      setSecondsLeft(durations[nextMode] * 60);
     } else {
-      switchMode("focus");
+      setModeKey("focus");
+      setSecondsLeft(durations["focus"] * 60);
     }
   }
 
   function saveSettings() {
+    startTimeRef.current = null;
+    secsAtStartRef.current = null;
     setDurations(settingDraft);
     setSecondsLeft(settingDraft[modeKey] * 60);
     setRunning(false);
