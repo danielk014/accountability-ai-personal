@@ -286,15 +286,6 @@ function WorkoutTab({ dayConfig, exercises, weightUnit, onUpdate }) {
 
   return (
     <div>
-      {/* Day description */}
-      <div className={cn("flex items-center gap-2.5 px-4 py-3 rounded-xl mb-5", dayConfig.lightBg, dayConfig.border, "border")}>
-        <div className={cn("w-2 h-2 rounded-full flex-shrink-0", dayConfig.dot)} />
-        <p className={cn("text-sm font-medium", dayConfig.text)}>{dayConfig.description}</p>
-        <span className={cn("ml-auto text-xs font-semibold px-2 py-0.5 rounded-full", dayConfig.badge)}>
-          {exercises.length} exercise{exercises.length !== 1 ? "s" : ""}
-        </span>
-      </div>
-
       {/* Exercise list */}
       <div>
         {exercises.length === 0 && !addingExercise && (

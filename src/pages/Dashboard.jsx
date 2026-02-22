@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Plus, Flag, Trash2, Pencil, Check, Bell, Timer, Play, Pause, RotateCcw, SkipForward, Settings2, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Flag, Trash2, Pencil, Check, Bell, Timer, Play, Pause, RotateCcw, SkipForward, Settings2, ChevronDown, ChevronUp, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
@@ -127,7 +127,28 @@ function savePomoState(state) {
   try { localStorage.setItem(POMO_KEY, JSON.stringify(state)); } catch {}
 }
 
-function PomodoroWidget() {
+function playBell() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Three bell rings — each has fundamental + harmonics with natural decay
+    [0, 0.55, 1.1].forEach(ringOffset => {
+      [[800, 0.5], [1600, 0.25], [2400, 0.12]].forEach(([freq, vol]) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(vol, ctx.currentTime + ringOffset);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + ringOffset + 0.9);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ctx.currentTime + ringOffset);
+        osc.stop(ctx.currentTime + ringOffset + 0.9);
+      });
+    });
+  } catch {}
+}
+
+function PomodoroWidget({ onComplete }) {
   const [modeKey, setModeKey] = useState("focus");
   const [durations, setDurations] = useState({ focus: 25, short: 5, long: 15 });
   const [secondsLeft, setSecondsLeft] = useState(25 * 60);
@@ -209,19 +230,8 @@ function PomodoroWidget() {
           startTimeRef.current = null;
           secsAtStartRef.current = null;
           if (modeKey === "focus") setSessions(n => n + 1);
-          try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            [0, 0.3, 0.6].forEach(offset => {
-              const osc = ctx.createOscillator();
-              const gain = ctx.createGain();
-              osc.connect(gain); gain.connect(ctx.destination);
-              osc.frequency.value = 880;
-              gain.gain.setValueAtTime(0.3, ctx.currentTime + offset);
-              gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.4);
-              osc.start(ctx.currentTime + offset);
-              osc.stop(ctx.currentTime + offset + 0.4);
-            });
-          } catch {}
+          playBell();
+          onComplete?.(modeKey);
         } else {
           setSecondsLeft(remaining);
         }
@@ -393,8 +403,33 @@ export default function Dashboard() {
   const [showHabitForm, setShowHabitForm] = useState(false);
   const [showTodoForm, setShowTodoForm] = useState(false);
   const [editingTodo, setEditingTodo] = useState(null);
-  const [showPomodoro, setShowPomodoro] = useState(false);
+  const [showPomodoro, setShowPomodoro] = useState(() => {
+    try { return localStorage.getItem('pomo_open_v1') === 'true'; } catch { return false; }
+  });
+  const [pomoFinished, setPomoFinished] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('pomo_finished_notif') || 'null'); } catch { return null; }
+  });
   const [, setTick] = useState(0);
+
+  function handlePomoToggle() {
+    setShowPomodoro(p => {
+      const next = !p;
+      try { localStorage.setItem('pomo_open_v1', String(next)); } catch {}
+      return next;
+    });
+  }
+
+  function handlePomoComplete(mode) {
+    const notif = { mode, time: Date.now() };
+    setPomoFinished(notif);
+    try { localStorage.setItem('pomo_finished_notif', JSON.stringify(notif)); } catch {}
+    toast.success(mode === 'focus' ? '🎉 Focus session done! Take a break.' : '⏰ Break over — back to work!', { duration: 6000 });
+  }
+
+  function dismissPomoNotif() {
+    setPomoFinished(null);
+    try { localStorage.removeItem('pomo_finished_notif'); } catch {}
+  }
   const queryClient = useQueryClient();
   const today = format(new Date(), "yyyy-MM-dd");
 
@@ -545,7 +580,7 @@ export default function Dashboard() {
       {/* ── Pomodoro Timer ── */}
       <div className="mb-8">
         <button
-          onClick={() => setShowPomodoro(p => !p)}
+          onClick={handlePomoToggle}
           className="flex items-center gap-2 mb-4 group"
         >
           <h2 className="text-lg font-bold text-slate-800">Pomodoro Timer</h2>
@@ -554,13 +589,26 @@ export default function Dashboard() {
             {showPomodoro ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </span>
         </button>
+
+        {/* Completion notification banner */}
+        {pomoFinished && (
+          <div className="flex items-center justify-between gap-3 mb-3 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">
+            <span>
+              {pomoFinished.mode === 'focus' ? '🎉 Focus session complete! Time for a break.' : '⏰ Break finished — ready to focus?'}
+            </span>
+            <button onClick={dismissPomoNotif} className="text-emerald-500 hover:text-emerald-700 transition flex-shrink-0">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {showPomodoro && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
           >
-            <PomodoroWidget />
+            <PomodoroWidget onComplete={handlePomoComplete} />
           </motion.div>
         )}
       </div>
