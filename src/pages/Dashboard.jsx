@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Plus, Flag, Trash2, Pencil, Check, Bell } from "lucide-react";
+import { Plus, Flag, Trash2, Pencil, Check, Bell, Timer, Play, Pause, RotateCcw, SkipForward, Settings2, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
@@ -111,6 +111,190 @@ function TodoFormDialog({ open, onOpenChange, onSubmit, item }) {
   );
 }
 
+// ── Pomodoro Widget ──────────────────────────────────────────────────────────
+const POMO_MODES = [
+  { key: "focus", label: "Focus", color: "from-rose-500 to-orange-500", text: "text-rose-600", defaultMin: 25 },
+  { key: "short", label: "Short Break", color: "from-emerald-500 to-teal-500", text: "text-emerald-600", defaultMin: 5 },
+  { key: "long", label: "Long Break", color: "from-blue-500 to-indigo-500", text: "text-blue-600", defaultMin: 15 },
+];
+function padTwo(n) { return String(n).padStart(2, "0"); }
+
+function PomodoroWidget() {
+  const [modeKey, setModeKey] = useState("focus");
+  const [durations, setDurations] = useState({ focus: 25, short: 5, long: 15 });
+  const [secondsLeft, setSecondsLeft] = useState(25 * 60);
+  const [running, setRunning] = useState(false);
+  const [sessions, setSessions] = useState(0);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingDraft, setSettingDraft] = useState({ focus: 25, short: 5, long: 15 });
+  const intervalRef = useRef(null);
+
+  const mode = POMO_MODES.find(m => m.key === modeKey);
+  const totalSeconds = durations[modeKey] * 60;
+  const progress = 1 - secondsLeft / totalSeconds;
+
+  useEffect(() => {
+    if (running) {
+      intervalRef.current = setInterval(() => {
+        setSecondsLeft(s => {
+          if (s <= 1) {
+            clearInterval(intervalRef.current);
+            setRunning(false);
+            if (modeKey === "focus") setSessions(n => n + 1);
+            try {
+              const ctx = new (window.AudioContext || window.webkitAudioContext)();
+              [0, 0.3, 0.6].forEach(offset => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.frequency.value = 880;
+                gain.gain.setValueAtTime(0.3, ctx.currentTime + offset);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + offset + 0.4);
+                osc.start(ctx.currentTime + offset);
+                osc.stop(ctx.currentTime + offset + 0.4);
+              });
+            } catch {}
+            return 0;
+          }
+          return s - 1;
+        });
+      }, 1000);
+    } else {
+      clearInterval(intervalRef.current);
+    }
+    return () => clearInterval(intervalRef.current);
+  }, [running, modeKey]);
+
+  function switchMode(key) {
+    setModeKey(key);
+    setRunning(false);
+    setSecondsLeft(durations[key] * 60);
+  }
+
+  function reset() { setRunning(false); setSecondsLeft(durations[modeKey] * 60); }
+
+  function skip() {
+    setRunning(false);
+    if (modeKey === "focus") {
+      const n = sessions + 1;
+      setSessions(n);
+      switchMode(n % 4 === 0 ? "long" : "short");
+    } else {
+      switchMode("focus");
+    }
+  }
+
+  function saveSettings() {
+    setDurations(settingDraft);
+    setSecondsLeft(settingDraft[modeKey] * 60);
+    setRunning(false);
+    setShowSettings(false);
+  }
+
+  const mins = Math.floor(secondsLeft / 60);
+  const secs = secondsLeft % 60;
+  const R = 80;
+  const circ = 2 * Math.PI * R;
+  const dash = circ * (1 - progress);
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl p-5">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-slate-500">{sessions} session{sessions !== 1 ? "s" : ""} completed</p>
+        <button onClick={() => { setShowSettings(s => !s); setSettingDraft({ ...durations }); }}
+          className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition">
+          <Settings2 className="w-4 h-4" />
+        </button>
+      </div>
+
+      {showSettings && (
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
+          <p className="text-xs font-bold text-slate-700 mb-3">Timer Settings (minutes)</p>
+          {[{ key: "focus", label: "Focus" }, { key: "short", label: "Short Break" }, { key: "long", label: "Long Break" }].map(({ key, label }) => (
+            <div key={key} className="flex items-center justify-between mb-2">
+              <span className="text-sm text-slate-600">{label}</span>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setSettingDraft(d => ({ ...d, [key]: Math.max(1, d[key] - 1) }))}
+                  className="w-6 h-6 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold flex items-center justify-center text-sm transition">−</button>
+                <span className="w-7 text-center text-sm font-bold text-slate-800">{settingDraft[key]}</span>
+                <button onClick={() => setSettingDraft(d => ({ ...d, [key]: Math.min(90, d[key] + 1) }))}
+                  className="w-6 h-6 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold flex items-center justify-center text-sm transition">+</button>
+              </div>
+            </div>
+          ))}
+          <button onClick={saveSettings}
+            className="w-full mt-2 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-1.5">
+            <Check className="w-3.5 h-3.5" /> Save
+          </button>
+        </div>
+      )}
+
+      {/* Mode tabs */}
+      <div className="flex gap-1.5 mb-5 bg-slate-50 border border-slate-200 rounded-xl p-1">
+        {POMO_MODES.map(m => (
+          <button key={m.key} onClick={() => switchMode(m.key)}
+            className={cn("flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all",
+              modeKey === m.key ? `bg-gradient-to-r ${m.color} text-white shadow-sm` : "text-slate-500 hover:text-slate-700"
+            )}>{m.label}</button>
+        ))}
+      </div>
+
+      {/* Timer + controls in a row */}
+      <div className="flex items-center gap-5">
+        {/* SVG Timer */}
+        <div className="relative flex-shrink-0">
+          <svg width="180" height="180" className="-rotate-90">
+            <circle cx="90" cy="90" r={R} fill="none" stroke="#e2e8f0" strokeWidth="8" />
+            <circle cx="90" cy="90" r={R} fill="none" strokeWidth="8"
+              stroke="url(#pgrd)"
+              strokeDasharray={circ}
+              strokeDashoffset={dash}
+              strokeLinecap="round"
+              style={{ transition: "stroke-dashoffset 0.5s ease" }}
+            />
+            <defs>
+              <linearGradient id="pgrd" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor={modeKey === "focus" ? "#f43f5e" : modeKey === "short" ? "#10b981" : "#6366f1"} />
+                <stop offset="100%" stopColor={modeKey === "focus" ? "#f97316" : modeKey === "short" ? "#14b8a6" : "#3b82f6"} />
+              </linearGradient>
+            </defs>
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-4xl font-bold text-slate-800 tabular-nums">{padTwo(mins)}:{padTwo(secs)}</span>
+            <span className={cn("text-xs font-semibold mt-0.5", mode.text)}>{mode.label}</span>
+          </div>
+        </div>
+
+        {/* Controls + dots */}
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <button onClick={reset}
+              className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition">
+              <RotateCcw className="w-4 h-4" />
+            </button>
+            <button onClick={() => setRunning(r => !r)}
+              className={cn("w-14 h-14 rounded-full bg-gradient-to-br text-white shadow-md hover:shadow-lg hover:scale-105 transition-all flex items-center justify-center", mode.color)}>
+              {running ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
+            </button>
+            <button onClick={skip}
+              className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition">
+              <SkipForward className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex gap-1.5">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className={cn("w-2.5 h-2.5 rounded-full transition-all",
+                i < sessions % 4 ? `bg-gradient-to-br ${mode.color}` : "bg-slate-200"
+              )} />
+            ))}
+          </div>
+          <p className="text-xs text-slate-400">{4 - (sessions % 4)} more until long break</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Dashboard ────────────────────────────────────────────────────────────────
 function isUpcomingInFiveMinutes(scheduledTime) {
   if (!scheduledTime) return false;
@@ -126,6 +310,7 @@ export default function Dashboard() {
   const [showHabitForm, setShowHabitForm] = useState(false);
   const [showTodoForm, setShowTodoForm] = useState(false);
   const [editingTodo, setEditingTodo] = useState(null);
+  const [showPomodoro, setShowPomodoro] = useState(false);
   const [, setTick] = useState(0);
   const queryClient = useQueryClient();
   const today = format(new Date(), "yyyy-MM-dd");
@@ -273,6 +458,29 @@ export default function Dashboard() {
         tasksToday={todaysTasks.length}
         completedToday={completedToday}
       />
+
+      {/* ── Pomodoro Timer ── */}
+      <div className="mb-8">
+        <button
+          onClick={() => setShowPomodoro(p => !p)}
+          className="flex items-center gap-2 mb-4 group"
+        >
+          <h2 className="text-lg font-bold text-slate-800">Pomodoro Timer</h2>
+          <span className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-rose-50 text-rose-600 text-xs font-semibold border border-rose-200 hover:bg-rose-100 transition">
+            <Timer className="w-3.5 h-3.5" />
+            {showPomodoro ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </span>
+        </button>
+        {showPomodoro && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+          >
+            <PomodoroWidget />
+          </motion.div>
+        )}
+      </div>
 
       {/* ── Today's Tasks ── */}
       <div className="flex items-center justify-between mb-4">

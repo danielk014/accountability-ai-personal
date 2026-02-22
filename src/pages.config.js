@@ -52,6 +52,7 @@ import Calendar from './pages/Calendar';
 import Chat from './pages/Chat';
 import Dashboard from './pages/Dashboard';
 import Financials from './pages/Financials';
+import Gym from './pages/Gym';
 import Habits from './pages/Habits';
 import Login from './pages/Login';
 import Onboarding from './pages/Onboarding';
@@ -68,6 +69,7 @@ export const PAGES = {
     "Chat": Chat,
     "Dashboard": Dashboard,
     "Financials": Financials,
+    "Gym": Gym,
     "Habits": Habits,
     "Onboarding": Onboarding,
     "Pomodoro": Pomodoro,
