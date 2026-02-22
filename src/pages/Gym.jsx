@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Plus, Trash2, Pencil, Check, X, Dumbbell, Weight, Send, Loader2, Bot, ChevronDown, ChevronUp, Scale } from "lucide-react";
+import { Plus, Trash2, Pencil, Check, X, Dumbbell, Weight, Send, Loader2, Bot, Scale, Paperclip, Camera } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getUserPrefix } from "@/lib/userStore";
 import { sendGymMessage } from "@/api/claudeClient";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 // ── Storage helpers ──────────────────────────────────────────────────────────
 const getStorageKey = () => `${getUserPrefix()}gym_tracker_v1`;
 const getChatKey = () => `${getUserPrefix()}gym_chat_v1`;
+const getPhysiqueKey = () => `${getUserPrefix()}gym_physique_v1`;
 
 function generateId() {
   return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
@@ -40,6 +41,54 @@ function loadChat() {
 
 function saveChat(msgs) {
   localStorage.setItem(getChatKey(), JSON.stringify(msgs.slice(-60)));
+}
+
+function loadPhysique() {
+  try {
+    const raw = localStorage.getItem(getPhysiqueKey());
+    return raw ? JSON.parse(raw) : { panels: [] };
+  } catch { return { panels: [] }; }
+}
+
+function savePhysique(data) {
+  try {
+    localStorage.setItem(getPhysiqueKey(), JSON.stringify(data));
+  } catch {
+    toast.error("Storage full — try deleting older check-ins.");
+  }
+}
+
+// Compress image file to a data URL (max 900px, 75% quality)
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const MAX = 900;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.75));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Read file as base64 (strips data: prefix)
+function readAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 // ── Workout day config ───────────────────────────────────────────────────────
@@ -160,7 +209,7 @@ function ExerciseCard({ exercise, dayConfig, weightUnit, onDelete, onAddSet, onD
 
       {/* Add set form */}
       {addingSet ? (
-        <form onSubmit={handleAddSet} className="flex items-center gap-2 mb-3">
+        <form onSubmit={handleAddSet} className="flex items-center gap-2">
           <input
             autoFocus
             type="number"
@@ -194,7 +243,6 @@ function ExerciseCard({ exercise, dayConfig, weightUnit, onDelete, onAddSet, onD
           <Plus className="w-3 h-3" /> Add Set
         </button>
       )}
-
     </div>
   );
 }
@@ -299,11 +347,170 @@ function WorkoutTab({ dayConfig, exercises, weightUnit, onUpdate }) {
   );
 }
 
+// ── Physique progress tab ────────────────────────────────────────────────────
+function PhysiqueTab({ physique, onUpdate }) {
+  const panels = physique.panels || [];
+  const [addingPanel, setAddingPanel] = useState(false);
+  const [newDate, setNewDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [newLabel, setNewLabel] = useState("");
+  const addPhotoRefs = useRef({});
+
+  async function handleCreatePanel(e) {
+    e.preventDefault();
+    if (!newDate) return;
+    const panel = { id: generateId(), date: newDate, label: newLabel.trim(), images: [] };
+    onUpdate({ panels: [panel, ...panels] });
+    setNewDate(new Date().toISOString().split("T")[0]);
+    setNewLabel("");
+    setAddingPanel(false);
+    toast.success("Check-in created!");
+  }
+
+  async function handleAddImages(panelId, files) {
+    const updated = [...panels];
+    const panel = updated.find(p => p.id === panelId);
+    if (!panel) return;
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith("image/")) continue;
+      try {
+        const dataUrl = await compressImage(file);
+        panel.images.push({ id: generateId(), dataUrl, name: file.name });
+      } catch {
+        toast.error(`Failed to load ${file.name}`);
+      }
+    }
+    onUpdate({ panels: updated });
+  }
+
+  function handleDeleteImage(panelId, imageId) {
+    onUpdate({ panels: panels.map(p => p.id === panelId ? { ...p, images: p.images.filter(i => i.id !== imageId) } : p) });
+  }
+
+  function handleDeletePanel(panelId) {
+    onUpdate({ panels: panels.filter(p => p.id !== panelId) });
+    toast.success("Check-in deleted.");
+  }
+
+  const sortedPanels = [...panels].sort((a, b) => b.date.localeCompare(a.date));
+
+  return (
+    <div>
+      {/* New check-in */}
+      {addingPanel ? (
+        <form onSubmit={handleCreatePanel} className="bg-slate-50 rounded-2xl border border-slate-200 p-4 mb-5">
+          <p className="text-sm font-semibold text-slate-700 mb-3">New Check-in</p>
+          <div className="flex flex-wrap gap-2 items-center">
+            <input
+              type="date"
+              value={newDate}
+              onChange={e => setNewDate(e.target.value)}
+              className="text-sm border border-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              required
+            />
+            <input
+              type="text"
+              placeholder="Label (optional, e.g. Week 4)"
+              value={newLabel}
+              onChange={e => setNewLabel(e.target.value)}
+              className="flex-1 min-w-[160px] text-sm border border-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            />
+            <button type="submit"
+              className="px-4 py-1.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition">
+              Create
+            </button>
+            <button type="button" onClick={() => setAddingPanel(false)}
+              className="px-3 py-1.5 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-slate-100 transition">
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : (
+        <button onClick={() => setAddingPanel(true)}
+          className="w-full mb-5 py-3 rounded-2xl border-2 border-dashed border-slate-200 text-sm font-medium text-slate-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50/50 transition flex items-center justify-center gap-2">
+          <Camera className="w-4 h-4" /> New Check-in
+        </button>
+      )}
+
+      {/* Panels */}
+      {sortedPanels.length === 0 && (
+        <div className="text-center py-12 text-slate-400">
+          <Camera className="w-10 h-10 mx-auto mb-3 opacity-30" />
+          <p className="text-sm font-medium">No check-ins yet</p>
+          <p className="text-xs mt-1">Create your first check-in to start tracking your physique</p>
+        </div>
+      )}
+      {sortedPanels.map(panel => (
+        <div key={panel.id} className="bg-white rounded-2xl border border-slate-200 p-5 mb-4">
+          {/* Panel header */}
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <p className="font-semibold text-slate-800">
+                {new Date(panel.date + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "long", day: "numeric", year: "numeric" })}
+              </p>
+              {panel.label && (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 mt-1 inline-block">
+                  {panel.label}
+                </span>
+              )}
+              <p className="text-xs text-slate-400 mt-0.5">{panel.images.length} photo{panel.images.length !== 1 ? "s" : ""}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Add photos button */}
+              <button
+                onClick={() => addPhotoRefs.current[panel.id]?.click()}
+                className="text-xs font-medium px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100 transition flex items-center gap-1">
+                <Plus className="w-3 h-3" /> Photos
+              </button>
+              <input
+                ref={el => addPhotoRefs.current[panel.id] = el}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={e => { handleAddImages(panel.id, e.target.files); e.target.value = ""; }}
+              />
+              <button onClick={() => handleDeletePanel(panel.id)}
+                className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Image grid */}
+          {panel.images.length === 0 ? (
+            <button
+              onClick={() => addPhotoRefs.current[panel.id]?.click()}
+              className="w-full py-8 rounded-xl border-2 border-dashed border-slate-200 text-sm text-slate-400 hover:border-indigo-300 hover:text-indigo-400 hover:bg-indigo-50/30 transition flex flex-col items-center gap-2">
+              <Camera className="w-6 h-6 opacity-50" />
+              Tap to add photos
+            </button>
+          ) : (
+            <div className="grid grid-cols-3 gap-2">
+              {panel.images.map(img => (
+                <div key={img.id} className="relative group aspect-square rounded-xl overflow-hidden border border-slate-200">
+                  <img src={img.dataUrl} alt={img.name} className="w-full h-full object-cover" />
+                  <button
+                    onClick={() => handleDeleteImage(panel.id, img.id)}
+                    className="absolute top-1 right-1 p-1 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition">
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── AI Coach tab ─────────────────────────────────────────────────────────────
 function AICoachTab({ gymData, onDataChange }) {
   const [messages, setMessages] = useState(() => loadChat());
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [attachments, setAttachments] = useState([]); // {id, name, mediaType, data, preview}
+  const fileInputRef = useRef(null);
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -313,8 +520,8 @@ function AICoachTab({ gymData, onDataChange }) {
   // Refresh gym data when AI tools modify it
   useEffect(() => {
     const handler = () => onDataChange?.();
-    window.addEventListener('gym-data-updated', handler);
-    return () => window.removeEventListener('gym-data-updated', handler);
+    window.addEventListener("gym-data-updated", handler);
+    return () => window.removeEventListener("gym-data-updated", handler);
   }, [onDataChange]);
 
   function buildContext() {
@@ -323,7 +530,6 @@ function AICoachTab({ gymData, onDataChange }) {
       lines.push(`Body weight: ${gymData.current_weight} ${gymData.weight_unit}`);
     }
     lines.push(`Weight unit: ${gymData.weight_unit}`);
-
     for (const day of DAYS) {
       const exs = gymData[day.field] || [];
       lines.push(`\n### ${day.label} Day (${day.description})`);
@@ -332,33 +538,78 @@ function AICoachTab({ gymData, onDataChange }) {
       } else {
         exs.forEach(ex => {
           const setStr = (ex.sets || []).map((s, i) => `Set ${i + 1}: ${s.weight} ${gymData.weight_unit} × ${s.reps}`).join(", ");
-          const lastProgress = (ex.weight_log || []).at(-1);
-          const progressStr = lastProgress ? ` | Latest progress: ${lastProgress.weight} ${gymData.weight_unit} × ${lastProgress.reps} on ${lastProgress.date}` : "";
-          lines.push(`- ${ex.name}: ${setStr || "no sets logged"}${progressStr}`);
+          lines.push(`- ${ex.name}: ${setStr || "no sets logged"}`);
         });
       }
     }
-
     return lines.join("\n");
+  }
+
+  async function handleFileSelect(e) {
+    const files = Array.from(e.target.files || []);
+    for (const file of files) {
+      if (!file.type.startsWith("image/")) {
+        toast.error("Only images are supported");
+        continue;
+      }
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error(`${file.name} is too large (max 20 MB)`);
+        continue;
+      }
+      try {
+        const data = await readAsBase64(file);
+        const preview = URL.createObjectURL(file);
+        setAttachments(prev => [...prev, { id: generateId(), name: file.name, mediaType: file.type, data, preview }]);
+      } catch {
+        toast.error(`Failed to read ${file.name}`);
+      }
+    }
+    e.target.value = "";
   }
 
   async function handleSend(e) {
     e.preventDefault();
-    if (!input.trim() || loading) return;
+    if ((!input.trim() && attachments.length === 0) || loading) return;
 
-    const userMsg = { role: "user", content: input.trim() };
-    const updated = [...messages, userMsg];
-    setMessages(updated);
-    saveChat(updated);
+    // Build display message
+    const displayMsg = {
+      role: "user",
+      content: input.trim(),
+      ...(attachments.length > 0 && {
+        _attachments: attachments.map(a => ({ name: a.name, mediaType: a.mediaType, preview: a.preview })),
+      }),
+    };
+
+    // Build API message with base64 image content
+    let apiContent;
+    if (attachments.length > 0) {
+      apiContent = [];
+      for (const att of attachments) {
+        apiContent.push({ type: "image", source: { type: "base64", media_type: att.mediaType, data: att.data } });
+      }
+      if (input.trim()) apiContent.push({ type: "text", text: input.trim() });
+    } else {
+      apiContent = input.trim();
+    }
+
+    const updatedDisplay = [...messages, displayMsg];
+    setMessages(updatedDisplay);
+    saveChat(updatedDisplay);
     setInput("");
+    setAttachments([]);
     setLoading(true);
+
+    // Build API history: text-only for history, full multimodal for current message
+    const apiHistory = [
+      ...messages.map(m => ({ role: m.role, content: m.content || "" })),
+      { role: "user", content: apiContent },
+    ];
 
     try {
       const context = buildContext();
-      const reply = await sendGymMessage(updated, context);
-      // Always reload gym data after AI responds — it may have added/changed exercises
+      const reply = await sendGymMessage(apiHistory, context);
       onDataChange?.();
-      const withReply = [...updated, { role: "assistant", content: reply }];
+      const withReply = [...updatedDisplay, { role: "assistant", content: reply }];
       setMessages(withReply);
       saveChat(withReply);
     } catch (err) {
@@ -385,7 +636,7 @@ function AICoachTab({ gymData, onDataChange }) {
               <Bot className="w-7 h-7 text-indigo-500" />
             </div>
             <p className="font-semibold text-slate-700 mb-1">Your AI Gym Coach</p>
-            <p className="text-sm text-slate-500 mb-5">Ask me to add exercises, log weights, or give advice</p>
+            <p className="text-sm text-slate-500 mb-5">Ask me to add exercises, log weights, or give advice — you can also send photos</p>
             <div className="flex flex-wrap gap-2 justify-center">
               {QUICK_PROMPTS.map(p => (
                 <button key={p} onClick={() => setInput(p)}
@@ -404,12 +655,19 @@ function AICoachTab({ gymData, onDataChange }) {
               </div>
             )}
             <div className={cn(
-              "max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap",
-              m.role === "user"
-                ? "bg-indigo-600 text-white rounded-br-sm"
-                : "bg-white border border-slate-200 text-slate-700 rounded-bl-sm"
+              "max-w-[80%] rounded-2xl text-sm leading-relaxed",
+              m.role === "user" ? "bg-indigo-600 text-white rounded-br-sm" : "bg-white border border-slate-200 text-slate-700 rounded-bl-sm"
             )}>
-              {m.content}
+              {/* Image attachments */}
+              {m._attachments?.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 p-2 pb-0">
+                  {m._attachments.map((att, ai) => (
+                    <img key={ai} src={att.preview} alt={att.name}
+                      className="max-w-[180px] max-h-[140px] rounded-xl object-cover border border-indigo-300" />
+                  ))}
+                </div>
+              )}
+              {m.content && <div className="px-4 py-2.5 whitespace-pre-wrap">{m.content}</div>}
             </div>
           </div>
         ))}
@@ -426,8 +684,28 @@ function AICoachTab({ gymData, onDataChange }) {
         <div ref={bottomRef} />
       </div>
 
+      {/* Image attachment previews */}
+      {attachments.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {attachments.map(att => (
+            <div key={att.id} className="relative group">
+              <img src={att.preview} alt={att.name} className="w-16 h-16 rounded-xl object-cover border border-slate-200" />
+              <button onClick={() => setAttachments(prev => prev.filter(a => a.id !== att.id))}
+                className="absolute -top-1 -right-1 p-0.5 rounded-full bg-slate-700 text-white opacity-0 group-hover:opacity-100 transition">
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Input */}
       <form onSubmit={handleSend} className="flex gap-2">
+        <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />
+        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={loading}
+          className="p-2.5 rounded-xl border border-slate-200 text-slate-400 hover:text-indigo-500 hover:border-indigo-300 hover:bg-indigo-50 transition disabled:opacity-40">
+          <Paperclip className="w-4 h-4" />
+        </button>
         <input
           value={input}
           onChange={e => setInput(e.target.value)}
@@ -435,7 +713,7 @@ function AICoachTab({ gymData, onDataChange }) {
           className="flex-1 text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white"
           disabled={loading}
         />
-        <button type="submit" disabled={loading || !input.trim()}
+        <button type="submit" disabled={loading || (!input.trim() && attachments.length === 0)}
           className="px-4 py-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition flex items-center gap-1.5 text-sm font-medium">
           <Send className="w-4 h-4" />
         </button>
@@ -453,6 +731,7 @@ function AICoachTab({ gymData, onDataChange }) {
 // ── Main Gym page ────────────────────────────────────────────────────────────
 export default function Gym() {
   const [gymData, setGymData] = useState(loadData);
+  const [physique, setPhysique] = useState(loadPhysique);
   const [activeTab, setActiveTab] = useState("push");
   const [editingWeight, setEditingWeight] = useState(false);
   const [weightDraft, setWeightDraft] = useState("");
@@ -477,10 +756,22 @@ export default function Gym() {
     setEditingWeight(false);
   }
 
+  function handlePhysiqueUpdate(patch) {
+    const updated = { ...physique, ...patch };
+    setPhysique(updated);
+    savePhysique(updated);
+  }
+
   const totalExercises = DAYS.reduce((sum, d) => sum + (gymData[d.field]?.length || 0), 0);
   const totalSets = DAYS.reduce((sum, d) =>
     sum + (gymData[d.field] || []).reduce((s, ex) => s + ex.sets.length, 0), 0
   );
+
+  const TABS = [
+    ...DAYS.map(d => ({ key: d.key, label: d.label })),
+    { key: "ai", label: "AI Coach" },
+    { key: "physique", label: "Physique" },
+  ];
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
@@ -592,39 +883,27 @@ export default function Gym() {
 
       {/* Tabs */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <div className="flex gap-1 border-b border-slate-100 mb-6 -mx-1">
-          {DAYS.map(d => (
+        <div className="flex gap-1 border-b border-slate-100 mb-6 -mx-1 overflow-x-auto">
+          {TABS.map(tab => (
             <button
-              key={d.key}
-              onClick={() => setActiveTab(d.key)}
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
               className={cn(
-                "px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all -mb-px border-b-2",
-                activeTab === d.key
+                "px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all -mb-px border-b-2 whitespace-nowrap",
+                activeTab === tab.key
                   ? "text-indigo-600 border-indigo-500 bg-indigo-50/60"
                   : "text-slate-500 border-transparent hover:text-slate-700 hover:bg-slate-50"
               )}
             >
-              {d.label}
+              {tab.label}
             </button>
           ))}
-          <button
-            onClick={() => setActiveTab("ai")}
-            className={cn(
-              "px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all -mb-px border-b-2 flex items-center gap-1.5",
-              activeTab === "ai"
-                ? "text-indigo-600 border-indigo-500 bg-indigo-50/60"
-                : "text-slate-500 border-transparent hover:text-slate-700 hover:bg-slate-50"
-            )}
-          >
-            AI Coach
-          </button>
         </div>
 
         {activeTab === "ai" ? (
-          <AICoachTab
-            gymData={gymData}
-            onDataChange={() => setGymData(loadData())}
-          />
+          <AICoachTab gymData={gymData} onDataChange={() => setGymData(loadData())} />
+        ) : activeTab === "physique" ? (
+          <PhysiqueTab physique={physique} onUpdate={handlePhysiqueUpdate} />
         ) : (
           DAYS.filter(d => d.key === activeTab).map(d => (
             <WorkoutTab
