@@ -83,16 +83,11 @@ const DAYS = [
 ];
 
 // ── Exercise card component ──────────────────────────────────────────────────
-function ExerciseCard({ exercise, dayConfig, weightUnit, onDelete, onAddSet, onDeleteSet, onEditName, onLogProgress, onDeleteProgress }) {
+function ExerciseCard({ exercise, dayConfig, weightUnit, onDelete, onAddSet, onDeleteSet, onEditName }) {
   const [addingSet, setAddingSet] = useState(false);
   const [setForm, setSetForm] = useState({ weight: "", reps: "" });
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(exercise.name);
-  const [showHistory, setShowHistory] = useState(false);
-  const [addingProgress, setAddingProgress] = useState(false);
-  const [progressForm, setProgressForm] = useState({ weight: "", reps: "", note: "" });
-
-  const weightLog = exercise.weight_log || [];
 
   function handleAddSet(e) {
     e.preventDefault();
@@ -107,21 +102,6 @@ function ExerciseCard({ exercise, dayConfig, weightUnit, onDelete, onAddSet, onD
     if (!nameValue.trim()) return;
     onEditName(exercise.id, nameValue.trim());
     setEditingName(false);
-  }
-
-  function handleLogProgress(e) {
-    e.preventDefault();
-    if (!progressForm.weight || !progressForm.reps) return;
-    onLogProgress(exercise.id, {
-      id: generateId(),
-      date: new Date().toISOString().split('T')[0],
-      weight: parseFloat(progressForm.weight),
-      reps: parseInt(progressForm.reps, 10),
-      note: progressForm.note.trim() || null,
-    });
-    setProgressForm({ weight: "", reps: "", note: "" });
-    setAddingProgress(false);
-    setShowHistory(true);
   }
 
   return (
@@ -154,19 +134,7 @@ function ExerciseCard({ exercise, dayConfig, weightUnit, onDelete, onAddSet, onD
               </button>
             </div>
           )}
-          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <p className="text-xs text-slate-400">{exercise.sets.length} set{exercise.sets.length !== 1 ? "s" : ""}</p>
-            {(() => {
-              const log = exercise.weight_log || [];
-              const currentMax = exercise.sets.length > 0 ? Math.max(...exercise.sets.map(s => s.weight)) : null;
-              const lastLogged = log.length > 0 ? log[log.length - 1].weight : null;
-              if (currentMax === null || lastLogged === null) return null;
-              const diff = parseFloat((currentMax - lastLogged).toFixed(2));
-              if (diff > 0) return <span className="text-xs font-semibold text-green-600">↑ +{diff} {weightUnit} new PB!</span>;
-              if (diff < 0) return <span className="text-xs font-semibold text-orange-400">↓ {diff} {weightUnit}</span>;
-              return <span className="text-xs text-slate-400">→ same as best</span>;
-            })()}
-          </div>
+          <p className="text-xs text-slate-400 mt-0.5">{exercise.sets.length} set{exercise.sets.length !== 1 ? "s" : ""}</p>
         </div>
         <button onClick={() => onDelete(exercise.id)}
           className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition flex-shrink-0">
@@ -227,102 +195,6 @@ function ExerciseCard({ exercise, dayConfig, weightUnit, onDelete, onAddSet, onD
         </button>
       )}
 
-      {/* Progress / Weight History */}
-      <div className="mt-3 pt-3 border-t border-slate-100">
-        <button
-          onClick={() => setShowHistory(!showHistory)}
-          className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 transition"
-        >
-          {showHistory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          Progress
-          {weightLog.length > 0 && (
-            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-semibold">
-              {weightLog.length}
-            </span>
-          )}
-        </button>
-
-        {showHistory && (
-          <div className="mt-2 space-y-1">
-            {weightLog.length === 0 && !addingProgress && (
-              <p className="text-xs text-slate-400 italic">No progress logged yet</p>
-            )}
-            {[...weightLog].reverse().map((entry, idx, arr) => {
-              const prev = arr[idx + 1]; // prev in reversed = next chronologically
-              const diff = prev ? parseFloat((entry.weight - prev.weight).toFixed(2)) : null;
-              return (
-                <div key={entry.id} className="flex items-center gap-2 text-xs">
-                  <span className="text-slate-400 w-20 flex-shrink-0">
-                    {new Date(entry.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
-                  </span>
-                  <span className={cn("font-semibold", dayConfig.text)}>
-                    {entry.weight} {weightUnit} × {entry.reps}
-                  </span>
-                  {diff !== null && diff > 0 && (
-                    <span className="text-green-600 font-semibold">↑ +{diff}</span>
-                  )}
-                  {diff !== null && diff < 0 && (
-                    <span className="text-orange-400 font-semibold">↓ {diff}</span>
-                  )}
-                  {diff !== null && diff === 0 && (
-                    <span className="text-slate-400">→</span>
-                  )}
-                  {entry.note && !entry.note.startsWith('auto') && (
-                    <span className="text-slate-400 italic truncate">{entry.note}</span>
-                  )}
-                  <button onClick={() => onDeleteProgress(exercise.id, entry.id)}
-                    className="ml-auto text-slate-300 hover:text-red-400 transition flex-shrink-0">
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              );
-            })}
-
-            {addingProgress ? (
-              <form onSubmit={handleLogProgress} className="flex flex-wrap items-center gap-2 mt-2">
-                <input
-                  autoFocus
-                  type="number"
-                  placeholder={`Weight (${weightUnit})`}
-                  value={progressForm.weight}
-                  onChange={e => setProgressForm(f => ({ ...f, weight: e.target.value }))}
-                  className="w-28 text-sm border border-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                  min="0"
-                  step="0.5"
-                />
-                <input
-                  type="number"
-                  placeholder="Reps"
-                  value={progressForm.reps}
-                  onChange={e => setProgressForm(f => ({ ...f, reps: e.target.value }))}
-                  className="w-20 text-sm border border-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                  min="1"
-                />
-                <input
-                  type="text"
-                  placeholder="Note (optional)"
-                  value={progressForm.note}
-                  onChange={e => setProgressForm(f => ({ ...f, note: e.target.value }))}
-                  className="w-36 text-sm border border-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                />
-                <button type="submit"
-                  className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition">
-                  Save
-                </button>
-                <button type="button" onClick={() => { setAddingProgress(false); setProgressForm({ weight: "", reps: "", note: "" }); }}
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-slate-50 transition">
-                  Cancel
-                </button>
-              </form>
-            ) : (
-              <button onClick={() => setAddingProgress(true)}
-                className="mt-1 text-xs font-medium text-indigo-500 hover:text-indigo-700 transition flex items-center gap-1">
-                <Plus className="w-3 h-3" /> Log Progress
-              </button>
-            )}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
@@ -335,7 +207,7 @@ function WorkoutTab({ dayConfig, exercises, weightUnit, onUpdate }) {
   function handleAddExercise(e) {
     e.preventDefault();
     if (!newName.trim()) return;
-    onUpdate([...exercises, { id: generateId(), name: newName.trim(), sets: [], weight_log: [] }]);
+    onUpdate([...exercises, { id: generateId(), name: newName.trim(), sets: [] }]);
     setNewName("");
     setAddingExercise(false);
     toast.success("Exercise added!");
@@ -347,17 +219,9 @@ function WorkoutTab({ dayConfig, exercises, weightUnit, onUpdate }) {
   }
 
   function handleAddSet(exerciseId, set) {
-    onUpdate(exercises.map(ex => {
-      if (ex.id !== exerciseId) return ex;
-      const newSets = [...ex.sets, set];
-      const weightLog = ex.weight_log || [];
-      // Auto-log to progress history if this is a new personal best weight
-      const maxLogged = weightLog.length > 0 ? Math.max(...weightLog.map(e => e.weight)) : -1;
-      const newWeightLog = set.weight > maxLogged
-        ? [...weightLog, { id: generateId(), date: new Date().toISOString().split('T')[0], weight: set.weight, reps: set.reps, note: null }]
-        : weightLog;
-      return { ...ex, sets: newSets, weight_log: newWeightLog };
-    }));
+    onUpdate(exercises.map(ex =>
+      ex.id === exerciseId ? { ...ex, sets: [...ex.sets, set] } : ex
+    ));
   }
 
   function handleDeleteSet(exerciseId, setId) {
@@ -369,19 +233,6 @@ function WorkoutTab({ dayConfig, exercises, weightUnit, onUpdate }) {
   function handleEditName(exerciseId, newNameVal) {
     onUpdate(exercises.map(ex =>
       ex.id === exerciseId ? { ...ex, name: newNameVal } : ex
-    ));
-  }
-
-  function handleLogProgress(exerciseId, entry) {
-    onUpdate(exercises.map(ex =>
-      ex.id === exerciseId ? { ...ex, weight_log: [...(ex.weight_log || []), entry] } : ex
-    ));
-    toast.success("Progress logged!");
-  }
-
-  function handleDeleteProgress(exerciseId, entryId) {
-    onUpdate(exercises.map(ex =>
-      ex.id === exerciseId ? { ...ex, weight_log: (ex.weight_log || []).filter(e => e.id !== entryId) } : ex
     ));
   }
 
@@ -415,8 +266,6 @@ function WorkoutTab({ dayConfig, exercises, weightUnit, onUpdate }) {
             onAddSet={handleAddSet}
             onDeleteSet={handleDeleteSet}
             onEditName={handleEditName}
-            onLogProgress={handleLogProgress}
-            onDeleteProgress={handleDeleteProgress}
           />
         ))}
       </div>
