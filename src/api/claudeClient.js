@@ -537,3 +537,196 @@ export async function sendMessageToClaudeWithContext(history, extraContext) {
   const systemPrompt = `${base}\n\n${extraContext}`;
   return _agenticLoop(history, systemPrompt);
 }
+
+// ─── Gym AI tools ─────────────────────────────────────────────────────────────
+
+const _GYM_KEY_SUFFIX = 'gym_tracker_v1';
+const _getGymKey = () => `${getUserPrefix()}${_GYM_KEY_SUFFIX}`;
+
+function _loadGymData() {
+  try {
+    const raw = localStorage.getItem(_getGymKey());
+    return raw ? JSON.parse(raw) : { push_exercises: [], pull_exercises: [], legs_exercises: [], current_weight: "", weight_unit: "kg" };
+  } catch {
+    return { push_exercises: [], pull_exercises: [], legs_exercises: [], current_weight: "", weight_unit: "kg" };
+  }
+}
+
+function _saveGymData(data) {
+  localStorage.setItem(_getGymKey(), JSON.stringify(data));
+  window.dispatchEvent(new CustomEvent('gym-data-updated'));
+}
+
+function _gymId() {
+  return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+}
+
+const GYM_TOOLS = [
+  {
+    name: "gym_get_data",
+    description: "Get the user's current gym data: all exercises on each day with their sets and weight progress history.",
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "gym_add_exercise",
+    description: "Add a new exercise to push, pull, or legs day.",
+    input_schema: {
+      type: "object",
+      properties: {
+        day: { type: "string", enum: ["push", "pull", "legs"], description: "Workout day" },
+        name: { type: "string", description: "Exercise name e.g. 'Bench Press'" },
+      },
+      required: ["day", "name"],
+    },
+  },
+  {
+    name: "gym_delete_exercise",
+    description: "Delete an exercise from the workout plan.",
+    input_schema: {
+      type: "object",
+      properties: {
+        day: { type: "string", enum: ["push", "pull", "legs"] },
+        exercise_name: { type: "string", description: "Exercise name to delete (partial match)" },
+      },
+      required: ["day", "exercise_name"],
+    },
+  },
+  {
+    name: "gym_log_progress",
+    description: "Record a weight progression entry for an exercise (with today's date) so the user can track strength progress over time.",
+    input_schema: {
+      type: "object",
+      properties: {
+        day: { type: "string", enum: ["push", "pull", "legs"] },
+        exercise_name: { type: "string", description: "Exercise name (partial match)" },
+        weight: { type: "number", description: "Weight used in the user's unit (kg or lbs)" },
+        reps: { type: "number", description: "Reps performed" },
+        note: { type: "string", description: "Optional note e.g. 'new PR', 'felt strong'" },
+      },
+      required: ["day", "exercise_name", "weight", "reps"],
+    },
+  },
+  {
+    name: "gym_add_set",
+    description: "Add a set (weight + reps) to an exercise for today's workout session.",
+    input_schema: {
+      type: "object",
+      properties: {
+        day: { type: "string", enum: ["push", "pull", "legs"] },
+        exercise_name: { type: "string", description: "Exercise name (partial match)" },
+        weight: { type: "number" },
+        reps: { type: "number" },
+      },
+      required: ["day", "exercise_name", "weight", "reps"],
+    },
+  },
+];
+
+const _GYM_FIELD_MAP = { push: "push_exercises", pull: "pull_exercises", legs: "legs_exercises" };
+
+async function _executeGymTool(name, input) {
+  const data = _loadGymData();
+  switch (name) {
+    case "gym_get_data": {
+      const result = { weight_unit: data.weight_unit, current_weight: data.current_weight, days: {} };
+      for (const [day, field] of Object.entries(_GYM_FIELD_MAP)) {
+        result.days[day] = (data[field] || []).map(ex => ({
+          name: ex.name,
+          sets: ex.sets || [],
+          progress_entries: (ex.weight_log || []).length,
+          latest_weight: (ex.weight_log || []).at(-1)?.weight ?? (ex.sets || []).at(-1)?.weight ?? null,
+        }));
+      }
+      return result;
+    }
+    case "gym_add_exercise": {
+      const field = _GYM_FIELD_MAP[input.day];
+      if (!field) return { error: "Invalid day" };
+      const exercises = data[field] || [];
+      if (exercises.find(e => e.name.toLowerCase() === input.name.toLowerCase())) {
+        return { error: `"${input.name}" already exists on ${input.day} day` };
+      }
+      data[field] = [...exercises, { id: _gymId(), name: input.name, sets: [], weight_log: [] }];
+      _saveGymData(data);
+      return { success: true, message: `Added "${input.name}" to ${input.day} day` };
+    }
+    case "gym_delete_exercise": {
+      const field = _GYM_FIELD_MAP[input.day];
+      if (!field) return { error: "Invalid day" };
+      const exercises = data[field] || [];
+      const idx = exercises.findIndex(e => e.name.toLowerCase().includes(input.exercise_name.toLowerCase()));
+      if (idx === -1) return { error: `No exercise matching "${input.exercise_name}" on ${input.day} day` };
+      const deleted = exercises[idx].name;
+      data[field] = exercises.filter((_, i) => i !== idx);
+      _saveGymData(data);
+      return { success: true, message: `Deleted "${deleted}"` };
+    }
+    case "gym_log_progress": {
+      const field = _GYM_FIELD_MAP[input.day];
+      if (!field) return { error: "Invalid day" };
+      const ex = (data[field] || []).find(e => e.name.toLowerCase().includes(input.exercise_name.toLowerCase()));
+      if (!ex) return { error: `No exercise matching "${input.exercise_name}"` };
+      if (!ex.weight_log) ex.weight_log = [];
+      ex.weight_log.push({ id: _gymId(), date: new Date().toISOString().split('T')[0], weight: input.weight, reps: input.reps, note: input.note || null });
+      _saveGymData(data);
+      return { success: true, message: `Logged ${input.weight}${data.weight_unit} × ${input.reps} for "${ex.name}"` };
+    }
+    case "gym_add_set": {
+      const field = _GYM_FIELD_MAP[input.day];
+      if (!field) return { error: "Invalid day" };
+      const ex = (data[field] || []).find(e => e.name.toLowerCase().includes(input.exercise_name.toLowerCase()));
+      if (!ex) return { error: `No exercise matching "${input.exercise_name}"` };
+      if (!ex.sets) ex.sets = [];
+      ex.sets.push({ id: _gymId(), weight: input.weight, reps: input.reps });
+      _saveGymData(data);
+      return { success: true, message: `Added set: ${input.weight} × ${input.reps} to "${ex.name}"` };
+    }
+    default:
+      return { error: `Unknown gym tool: ${name}` };
+  }
+}
+
+export async function sendGymMessage(history, gymContext) {
+  const systemPrompt = `You are a knowledgeable and motivating gym coach with direct access to the user's gym data. When they ask you to add exercises, log sets, or record progress — use your tools to do it immediately without asking for confirmation. After using a tool, briefly confirm what you did. Give specific, practical advice about form, progression, and programming.
+
+Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+
+${gymContext}`;
+
+  let messages = history.map(m => ({ role: m.role, content: m.content }));
+
+  for (let turn = 0; turn < 8; turn++) {
+    const response = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 2048,
+        system: systemPrompt,
+        tools: GYM_TOOLS,
+        messages,
+      }),
+    });
+
+    if (!response.ok) throw new Error(`Claude API error ${response.status}: ${await response.text()}`);
+    const data = await response.json();
+
+    if (data.stop_reason !== 'tool_use') {
+      const textBlock = data.content.find(b => b.type === 'text');
+      return textBlock?.text ?? '';
+    }
+
+    messages = [...messages, { role: 'assistant', content: data.content }];
+
+    const toolResults = [];
+    for (const block of data.content) {
+      if (block.type === 'tool_use') {
+        const result = await _executeGymTool(block.name, block.input);
+        toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) });
+      }
+    }
+    messages = [...messages, { role: 'user', content: toolResults }];
+  }
+
+  return "I ran into an issue completing that. Can you try again?";
+}

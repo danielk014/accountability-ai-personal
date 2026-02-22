@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Plus, Trash2, Pencil, Check, X, Dumbbell, Weight, Send, Loader2, Bot, ChevronDown, ChevronUp, Scale } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getUserPrefix } from "@/lib/userStore";
-import { sendMessageToClaudeWithContext } from "@/api/claudeClient";
+import { sendGymMessage } from "@/api/claudeClient";
 import { toast } from "sonner";
 
 // ── Storage helpers ──────────────────────────────────────────────────────────
@@ -20,7 +20,7 @@ function loadData() {
   } catch {}
   return {
     current_weight: "",
-    weight_unit: "lbs",
+    weight_unit: "kg",
     push_exercises: [],
     pull_exercises: [],
     legs_exercises: [],
@@ -83,11 +83,16 @@ const DAYS = [
 ];
 
 // ── Exercise card component ──────────────────────────────────────────────────
-function ExerciseCard({ exercise, dayConfig, onDelete, onAddSet, onDeleteSet, onEditName }) {
+function ExerciseCard({ exercise, dayConfig, weightUnit, onDelete, onAddSet, onDeleteSet, onEditName, onLogProgress, onDeleteProgress }) {
   const [addingSet, setAddingSet] = useState(false);
   const [setForm, setSetForm] = useState({ weight: "", reps: "" });
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState(exercise.name);
+  const [showHistory, setShowHistory] = useState(false);
+  const [addingProgress, setAddingProgress] = useState(false);
+  const [progressForm, setProgressForm] = useState({ weight: "", reps: "", note: "" });
+
+  const weightLog = exercise.weight_log || [];
 
   function handleAddSet(e) {
     e.preventDefault();
@@ -102,6 +107,21 @@ function ExerciseCard({ exercise, dayConfig, onDelete, onAddSet, onDeleteSet, on
     if (!nameValue.trim()) return;
     onEditName(exercise.id, nameValue.trim());
     setEditingName(false);
+  }
+
+  function handleLogProgress(e) {
+    e.preventDefault();
+    if (!progressForm.weight || !progressForm.reps) return;
+    onLogProgress(exercise.id, {
+      id: generateId(),
+      date: new Date().toISOString().split('T')[0],
+      weight: parseFloat(progressForm.weight),
+      reps: parseInt(progressForm.reps, 10),
+      note: progressForm.note.trim() || null,
+    });
+    setProgressForm({ weight: "", reps: "", note: "" });
+    setAddingProgress(false);
+    setShowHistory(true);
   }
 
   return (
@@ -129,7 +149,7 @@ function ExerciseCard({ exercise, dayConfig, onDelete, onAddSet, onDeleteSet, on
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-slate-800">{exercise.name}</h3>
               <button onClick={() => setEditingName(true)}
-                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition opacity-0 group-hover:opacity-100">
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition">
                 <Pencil className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -148,7 +168,7 @@ function ExerciseCard({ exercise, dayConfig, onDelete, onAddSet, onDeleteSet, on
           {exercise.sets.map((set, idx) => (
             <div key={set.id}
               className={cn("group/set flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border", dayConfig.lightBg, dayConfig.border, dayConfig.text)}>
-              <span>Set {idx + 1}: {set.weight} lbs × {set.reps}</span>
+              <span>Set {idx + 1}: {set.weight} {weightUnit} × {set.reps}</span>
               <button onClick={() => onDeleteSet(exercise.id, set.id)}
                 className="opacity-0 group-hover/set:opacity-100 hover:text-red-500 transition ml-0.5">
                 <X className="w-3 h-3" />
@@ -160,11 +180,11 @@ function ExerciseCard({ exercise, dayConfig, onDelete, onAddSet, onDeleteSet, on
 
       {/* Add set form */}
       {addingSet ? (
-        <form onSubmit={handleAddSet} className="flex items-center gap-2">
+        <form onSubmit={handleAddSet} className="flex items-center gap-2 mb-3">
           <input
             autoFocus
             type="number"
-            placeholder="Weight (lbs)"
+            placeholder={`Weight (${weightUnit})`}
             value={setForm.weight}
             onChange={e => setSetForm(f => ({ ...f, weight: e.target.value }))}
             className="w-32 text-sm border border-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
@@ -194,19 +214,103 @@ function ExerciseCard({ exercise, dayConfig, onDelete, onAddSet, onDeleteSet, on
           <Plus className="w-3 h-3" /> Add Set
         </button>
       )}
+
+      {/* Progress / Weight History */}
+      <div className="mt-3 pt-3 border-t border-slate-100">
+        <button
+          onClick={() => setShowHistory(!showHistory)}
+          className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-700 transition"
+        >
+          {showHistory ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          Progress
+          {weightLog.length > 0 && (
+            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-semibold">
+              {weightLog.length}
+            </span>
+          )}
+        </button>
+
+        {showHistory && (
+          <div className="mt-2 space-y-1">
+            {weightLog.length === 0 && !addingProgress && (
+              <p className="text-xs text-slate-400 italic">No progress logged yet</p>
+            )}
+            {[...weightLog].reverse().map((entry) => (
+              <div key={entry.id} className="flex items-center gap-2 text-xs">
+                <span className="text-slate-400 w-20 flex-shrink-0">
+                  {new Date(entry.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
+                </span>
+                <span className={cn("font-semibold", dayConfig.text)}>
+                  {entry.weight} {weightUnit} × {entry.reps}
+                </span>
+                {entry.note && (
+                  <span className="text-slate-400 italic truncate">{entry.note}</span>
+                )}
+                <button onClick={() => onDeleteProgress(exercise.id, entry.id)}
+                  className="ml-auto text-slate-300 hover:text-red-400 transition flex-shrink-0">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+
+            {addingProgress ? (
+              <form onSubmit={handleLogProgress} className="flex flex-wrap items-center gap-2 mt-2">
+                <input
+                  autoFocus
+                  type="number"
+                  placeholder={`Weight (${weightUnit})`}
+                  value={progressForm.weight}
+                  onChange={e => setProgressForm(f => ({ ...f, weight: e.target.value }))}
+                  className="w-28 text-sm border border-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  min="0"
+                  step="0.5"
+                />
+                <input
+                  type="number"
+                  placeholder="Reps"
+                  value={progressForm.reps}
+                  onChange={e => setProgressForm(f => ({ ...f, reps: e.target.value }))}
+                  className="w-20 text-sm border border-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  min="1"
+                />
+                <input
+                  type="text"
+                  placeholder="Note (optional)"
+                  value={progressForm.note}
+                  onChange={e => setProgressForm(f => ({ ...f, note: e.target.value }))}
+                  className="w-36 text-sm border border-slate-300 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                />
+                <button type="submit"
+                  className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition">
+                  Save
+                </button>
+                <button type="button" onClick={() => { setAddingProgress(false); setProgressForm({ weight: "", reps: "", note: "" }); }}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-slate-50 transition">
+                  Cancel
+                </button>
+              </form>
+            ) : (
+              <button onClick={() => setAddingProgress(true)}
+                className="mt-1 text-xs font-medium text-indigo-500 hover:text-indigo-700 transition flex items-center gap-1">
+                <Plus className="w-3 h-3" /> Log Progress
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 // ── Workout day tab ──────────────────────────────────────────────────────────
-function WorkoutTab({ dayConfig, exercises, onUpdate }) {
+function WorkoutTab({ dayConfig, exercises, weightUnit, onUpdate }) {
   const [addingExercise, setAddingExercise] = useState(false);
   const [newName, setNewName] = useState("");
 
   function handleAddExercise(e) {
     e.preventDefault();
     if (!newName.trim()) return;
-    onUpdate([...exercises, { id: generateId(), name: newName.trim(), sets: [] }]);
+    onUpdate([...exercises, { id: generateId(), name: newName.trim(), sets: [], weight_log: [] }]);
     setNewName("");
     setAddingExercise(false);
     toast.success("Exercise added!");
@@ -235,6 +339,19 @@ function WorkoutTab({ dayConfig, exercises, onUpdate }) {
     ));
   }
 
+  function handleLogProgress(exerciseId, entry) {
+    onUpdate(exercises.map(ex =>
+      ex.id === exerciseId ? { ...ex, weight_log: [...(ex.weight_log || []), entry] } : ex
+    ));
+    toast.success("Progress logged!");
+  }
+
+  function handleDeleteProgress(exerciseId, entryId) {
+    onUpdate(exercises.map(ex =>
+      ex.id === exerciseId ? { ...ex, weight_log: (ex.weight_log || []).filter(e => e.id !== entryId) } : ex
+    ));
+  }
+
   return (
     <div>
       {/* Day description */}
@@ -247,7 +364,7 @@ function WorkoutTab({ dayConfig, exercises, onUpdate }) {
       </div>
 
       {/* Exercise list */}
-      <div className="group">
+      <div>
         {exercises.length === 0 && !addingExercise && (
           <div className="text-center py-10 text-slate-400">
             <Dumbbell className="w-8 h-8 mx-auto mb-2 opacity-40" />
@@ -260,10 +377,13 @@ function WorkoutTab({ dayConfig, exercises, onUpdate }) {
             key={ex.id}
             exercise={ex}
             dayConfig={dayConfig}
+            weightUnit={weightUnit}
             onDelete={handleDeleteExercise}
             onAddSet={handleAddSet}
             onDeleteSet={handleDeleteSet}
             onEditName={handleEditName}
+            onLogProgress={handleLogProgress}
+            onDeleteProgress={handleDeleteProgress}
           />
         ))}
       </div>
@@ -298,7 +418,7 @@ function WorkoutTab({ dayConfig, exercises, onUpdate }) {
 }
 
 // ── AI Coach tab ─────────────────────────────────────────────────────────────
-function AICoachTab({ gymData }) {
+function AICoachTab({ gymData, onDataChange }) {
   const [messages, setMessages] = useState(() => loadChat());
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -308,24 +428,36 @@ function AICoachTab({ gymData }) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Refresh gym data when AI tools modify it
+  useEffect(() => {
+    const handler = () => onDataChange?.();
+    window.addEventListener('gym-data-updated', handler);
+    return () => window.removeEventListener('gym-data-updated', handler);
+  }, [onDataChange]);
+
   function buildContext() {
-    const lines = ["## Gym Data"];
+    const lines = ["## Current Gym Data"];
     if (gymData.current_weight) {
-      lines.push(`Current Weight: ${gymData.current_weight} ${gymData.weight_unit}`);
+      lines.push(`Body weight: ${gymData.current_weight} ${gymData.weight_unit}`);
     }
+    lines.push(`Weight unit: ${gymData.weight_unit}`);
 
     for (const day of DAYS) {
       const exs = gymData[day.field] || [];
-      if (exs.length > 0) {
-        lines.push(`\n### ${day.label} Day (${day.description})`);
+      lines.push(`\n### ${day.label} Day (${day.description})`);
+      if (exs.length === 0) {
+        lines.push("No exercises added yet.");
+      } else {
         exs.forEach(ex => {
-          const setStr = ex.sets.map((s, i) => `Set ${i + 1}: ${s.weight} lbs × ${s.reps} reps`).join(", ");
-          lines.push(`- ${ex.name}: ${setStr || "no sets logged"}`);
+          const setStr = (ex.sets || []).map((s, i) => `Set ${i + 1}: ${s.weight} ${gymData.weight_unit} × ${s.reps}`).join(", ");
+          const lastProgress = (ex.weight_log || []).at(-1);
+          const progressStr = lastProgress ? ` | Latest progress: ${lastProgress.weight} ${gymData.weight_unit} × ${lastProgress.reps} on ${lastProgress.date}` : "";
+          lines.push(`- ${ex.name}: ${setStr || "no sets logged"}${progressStr}`);
         });
       }
     }
 
-    return `You are a knowledgeable and motivating gym coach. You know the user's workout data below. Give specific, practical advice about form, progression, programming, and recovery. Be encouraging but direct.\n\n${lines.join("\n")}`;
+    return lines.join("\n");
   }
 
   async function handleSend(e) {
@@ -341,7 +473,7 @@ function AICoachTab({ gymData }) {
 
     try {
       const context = buildContext();
-      const reply = await sendMessageToClaudeWithContext(updated, context);
+      const reply = await sendGymMessage(updated, context);
       const withReply = [...updated, { role: "assistant", content: reply }];
       setMessages(withReply);
       saveChat(withReply);
@@ -353,10 +485,10 @@ function AICoachTab({ gymData }) {
   }
 
   const QUICK_PROMPTS = [
+    "Add chest press to my push day",
     "How should I progress on bench press?",
     "What's a good push day routine?",
     "Tips for leg day recovery?",
-    "How do I fix my squat form?",
   ];
 
   return (
@@ -369,7 +501,7 @@ function AICoachTab({ gymData }) {
               <Bot className="w-7 h-7 text-indigo-500" />
             </div>
             <p className="font-semibold text-slate-700 mb-1">Your AI Gym Coach</p>
-            <p className="text-sm text-slate-500 mb-5">Ask me anything about your training</p>
+            <p className="text-sm text-slate-500 mb-5">Ask me to add exercises, log weights, or give advice</p>
             <div className="flex flex-wrap gap-2 justify-center">
               {QUICK_PROMPTS.map(p => (
                 <button key={p} onClick={() => setInput(p)}
@@ -466,8 +598,6 @@ export default function Gym() {
     sum + (gymData[d.field] || []).reduce((s, ex) => s + ex.sets.length, 0), 0
   );
 
-  const TABS = ["push", "pull", "legs", "ai"];
-
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       {/* Page header */}
@@ -498,7 +628,7 @@ export default function Gym() {
                 type="number"
                 value={weightDraft}
                 onChange={e => setWeightDraft(e.target.value)}
-                placeholder="185"
+                placeholder="80"
                 className="w-20 text-sm border border-slate-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 step="0.1"
                 min="1"
@@ -523,6 +653,23 @@ export default function Gym() {
               )}
             </button>
           )}
+          {/* kg / lbs toggle */}
+          <div className="flex gap-1 mt-2">
+            {["kg", "lbs"].map(unit => (
+              <button
+                key={unit}
+                onClick={() => updateAndSave({ weight_unit: unit })}
+                className={cn(
+                  "text-xs px-2 py-0.5 rounded-lg font-medium transition",
+                  gymData.weight_unit === unit
+                    ? "bg-indigo-100 text-indigo-700"
+                    : "bg-slate-100 text-slate-400 hover:bg-slate-200"
+                )}
+              >
+                {unit}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Total exercises */}
@@ -590,13 +737,17 @@ export default function Gym() {
         </div>
 
         {activeTab === "ai" ? (
-          <AICoachTab gymData={gymData} />
+          <AICoachTab
+            gymData={gymData}
+            onDataChange={() => setGymData(loadData())}
+          />
         ) : (
           DAYS.filter(d => d.key === activeTab).map(d => (
             <WorkoutTab
               key={d.key}
               dayConfig={d}
               exercises={gymData[d.field] || []}
+              weightUnit={gymData.weight_unit}
               onUpdate={(exs) => handleExercisesUpdate(d.field, exs)}
             />
           ))
