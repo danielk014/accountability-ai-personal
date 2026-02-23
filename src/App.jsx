@@ -1,5 +1,5 @@
 import { Toaster } from "@/components/ui/toaster"
-import { runCleanup } from '@/api/localDB'
+import { runCleanup } from '@/api/supabaseDB'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { queryClientInstance } from '@/lib/query-client'

@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { localDB } from '@/api/localDB';
+import { supabase } from '@/api/supabaseClient';
+import { supabaseDB, _setUser, _clearUser } from '@/api/supabaseDB';
+import { hydrateStorage, clearStorage } from '@/api/supabaseStorage';
 import { queryClientInstance } from '@/lib/query-client';
 import { setCurrentUser, clearCurrentUser } from '@/lib/userStore';
 
@@ -9,39 +11,49 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // On mount, restore session from localStorage
+  // On mount, restore session from Supabase (it persists the token in localStorage automatically)
   useEffect(() => {
-    localDB.auth.me()
-      .then(u => {
-        setCurrentUser(u.email); // must be set before app renders
-        setUser(u);
-      })
-      .catch(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const u = session.user;
+        _setUser(u.id, u.email);
+        setCurrentUser(u.email);
+        await hydrateStorage(u.id);
+        setUser({
+          id:        u.id,
+          email:     u.email,
+          full_name: u.user_metadata?.name || u.email.split('@')[0],
+          picture:   u.user_metadata?.picture,
+        });
+      } else {
+        _clearUser();
         clearCurrentUser();
+        clearStorage();
         setUser(null);
-      })
-      .finally(() => setLoading(false));
+      }
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = useCallback(async (email, password) => {
-    const session = await localDB.auth.login(email, password);
-    setCurrentUser(session.email);
+    const session = await supabaseDB.auth.login(email, password);
     queryClientInstance.clear();
-    setUser({ id: session.id, email: session.email, full_name: session.name, picture: session.picture });
     return session;
   }, []);
 
   const register = useCallback(async (email, password, name) => {
-    const session = await localDB.auth.register(email, password, name);
-    setCurrentUser(session.email);
+    const session = await supabaseDB.auth.register(email, password, name);
     queryClientInstance.clear();
-    setUser({ id: session.id, email: session.email, full_name: session.name, picture: session.picture });
     return session;
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    _clearUser();
     clearCurrentUser();
-    localDB.auth.logout();
+    clearStorage();
+    await supabaseDB.auth.logout();
     queryClientInstance.clear();
     setUser(null);
   }, []);
