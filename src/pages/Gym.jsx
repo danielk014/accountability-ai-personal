@@ -1280,13 +1280,7 @@ export default function Gym() {
             <p className="text-sm text-slate-400 italic mt-2">Log in Bodyweight tab</p>
           )}
           <div className="flex gap-1 mt-2">
-            {["kg", "lbs"].map(unit => (
-              <button key={unit} onClick={() => updateAndSave({ weight_unit: unit })}
-                className={cn("text-xs px-2 py-0.5 rounded-lg font-medium transition",
-                  gymData.weight_unit === unit ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-400 hover:bg-slate-200")}>
-                {unit}
-              </button>
-            ))}
+            <span className="text-xs px-2 py-0.5 rounded-lg font-medium bg-indigo-100 text-indigo-700">kg</span>
           </div>
         </div>
 

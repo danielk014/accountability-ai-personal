@@ -8,7 +8,7 @@ const SECTIONS = [
   { key: "about", label: "About Me", icon: User, color: "bg-violet-100 text-violet-600", placeholder: "e.g. I'm 28, live in NYC, introvert who loves hiking..." },
   { key: "work", label: "Work & Schedule", icon: Briefcase, color: "bg-blue-100 text-blue-600", placeholder: "e.g. I work 9-5 at a startup, Tuesdays are my busiest day..." },
   { key: "people", label: "People in My Life", icon: Users, color: "bg-pink-100 text-pink-600", placeholder: null },
-  { key: "goals", label: "Goals & Plans", icon: Target, color: "bg-emerald-100 text-emerald-600", placeholder: "e.g. I want to lose 20lbs by summer, get promoted by Q3..." },
+  { key: "goals", label: "Goals & Plans", icon: Target, color: "bg-emerald-100 text-emerald-600", placeholder: "e.g. I want to lose 20kg by summer, get promoted by Q3..." },
   { key: "notes", label: "Extra Context", icon: StickyNote, color: "bg-amber-100 text-amber-600", placeholder: "e.g. I struggle with mornings, anxiety about presentations..." },
 ];
 

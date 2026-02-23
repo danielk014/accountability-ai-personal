@@ -624,7 +624,7 @@ const GYM_TOOLS = [
       properties: {
         day_name: { type: "string", description: "Name of the workout day" },
         exercise_name: { type: "string", description: "Exercise name (partial match)" },
-        weight: { type: "number", description: "Weight used in the user's unit (kg or lbs)" },
+        weight: { type: "number", description: "Weight in kg" },
         reps: { type: "number", description: "Reps performed" },
         note: { type: "string", description: "Optional note e.g. 'new PR', 'felt strong'" },
       },

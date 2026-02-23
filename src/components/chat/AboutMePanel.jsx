@@ -84,7 +84,7 @@ export default function AboutMePanel() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="e.g. I'm trying to lose 20lbs, I work 9-5, mornings are tough for me..."
+            placeholder="e.g. I'm trying to lose 20kg, I work 9-5, mornings are tough for me..."
             className="flex-1 text-xs rounded-xl border border-slate-200 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white placeholder:text-slate-300"
           />
           <button
