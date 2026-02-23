@@ -12,10 +12,19 @@ Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 
 Current time: ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
 
 import { getUserPrefix } from '@/lib/userStore';
+import { supabaseStorage } from '@/api/supabaseStorage';
 
 const _CHAT_KEY = 'accountable_chat_history';
 const MAX_HISTORY = 40;
 const getStorageKey = () => `${getUserPrefix()}${_CHAT_KEY}`;
+
+function _readStorage(key) {
+  const raw = supabaseStorage.getItem(key);
+  if (raw) return raw;
+  const legacy = localStorage.getItem(key);
+  if (legacy) { supabaseStorage.setItem(key, legacy); return legacy; }
+  return null;
+}
 
 // ─── Tool definitions ───────────────────────────────────────────────────────
 
@@ -552,9 +561,10 @@ export async function buildSystemPrompt() {
       lines.push(`## My Habits & Tasks\n${taskText}`);
     }
 
-    // Financial snapshot from localStorage
+    // Financial snapshot from supabaseStorage
     try {
-      const finRaw = localStorage.getItem('accountable_financials_v2');
+      const finKey = `${getUserPrefix()}accountable_financials_v2`;
+      const finRaw = supabaseStorage.getItem(finKey) || localStorage.getItem(finKey);
       if (finRaw) {
         const fin = JSON.parse(finRaw);
         const sumAmts = arr => arr.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
@@ -591,7 +601,7 @@ ${lines.join('\n\n')}`;
 
 export function loadHistory() {
   try {
-    const raw = localStorage.getItem(getStorageKey());
+    const raw = _readStorage(getStorageKey());
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -599,11 +609,11 @@ export function loadHistory() {
 }
 
 export function saveHistory(messages) {
-  localStorage.setItem(getStorageKey(), JSON.stringify(messages.slice(-MAX_HISTORY)));
+  supabaseStorage.setItem(getStorageKey(), JSON.stringify(messages.slice(-MAX_HISTORY)));
 }
 
 export function clearHistory() {
-  localStorage.removeItem(getStorageKey());
+  supabaseStorage.removeItem(getStorageKey());
 }
 
 // ─── One-off prompt (no tools, no history) ───────────────────────────────────
@@ -720,12 +730,13 @@ function _migrateGymData(parsed) {
 
 function _loadGymData() {
   try {
-    const raw = localStorage.getItem(_getGymKey());
+    const key = _getGymKey();
+    const raw = supabaseStorage.getItem(key) || localStorage.getItem(key);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (!parsed.workout_days) {
         const migrated = _migrateGymData(parsed);
-        localStorage.setItem(_getGymKey(), JSON.stringify(migrated));
+        supabaseStorage.setItem(key, JSON.stringify(migrated));
         return migrated;
       }
       return parsed;
@@ -735,7 +746,7 @@ function _loadGymData() {
 }
 
 function _saveGymData(data) {
-  localStorage.setItem(_getGymKey(), JSON.stringify(data));
+  supabaseStorage.setItem(_getGymKey(), JSON.stringify(data));
   window.dispatchEvent(new CustomEvent('gym-data-updated'));
 }
 

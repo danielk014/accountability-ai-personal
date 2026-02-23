@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getUserPrefix } from "@/lib/userStore";
+import { supabaseStorage } from "@/api/supabaseStorage";
 import { sendGymMessage } from "@/api/claudeClient";
 import { toast } from "sonner";
 import {
@@ -61,14 +62,26 @@ function migrateOldFormat(parsed) {
   return { weight_unit: parsed.weight_unit || "kg", workout_days: days };
 }
 
+function _readStorage(key) {
+  // Try supabaseStorage first, fall back to localStorage for migration
+  const raw = supabaseStorage.getItem(key);
+  if (raw) return raw;
+  const legacy = localStorage.getItem(key);
+  if (legacy) {
+    supabaseStorage.setItem(key, legacy);
+    return legacy;
+  }
+  return null;
+}
+
 function loadData() {
   try {
-    const raw = localStorage.getItem(getStorageKey());
+    const raw = _readStorage(getStorageKey());
     if (raw) {
       const parsed = JSON.parse(raw);
       if (!parsed.workout_days) {
         const migrated = migrateOldFormat(parsed);
-        localStorage.setItem(getStorageKey(), JSON.stringify(migrated));
+        supabaseStorage.setItem(getStorageKey(), JSON.stringify(migrated));
         return migrated;
       }
       return parsed;
@@ -86,44 +99,40 @@ function loadData() {
 }
 
 function saveData(data) {
-  localStorage.setItem(getStorageKey(), JSON.stringify(data));
+  supabaseStorage.setItem(getStorageKey(), JSON.stringify(data));
 }
 
 function loadChat() {
   try {
-    const raw = localStorage.getItem(getChatKey());
+    const raw = _readStorage(getChatKey());
     return raw ? JSON.parse(raw) : [];
   } catch { return []; }
 }
 
 function saveChat(msgs) {
-  localStorage.setItem(getChatKey(), JSON.stringify(msgs.slice(-60)));
+  supabaseStorage.setItem(getChatKey(), JSON.stringify(msgs.slice(-60)));
 }
 
 function loadPhysique() {
   try {
-    const raw = localStorage.getItem(getPhysiqueKey());
+    const raw = _readStorage(getPhysiqueKey());
     return raw ? JSON.parse(raw) : { panels: [] };
   } catch { return { panels: [] }; }
 }
 
 function savePhysique(data) {
-  try {
-    localStorage.setItem(getPhysiqueKey(), JSON.stringify(data));
-  } catch {
-    toast.error("Storage full — try deleting older check-ins.");
-  }
+  supabaseStorage.setItem(getPhysiqueKey(), JSON.stringify(data));
 }
 
 function loadBodyweight() {
   try {
-    const raw = localStorage.getItem(getBodyweightKey());
+    const raw = _readStorage(getBodyweightKey());
     return raw ? JSON.parse(raw) : { logs: [] };
   } catch { return { logs: [] }; }
 }
 
 function saveBodyweight(data) {
-  localStorage.setItem(getBodyweightKey(), JSON.stringify(data));
+  supabaseStorage.setItem(getBodyweightKey(), JSON.stringify(data));
 }
 
 // Image helpers

@@ -7,10 +7,7 @@ import { setCurrentUser, clearCurrentUser } from '@/lib/userStore';
 
 const AuthContext = createContext();
 
-function applySession(u) {
-  _setUser(u.id, u.email);
-  setCurrentUser(u.email);
-  hydrateStorage(u.id).catch(() => {});
+function buildUserObj(u) {
   return {
     id:        u.id,
     email:     u.email,
@@ -25,17 +22,29 @@ export const AuthProvider = ({ children }) => {
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
-    // Step 1: restore session instantly from Supabase's local cache (no network needed)
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        if (session?.user) setUser(applySession(session.user));
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    let active = true;
+
+    // Step 1: restore session and WAIT for storage hydration so pages render with data
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user && active) {
+          const u = session.user;
+          _setUser(u.id, u.email);
+          setCurrentUser(u.email);
+          // Await hydration so supabaseStorage cache is ready before pages render
+          await hydrateStorage(u.id).catch(() => {});
+          if (active) setUser(buildUserObj(u));
+        }
+      } catch {}
+      if (active) setLoading(false);
+    };
+
+    initAuth();
 
     // Step 2: listen for subsequent auth changes (sign in, sign out, token refresh, recovery)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'INITIAL_SESSION') return; // already handled by getSession() above
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'INITIAL_SESSION') return; // already handled by initAuth() above
 
       if (event === 'PASSWORD_RECOVERY') {
         setIsPasswordRecovery(true);
@@ -43,7 +52,14 @@ export const AuthProvider = ({ children }) => {
       }
 
       if (session?.user) {
-        setUser(applySession(session.user));
+        const u = session.user;
+        _setUser(u.id, u.email);
+        setCurrentUser(u.email);
+        // Hydrate storage on actual sign-in so new user data is available immediately
+        if (event === 'SIGNED_IN') {
+          await hydrateStorage(u.id).catch(() => {});
+        }
+        setUser(buildUserObj(u));
       } else {
         _clearUser();
         clearCurrentUser();
@@ -52,7 +68,10 @@ export const AuthProvider = ({ children }) => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = useCallback(async (email, password) => {

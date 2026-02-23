@@ -5,7 +5,7 @@ import { Loader2, Check, Flag, RotateCcw } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { runCleanup } from "@/api/localDB";
+import { runCleanup } from "@/api/supabaseDB";
 
 import TimeActivityChart from "../components/progress/TimeActivityChart";
 import SleepChart from "../components/progress/SleepChart";

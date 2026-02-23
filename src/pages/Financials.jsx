@@ -10,23 +10,41 @@ import { cn } from "@/lib/utils";
 import { buildSystemPrompt } from "@/api/claudeClient";
 import { toast } from "sonner";
 import { getUserPrefix } from "@/lib/userStore";
+import { supabaseStorage } from "@/api/supabaseStorage";
 
 // ── Storage ────────────────────────────────────────────────────────────────────
 const getStorageKey = () => `${getUserPrefix()}accountable_financials_v2`;
 const getChatKey    = () => `${getUserPrefix()}accountable_financials_chat`;
 
 function loadFin() {
+  const empty = { income_sources: [], recurring_expenses: [], wishlist_expenses: [] };
   try {
-    return JSON.parse(localStorage.getItem(getStorageKey()) || "null") || {
-      income_sources: [],
-      recurring_expenses: [],
-      wishlist_expenses: [],
-    };
-  } catch { return { income_sources: [], recurring_expenses: [], wishlist_expenses: [] }; }
+    // Try supabaseStorage first (synced to Supabase)
+    const raw = supabaseStorage.getItem(getStorageKey());
+    if (raw) return JSON.parse(raw) || empty;
+    // Migrate from legacy localStorage if present
+    const legacy = localStorage.getItem(getStorageKey());
+    if (legacy) {
+      supabaseStorage.setItem(getStorageKey(), legacy);
+      return JSON.parse(legacy) || empty;
+    }
+  } catch {}
+  return empty;
 }
-function saveFin(d) { localStorage.setItem(getStorageKey(), JSON.stringify(d)); }
-function loadChat() { try { return JSON.parse(localStorage.getItem(getChatKey()) || "[]"); } catch { return []; } }
-function saveChat(m) { localStorage.setItem(getChatKey(), JSON.stringify(m.slice(-60))); }
+function saveFin(d) { supabaseStorage.setItem(getStorageKey(), JSON.stringify(d)); }
+function loadChat() {
+  try {
+    const raw = supabaseStorage.getItem(getChatKey());
+    if (raw) return JSON.parse(raw) || [];
+    const legacy = localStorage.getItem(getChatKey());
+    if (legacy) {
+      supabaseStorage.setItem(getChatKey(), legacy);
+      return JSON.parse(legacy) || [];
+    }
+  } catch {}
+  return [];
+}
+function saveChat(m) { supabaseStorage.setItem(getChatKey(), JSON.stringify(m.slice(-60))); }
 function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
 // ── Number / date helpers ──────────────────────────────────────────────────────

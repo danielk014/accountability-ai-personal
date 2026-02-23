@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { getUserPrefix } from "@/lib/userStore";
+import { supabaseStorage } from "@/api/supabaseStorage";
 import { createPortal } from "react-dom";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -477,7 +478,10 @@ function ProjectDetail({ project, tasks, onBack, queryClient, onEdit, onDelete }
 
   const chatKey = getChatStorageKey(project?.id);
   const [chatMessages, setChatMessages] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(chatKey) || "[]"); } catch { return []; }
+    try {
+      const raw = supabaseStorage.getItem(chatKey) || localStorage.getItem(chatKey);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
   });
   const [chatInput, setChatInput]     = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -486,7 +490,10 @@ function ProjectDetail({ project, tasks, onBack, queryClient, onEdit, onDelete }
   const taskInputRef = useRef(null);
 
   useEffect(() => {
-    try { setChatMessages(JSON.parse(localStorage.getItem(chatKey) || "[]")); } catch {}
+    try {
+      const raw = supabaseStorage.getItem(chatKey) || localStorage.getItem(chatKey);
+      setChatMessages(raw ? JSON.parse(raw) : []);
+    } catch {}
   }, [project?.id]);
 
   useEffect(() => {
@@ -528,18 +535,18 @@ function ProjectDetail({ project, tasks, onBack, queryClient, onEdit, onDelete }
     const userMsg = { role: "user", content: text.trim() };
     const updated = [...chatMessages, userMsg];
     setChatMessages(updated);
-    localStorage.setItem(chatKey, JSON.stringify(updated.slice(-60)));
+    supabaseStorage.setItem(chatKey, JSON.stringify(updated.slice(-60)));
     setChatLoading(true);
     try {
       const systemPrompt = buildProjectSystemPrompt(project, tasks);
       const reply = await projectAgenticLoop(updated, systemPrompt, project.id, queryClient);
       const withReply = [...updated, { role: "assistant", content: reply }];
       setChatMessages(withReply);
-      localStorage.setItem(chatKey, JSON.stringify(withReply.slice(-60)));
+      supabaseStorage.setItem(chatKey, JSON.stringify(withReply.slice(-60)));
     } catch (err) {
       const withErr = [...updated, { role: "assistant", content: `Something went wrong: ${err.message}` }];
       setChatMessages(withErr);
-      localStorage.setItem(chatKey, JSON.stringify(withErr.slice(-60)));
+      supabaseStorage.setItem(chatKey, JSON.stringify(withErr.slice(-60)));
     } finally {
       setChatLoading(false);
     }
@@ -548,7 +555,7 @@ function ProjectDetail({ project, tasks, onBack, queryClient, onEdit, onDelete }
   const deleteChatMessage = (index) => {
     const updated = chatMessages.filter((_, i) => i !== index);
     setChatMessages(updated);
-    localStorage.setItem(chatKey, JSON.stringify(updated));
+    supabaseStorage.setItem(chatKey, JSON.stringify(updated));
     setContextMenu(null);
   };
 

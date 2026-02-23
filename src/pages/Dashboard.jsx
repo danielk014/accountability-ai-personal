@@ -495,11 +495,13 @@ export default function Dashboard() {
       setShowHabitForm(false);
       toast.success("Habit added!");
     },
+    onError: (err) => toast.error("Failed to add habit: " + err.message),
   });
 
   const deleteTaskMutation = useMutation({
     mutationFn: (id) => base44.entities.Task.delete(id),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["tasks"] }); toast.success("Task deleted"); },
+    onError: (err) => toast.error("Failed to delete task: " + err.message),
   });
 
   const deleteTaskWithConfirm = (task) => {
@@ -574,16 +576,19 @@ export default function Dashboard() {
   const createTodoMutation = useMutation({
     mutationFn: (data) => base44.entities.TodoItem.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["todos"] }); toast.success("To-do added!"); },
+    onError: (err) => toast.error("Failed to add to-do: " + err.message),
   });
 
   const updateTodoMutation = useMutation({
     mutationFn: ({ id, data }) => base44.entities.TodoItem.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["todos"] }); setEditingTodo(null); },
+    onError: (err) => toast.error("Failed to update to-do: " + err.message),
   });
 
   const deleteTodoMutation = useMutation({
     mutationFn: (id) => base44.entities.TodoItem.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["todos"] }),
+    onError: (err) => toast.error("Failed to delete to-do: " + err.message),
   });
 
   const handleTodoSubmit = (data) => {
