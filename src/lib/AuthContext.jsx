@@ -28,7 +28,8 @@ export const AuthProvider = ({ children }) => {
           const u = session.user;
           _setUser(u.id, u.email);
           setCurrentUser(u.email);
-          await hydrateStorage(u.id);
+          // Show app immediately — hydrate KV storage in background
+          hydrateStorage(u.id).catch(() => {});
           setUser({
             id:        u.id,
             email:     u.email,
