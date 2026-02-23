@@ -7,47 +7,52 @@ import { setCurrentUser, clearCurrentUser } from '@/lib/userStore';
 
 const AuthContext = createContext();
 
+function applySession(u) {
+  _setUser(u.id, u.email);
+  setCurrentUser(u.email);
+  hydrateStorage(u.id).catch(() => {});
+  return {
+    id:        u.id,
+    email:     u.email,
+    full_name: u.user_metadata?.name || u.email.split('@')[0],
+    picture:   u.user_metadata?.picture,
+  };
+}
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser]                     = useState(null);
-  const [loading, setLoading]               = useState(true);
+  const [user, setUser]                             = useState(null);
+  const [loading, setLoading]                       = useState(true);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
-    // Safety net: unblock loading after 5s if Supabase never responds (e.g. missing env vars)
-    const timeout = setTimeout(() => setLoading(false), 5000);
+    // Step 1: restore session instantly from Supabase's local cache (no network needed)
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (session?.user) setUser(applySession(session.user));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      clearTimeout(timeout);
-      try {
-        if (event === 'PASSWORD_RECOVERY') {
-          setIsPasswordRecovery(true);
-          return;
-        }
+    // Step 2: listen for subsequent auth changes (sign in, sign out, token refresh, recovery)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') return; // already handled by getSession() above
 
-        if (session?.user) {
-          const u = session.user;
-          _setUser(u.id, u.email);
-          setCurrentUser(u.email);
-          // Show app immediately — hydrate KV storage in background
-          hydrateStorage(u.id).catch(() => {});
-          setUser({
-            id:        u.id,
-            email:     u.email,
-            full_name: u.user_metadata?.name || u.email.split('@')[0],
-            picture:   u.user_metadata?.picture,
-          });
-        } else {
-          _clearUser();
-          clearCurrentUser();
-          clearStorage();
-          setUser(null);
-        }
-      } finally {
-        setLoading(false);
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true);
+        return;
+      }
+
+      if (session?.user) {
+        setUser(applySession(session.user));
+      } else {
+        _clearUser();
+        clearCurrentUser();
+        clearStorage();
+        setUser(null);
       }
     });
 
-    return () => { clearTimeout(timeout); subscription.unsubscribe(); };
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = useCallback(async (email, password) => {
