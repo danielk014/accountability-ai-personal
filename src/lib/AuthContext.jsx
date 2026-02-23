@@ -18,31 +18,32 @@ export const AuthProvider = ({ children }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       clearTimeout(timeout);
-      if (event === 'PASSWORD_RECOVERY') {
-        // User clicked the reset link — show reset form, don't route to app
-        setIsPasswordRecovery(true);
-        setLoading(false);
-        return;
-      }
+      try {
+        if (event === 'PASSWORD_RECOVERY') {
+          setIsPasswordRecovery(true);
+          return;
+        }
 
-      if (session?.user) {
-        const u = session.user;
-        _setUser(u.id, u.email);
-        setCurrentUser(u.email);
-        await hydrateStorage(u.id);
-        setUser({
-          id:        u.id,
-          email:     u.email,
-          full_name: u.user_metadata?.name || u.email.split('@')[0],
-          picture:   u.user_metadata?.picture,
-        });
-      } else {
-        _clearUser();
-        clearCurrentUser();
-        clearStorage();
-        setUser(null);
+        if (session?.user) {
+          const u = session.user;
+          _setUser(u.id, u.email);
+          setCurrentUser(u.email);
+          await hydrateStorage(u.id);
+          setUser({
+            id:        u.id,
+            email:     u.email,
+            full_name: u.user_metadata?.name || u.email.split('@')[0],
+            picture:   u.user_metadata?.picture,
+          });
+        } else {
+          _clearUser();
+          clearCurrentUser();
+          clearStorage();
+          setUser(null);
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => { clearTimeout(timeout); subscription.unsubscribe(); };
