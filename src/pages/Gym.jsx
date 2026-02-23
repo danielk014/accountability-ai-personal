@@ -182,6 +182,7 @@ function GymDatePicker({ selectedDate, onSelect, label }) {
   return (
     <div className="relative" ref={ref}>
       <button
+        type="button"
         onClick={() => setOpen(o => !o)}
         className="flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
       >
@@ -192,10 +193,10 @@ function GymDatePicker({ selectedDate, onSelect, label }) {
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-slate-800">{format(baseMonth, "MMMM yyyy")}</span>
             <div className="flex gap-0.5">
-              <button onClick={() => setBaseMonth(subMonths(baseMonth, 1))} className="p-1.5 hover:bg-slate-100 rounded-lg transition">
+              <button type="button" onClick={() => setBaseMonth(subMonths(baseMonth, 1))} className="p-1.5 hover:bg-slate-100 rounded-lg transition">
                 <ChevronLeft className="w-3.5 h-3.5 text-slate-500" />
               </button>
-              <button onClick={() => setBaseMonth(addMonths(baseMonth, 1))} className="p-1.5 hover:bg-slate-100 rounded-lg transition">
+              <button type="button" onClick={() => setBaseMonth(addMonths(baseMonth, 1))} className="p-1.5 hover:bg-slate-100 rounded-lg transition">
                 <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
               </button>
             </div>
@@ -213,6 +214,7 @@ function GymDatePicker({ selectedDate, onSelect, label }) {
               const isToday = isSameDay(day, new Date());
               return (
                 <button
+                  type="button"
                   key={dayStr}
                   onClick={() => { onSelect(dayStr); setOpen(false); }}
                   className={cn(
@@ -481,6 +483,7 @@ function WorkoutTab({ day, weightUnit, onUpdate }) {
 function PhotosTab({ physique, onUpdate }) {
   const panels = physique.panels || [];
   const [fullscreenPanel, setFullscreenPanel] = useState(null);
+  const [zoomedImage, setZoomedImage] = useState(null);
   const [addingPanel, setAddingPanel] = useState(false);
   const [newDate, setNewDate]   = useState(() => new Date().toISOString().split("T")[0]);
   const [newLabel, setNewLabel] = useState("");
@@ -584,7 +587,12 @@ function PhotosTab({ physique, onUpdate }) {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-2xl mx-auto">
                 {fullscreenPanel.images.map(img => (
                   <div key={img.id} className="relative group aspect-square rounded-2xl overflow-hidden bg-slate-100">
-                    <img src={img.dataUrl} alt={img.name} className="w-full h-full object-cover" />
+                    <img
+                      src={img.dataUrl}
+                      alt={img.name}
+                      className="w-full h-full object-cover cursor-zoom-in"
+                      onClick={() => setZoomedImage(img)}
+                    />
                     <button
                       onClick={() => handleDeleteImage(fullscreenPanel.id, img.id, true)}
                       className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition">
@@ -595,6 +603,29 @@ function PhotosTab({ physique, onUpdate }) {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Photo lightbox */}
+      {zoomedImage && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+          onClick={() => setZoomedImage(null)}
+        >
+          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" />
+          <img
+            src={zoomedImage.dataUrl}
+            alt={zoomedImage.name}
+            className="relative z-10 rounded-2xl shadow-2xl object-contain"
+            style={{ maxWidth: "90vw", maxHeight: "90vh" }}
+            onClick={(e) => e.stopPropagation()}
+          />
+          <button
+            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70 transition"
+            onClick={() => setZoomedImage(null)}
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
       )}
 

@@ -2,22 +2,20 @@ import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, startOfWeek, addDays, isSameDay, parseISO } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, ListTodo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useState as useStateLocal } from "react";
 import DayView from "../components/schedule/DayView.jsx";
 import WeekView from "../components/schedule/WeekView.jsx";
 import TaskSidebar from "../components/schedule/TaskSidebar.jsx";
 import TaskFormDialog from "../components/tasks/TaskFormDialog.jsx";
 import CalendarPicker from "../components/schedule/CalendarPicker.jsx";
 
-const CAL_SLOT_HEIGHT = 44; // must match SLOT_HEIGHT in WeekView/DayView
-
 export default function Calendar() {
   const [view, setView] = useState("day");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [mobileDrag, setMobileDrag] = useState(null); // { task, x, y }
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const queryClient = useQueryClient();
 
@@ -95,6 +93,14 @@ export default function Calendar() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] }),
   });
 
+  const deleteTaskMutation = useMutation({
+    mutationFn: (task) => base44.entities.Task.delete(task.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      toast.success("Task deleted");
+    },
+  });
+
   const createTaskMutation = useMutation({
     mutationFn: (data) => base44.entities.Task.create(data),
     onSuccess: () => {
@@ -140,8 +146,17 @@ export default function Calendar() {
   })();
 
   const handleMobileDragStart = (task, startEvent) => {
+    // Slot height differs per view: WeekView=44px/hr, DayView=64px/hr
+    const slotHeight = view === "week" ? 44 : 64;
+    setMobileSidebarOpen(false);
     setMobileDrag({ task, x: startEvent.clientX, y: startEvent.clientY });
-    const onMove = (e) => setMobileDrag(d => d ? { ...d, x: e.clientX, y: e.clientY } : null);
+    const onMove = (e) => {
+      setMobileDrag(d => d ? { ...d, x: e.clientX, y: e.clientY } : null);
+      // Auto-scroll window when near top/bottom
+      const ZONE = 80, SPEED = 10;
+      if (e.clientY > window.innerHeight - ZONE) window.scrollBy(0, SPEED);
+      else if (e.clientY < ZONE) window.scrollBy(0, -SPEED);
+    };
     const onUp = (e) => {
       document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerup", onUp);
@@ -153,7 +168,7 @@ export default function Calendar() {
         const dateStr = col.dataset.calendarDate;
         const rect = col.getBoundingClientRect();
         const relY = Math.max(0, e.clientY - rect.top);
-        const totalMin = Math.round((relY / CAL_SLOT_HEIGHT) * 60 / 15) * 15;
+        const totalMin = Math.round((relY / slotHeight) * 60 / 15) * 15;
         const hour = Math.min(23, Math.floor(totalMin / 60) + 6);
         const min = totalMin % 60;
         const time = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
@@ -211,14 +226,24 @@ export default function Calendar() {
             Today
           </button>
         </div>
-        <Button
-          onClick={() => setShowForm(true)}
-          size="sm"
-          className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white"
-        >
-          <Plus className="w-4 h-4 sm:mr-1" />
-          <span className="hidden sm:inline">Add task</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Mobile-only Tasks toggle */}
+          <button
+            onClick={() => setMobileSidebarOpen(true)}
+            className="md:hidden flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-full font-medium bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all"
+          >
+            <ListTodo className="w-3.5 h-3.5" />
+            Tasks{sidebarTasks.length > 0 && ` (${sidebarTasks.length})`}
+          </button>
+          <Button
+            onClick={() => setShowForm(true)}
+            size="sm"
+            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white"
+          >
+            <Plus className="w-4 h-4 sm:mr-1" />
+            <span className="hidden sm:inline">Add task</span>
+          </Button>
+        </div>
       </div>
 
       {/* Header row 2: view toggle + navigation */}
@@ -252,7 +277,21 @@ export default function Calendar() {
 
       {/* Calendar + sidebar — stacked on mobile, side-by-side on md+ */}
       <div className="flex flex-col md:flex-row gap-4 items-start">
-        {/* Calendar view */}
+        {/* Desktop sidebar (right side) */}
+        <div className="hidden md:block">
+          <TaskSidebar tasks={sidebarTasks} onMobileDragStart={handleMobileDragStart} />
+        </div>
+
+        {/* Mobile sidebar drawer */}
+        <TaskSidebar
+          tasks={sidebarTasks}
+          onMobileDragStart={handleMobileDragStart}
+          mobileOpen={mobileSidebarOpen}
+          onClose={() => setMobileSidebarOpen(false)}
+          mobileOnly
+        />
+
+        {/* Calendar: full-width on mobile, flex-1 on desktop */}
         <div className="flex-1 min-w-0 w-full">
           {view === "day" ? (
             <DayView
@@ -260,7 +299,7 @@ export default function Calendar() {
               tasks={activeTasks.filter(t => taskAppliesOnDate(t, currentDate))}
               completions={completions}
               onToggle={(task, date) => toggleCompletionMutation.mutate({ task, date })}
-              onRemoveTask={(task) => unscheduleTaskMutation.mutate(task)}
+              onRemoveTask={(task) => deleteTaskMutation.mutate(task)}
               onDropTask={onDropTask}
               timezone={timezone}
             />
@@ -274,14 +313,11 @@ export default function Calendar() {
                 base44.entities.Task.update(taskId, { scheduled_time: time, scheduled_date: dayStr });
                 queryClient.invalidateQueries({ queryKey: ["tasks"] });
               }}
-              onRemoveTask={(task) => unscheduleTaskMutation.mutate(task)}
+              onRemoveTask={(task) => deleteTaskMutation.mutate(task)}
               timezone={timezone}
             />
           )}
         </div>
-
-        {/* Task sidebar — full width on mobile, fixed on md+ */}
-        <TaskSidebar tasks={sidebarTasks} onMobileDragStart={handleMobileDragStart} />
       </div>
 
       {/* Mobile drag ghost */}

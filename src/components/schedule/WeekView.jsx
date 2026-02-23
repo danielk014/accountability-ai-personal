@@ -165,6 +165,7 @@ export default function WeekView({ date, tasks, completions, onToggle, onDropTas
   const weekStart = startOfWeek(date, { weekStartsOn: 1 });
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const gridRefs = useRef({});
+  const scrollContainerRef = useRef(null);
   const [dragOver, setDragOver] = useState(null);
   const [localData, setLocalData] = useState({});
   const [completing, setCompleting] = useState({}); // { taskId: true }
@@ -263,6 +264,15 @@ export default function WeekView({ date, tasks, completions, onToggle, onDropTas
       }
 
       const targetDayIdx = type === "move" ? getDayIdxFromX(ev.clientX) : startDayIdx;
+
+      // Auto-scroll the timetable grid when dragging near its edges
+      const sc = scrollContainerRef.current;
+      if (sc) {
+        const { top: scTop, bottom: scBottom } = sc.getBoundingClientRect();
+        const ZONE = 60, SPEED = 8;
+        if (ev.clientY > scBottom - ZONE) sc.scrollTop += SPEED;
+        else if (ev.clientY < scTop + ZONE) sc.scrollTop -= SPEED;
+      }
 
       setActiveDrag(prev => prev ? {
         ...prev,
@@ -375,7 +385,7 @@ export default function WeekView({ date, tasks, completions, onToggle, onDropTas
       </div>
 
       {/* Timetable grid */}
-      <div className="flex overflow-y-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
+      <div ref={scrollContainerRef} className="flex overflow-y-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
         {/* Time gutter */}
         <div className="w-12 flex-shrink-0 border-r border-slate-100 relative" style={{ height: totalGridHeight }}>
           {HOURS.map((hour, idx) => (

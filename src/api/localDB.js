@@ -21,25 +21,25 @@ function getCurrentUserEmail() {
 export function runCleanup() {
   const uid = getCurrentUserId();
 
-  const cutoff7 = new Date();
-  cutoff7.setDate(cutoff7.getDate() - 7);
-  const cutoffDate7 = cutoff7.toISOString().split('T')[0];
-  const cutoffISO7  = cutoff7.toISOString();
-
   const cutoff30 = new Date();
   cutoff30.setDate(cutoff30.getDate() - 30);
   const cutoffDate30 = cutoff30.toISOString().split('T')[0];
+  const cutoffISO30  = cutoff30.toISOString();
 
-  // TaskCompletion — 7 days
+  const cutoff90 = new Date();
+  cutoff90.setDate(cutoff90.getDate() - 90);
+  const cutoffDate90 = cutoff90.toISOString().split('T')[0];
+
+  // TaskCompletion — 30 days (extended from 7 to preserve streak history)
   try {
     const key = `user_${uid}_TaskCompletion`;
     const records = JSON.parse(localStorage.getItem(key) || '[]');
     localStorage.setItem(key, JSON.stringify(
-      records.filter(r => (r.completed_date || '') >= cutoffDate7)
+      records.filter(r => (r.completed_date || '') >= cutoffDate30)
     ));
   } catch {}
 
-  // Completed TodoItems — 7 days
+  // Completed TodoItems — 30 days
   try {
     const key = `user_${uid}_TodoItem`;
     const records = JSON.parse(localStorage.getItem(key) || '[]');
@@ -47,17 +47,17 @@ export function runCleanup() {
       records.filter(r => {
         if (!r.is_done) return true;
         const ts = r.completed_at || r.created_at;
-        return !ts || ts >= cutoffISO7;
+        return !ts || ts >= cutoffISO30;
       })
     ));
   } catch {}
 
-  // Sleep entries — 30 days
+  // Sleep entries — 90 days (extended from 30 for better progress charts)
   try {
     const key = `user_${uid}_Sleep`;
     const records = JSON.parse(localStorage.getItem(key) || '[]');
     localStorage.setItem(key, JSON.stringify(
-      records.filter(r => (r.date || '') >= cutoffDate30)
+      records.filter(r => (r.date || '') >= cutoffDate90)
     ));
   } catch {}
 }

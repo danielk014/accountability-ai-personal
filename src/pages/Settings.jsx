@@ -12,13 +12,42 @@ import { createPageUrl } from "../utils";
 import { useAuth } from "@/lib/AuthContext";
 
 const TIMEZONES = [
-  "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
-  "America/Anchorage", "America/Adak", "Pacific/Honolulu",
-  "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Moscow",
-  "Asia/Dubai", "Asia/Kolkata", "Asia/Bangkok", "Asia/Hong_Kong", "Asia/Tokyo",
-  "Australia/Sydney", "Australia/Melbourne", "Australia/Brisbane",
+  // Americas
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Anchorage",
+  "Pacific/Honolulu",
+  "America/Sao_Paulo",
+  "America/Argentina/Buenos_Aires",
+  "America/Bogota",
+  "America/Mexico_City",
+  "America/Toronto",
+  "America/Vancouver",
+  // Europe
+  "Europe/London",
+  "Europe/Berlin",
+  "Europe/Moscow",
+  "Europe/Istanbul",
+  // Africa & Middle East
+  "Africa/Cairo",
+  "Asia/Dubai",
+  // Asia
+  "Asia/Kolkata",
+  "Asia/Dhaka",
+  "Asia/Bangkok",
+  "Asia/Singapore",
+  "Asia/Hong_Kong",
+  "Asia/Shanghai",
+  "Asia/Tokyo",
+  "Asia/Seoul",
+  // Pacific
+  "Australia/Sydney",
+  "Australia/Brisbane",
   "Pacific/Auckland",
-];
+  "Pacific/Honolulu",
+].filter((v, i, a) => a.indexOf(v) === i); // deduplicate
 
 const SECTIONS = [
   { key: "context_about", label: "About Me", icon: User, color: "bg-violet-100 text-violet-600", placeholder: "e.g. I'm 28, live in NYC, introvert who loves hiking..." },
@@ -413,10 +442,21 @@ export default function Settings() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["profile"] }),
   });
 
-  // Auto-save timezone immediately when changed — no intermediate state that fights re-fetches
-  const handleTimezoneChange = (tz) => {
-    saveMutation.mutate({ timezone: tz });
-    toast.success("Timezone saved!");
+  // Auto-save timezone immediately when changed — fetch fresh profile to avoid stale-closure bugs
+  const handleTimezoneChange = async (tz) => {
+    try {
+      if (!user?.email) return;
+      const freshProfiles = await base44.entities.UserProfile.filter({ created_by: user.email });
+      if (freshProfiles.length > 0) {
+        await base44.entities.UserProfile.update(freshProfiles[0].id, { timezone: tz });
+      } else {
+        await base44.entities.UserProfile.create({ timezone: tz });
+      }
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("Timezone saved!");
+    } catch {
+      toast.error("Failed to save timezone. Please try again.");
+    }
   };
 
   const getItems = (key) => profile?.[key] || [];

@@ -10,7 +10,7 @@ export default function Login() {
 
   const [mode, setMode]         = useState("login");
   const [name, setName]         = useState("");
-  const [email, setEmail]       = useState("");
+  const [email, setEmail]       = useState(() => localStorage.getItem("last_login_email") || "");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw]     = useState(false);
   const [error, setError]       = useState("");
@@ -25,6 +25,7 @@ export default function Login() {
       return;
     }
     setLoading(true);
+    localStorage.setItem("last_login_email", email);
     try {
       if (mode === "login") {
         await login(email, password);

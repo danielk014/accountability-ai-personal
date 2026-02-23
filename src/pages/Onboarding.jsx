@@ -10,13 +10,41 @@ import { createPageUrl } from "../utils";
 import { useNavigate } from "react-router-dom";
 
 const TIMEZONES = [
-  "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
-  "America/Anchorage", "Pacific/Honolulu",
-  "Europe/London", "Europe/Paris", "Europe/Berlin", "Europe/Moscow",
-  "Asia/Dubai", "Asia/Kolkata", "Asia/Bangkok", "Asia/Hong_Kong", "Asia/Tokyo",
-  "Australia/Sydney", "Australia/Melbourne",
+  // Americas
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Anchorage",
+  "Pacific/Honolulu",
+  "America/Sao_Paulo",
+  "America/Argentina/Buenos_Aires",
+  "America/Bogota",
+  "America/Mexico_City",
+  "America/Toronto",
+  "America/Vancouver",
+  // Europe
+  "Europe/London",
+  "Europe/Berlin",
+  "Europe/Moscow",
+  "Europe/Istanbul",
+  // Africa & Middle East
+  "Africa/Cairo",
+  "Asia/Dubai",
+  // Asia
+  "Asia/Kolkata",
+  "Asia/Dhaka",
+  "Asia/Bangkok",
+  "Asia/Singapore",
+  "Asia/Hong_Kong",
+  "Asia/Shanghai",
+  "Asia/Tokyo",
+  "Asia/Seoul",
+  // Pacific
+  "Australia/Sydney",
+  "Australia/Brisbane",
   "Pacific/Auckland",
-];
+].filter((v, i, a) => a.indexOf(v) === i); // deduplicate
 
 const PERSONALITY_PRESETS = [
   {
@@ -60,10 +88,12 @@ export default function Onboarding() {
   const [error, setError] = useState("");
   const [userName, setUserName] = useState("");
 
-  // Step 1 — Timezone
+  // Step 1 — Timezone (snap to list if browser timezone isn't in it)
   const [timezone, setTimezone] = useState(() => {
-    try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York"; }
-    catch { return "America/New_York"; }
+    try {
+      const detected = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+      return TIMEZONES.includes(detected) ? detected : "America/New_York";
+    } catch { return "America/New_York"; }
   });
 
   // Step 2 — AI personality
