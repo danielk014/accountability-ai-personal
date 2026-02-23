@@ -346,15 +346,19 @@ export default function Settings() {
 
   const profile = profiles[0];
 
+  // Used only for AI personality (simple string field, not array)
   const saveMutation = useMutation({
     mutationFn: async (data) => {
-      if (profile?.id) {
-        await base44.entities.UserProfile.update(profile.id, data);
+      const freshProfiles = await base44.entities.UserProfile.filter({ created_by: user?.email });
+      const freshProfile = freshProfiles[0];
+      if (freshProfile?.id) {
+        await base44.entities.UserProfile.update(freshProfile.id, data);
       } else {
         await base44.entities.UserProfile.create(data);
       }
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["profile"] }),
+    onError: () => toast.error("Failed to save. Please try again."),
   });
 
   // Auto-save timezone immediately when changed — fetch fresh profile to avoid stale-closure bugs
@@ -376,19 +380,48 @@ export default function Settings() {
 
   const getItems = (key) => profile?.[key] || [];
 
-  const handleAdd = (key, value) => {
-    saveMutation.mutate({ [key]: [...getItems(key), value] });
-    toast.success("Saved!");
+  const handleAdd = async (key, value) => {
+    try {
+      const freshProfiles = await base44.entities.UserProfile.filter({ created_by: user?.email });
+      const freshProfile = freshProfiles[0];
+      const existing = freshProfile?.[key] || [];
+      const newArray = [...existing, value];
+      if (freshProfile?.id) {
+        await base44.entities.UserProfile.update(freshProfile.id, { [key]: newArray });
+      } else {
+        await base44.entities.UserProfile.create({ [key]: newArray });
+      }
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("Saved!");
+    } catch {
+      toast.error("Failed to save. Please try again.");
+    }
   };
 
-  const handleUpdate = (key, idx, value) => {
-    const arr = [...getItems(key)];
-    arr[idx] = value;
-    saveMutation.mutate({ [key]: arr });
+  const handleUpdate = async (key, idx, value) => {
+    try {
+      const freshProfiles = await base44.entities.UserProfile.filter({ created_by: user?.email });
+      const freshProfile = freshProfiles[0];
+      const existing = freshProfile?.[key] || [];
+      const newArray = [...existing];
+      newArray[idx] = value;
+      await base44.entities.UserProfile.update(freshProfile.id, { [key]: newArray });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    } catch {
+      toast.error("Failed to save. Please try again.");
+    }
   };
 
-  const handleDelete = (key, idx) => {
-    saveMutation.mutate({ [key]: getItems(key).filter((_, i) => i !== idx) });
+  const handleDelete = async (key, idx) => {
+    try {
+      const freshProfiles = await base44.entities.UserProfile.filter({ created_by: user?.email });
+      const freshProfile = freshProfiles[0];
+      const existing = freshProfile?.[key] || [];
+      await base44.entities.UserProfile.update(freshProfile.id, { [key]: existing.filter((_, i) => i !== idx) });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+    } catch {
+      toast.error("Failed to save. Please try again.");
+    }
   };
 
   const birthdayTaskMutation = useMutation({

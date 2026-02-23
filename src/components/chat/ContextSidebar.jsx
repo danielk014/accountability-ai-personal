@@ -335,30 +335,40 @@ export default function ContextSidebar() {
 
   const getItems = (key) => profile?.[key] || [];
 
+  // Fetch fresh profile inside mutation to avoid stale-closure bugs with Supabase
   const saveMutation = useMutation({
-    mutationFn: async (data) => {
-      if (profile?.id) {
-        await base44.entities.UserProfile.update(profile.id, data);
+    mutationFn: async ({ key, action, value, idx }) => {
+      if (!user?.email) throw new Error("Not authenticated");
+      const freshProfiles = await base44.entities.UserProfile.filter({ created_by: user.email });
+      const freshProfile = freshProfiles[0];
+      const existing = freshProfile?.[key] || [];
+      let newArray;
+      if (action === 'add') newArray = [...existing, value];
+      else if (action === 'update') { newArray = [...existing]; newArray[idx] = value; }
+      else if (action === 'delete') newArray = existing.filter((_, i) => i !== idx);
+      if (freshProfile?.id) {
+        await base44.entities.UserProfile.update(freshProfile.id, { [key]: newArray });
       } else {
-        await base44.entities.UserProfile.create(data);
+        await base44.entities.UserProfile.create({ [key]: newArray });
       }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["profile"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success("Saved!");
+    },
+    onError: () => toast.error("Failed to save. Please try again."),
   });
 
   const handleAdd = (key, value) => {
-    saveMutation.mutate({ [key]: [...getItems(key), value] });
-    toast.success("Saved!");
+    saveMutation.mutate({ key, action: 'add', value });
   };
 
   const handleUpdate = (key, idx, value) => {
-    const arr = [...getItems(key)];
-    arr[idx] = value;
-    saveMutation.mutate({ [key]: arr });
+    saveMutation.mutate({ key, action: 'update', idx, value });
   };
 
   const handleDelete = (key, idx) => {
-    saveMutation.mutate({ [key]: getItems(key).filter((_, i) => i !== idx) });
+    saveMutation.mutate({ key, action: 'delete', idx });
   };
 
   const birthdayTaskMutation = useMutation({
