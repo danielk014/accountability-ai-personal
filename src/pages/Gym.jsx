@@ -448,22 +448,32 @@ function WorkoutTab({ day, weightUnit, onUpdate }) {
           <p className="text-xs mt-1">Add your first exercise for {day.name}</p>
         </div>
       )}
-      {exercises.map((ex, idx) => (
-        <div
-          key={ex.id}
-          draggable
-          onDragStart={() => setDragIndex(idx)}
-          onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
-          onDrop={() => handleReorder(dragIndex, idx)}
-          onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
-        >
-          <ExerciseCard exercise={ex} dayConfig={dayConfig} weightUnit={weightUnit}
-            onDelete={handleDeleteExercise} onAddSet={handleAddSet}
-            onDeleteSet={handleDeleteSet} onEditSet={handleEditSet} onEditName={handleEditName}
-            isDragOver={dragOverIndex === idx && dragIndex !== idx}
-            dragHandleProps={{}} />
-        </div>
-      ))}
+      {exercises.map((ex, idx) => {
+        const isCardDragging = dragIndex === idx;
+        const isCardDragOver = dragOverIndex === idx && dragIndex !== idx;
+        return (
+          <React.Fragment key={ex.id}>
+            {/* Blue insertion line above the card we're hovering over */}
+            {isCardDragOver && (
+              <div className="h-0.5 rounded-full bg-indigo-500 mx-1 mb-1 transition-all" />
+            )}
+            <div
+              draggable
+              onDragStart={() => setDragIndex(idx)}
+              onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
+              onDrop={() => handleReorder(dragIndex, idx)}
+              onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+              className={cn("transition-all duration-150", isCardDragging && "opacity-40 scale-[0.98]")}
+            >
+              <ExerciseCard exercise={ex} dayConfig={dayConfig} weightUnit={weightUnit}
+                onDelete={handleDeleteExercise} onAddSet={handleAddSet}
+                onDeleteSet={handleDeleteSet} onEditSet={handleEditSet} onEditName={handleEditName}
+                isDragOver={isCardDragOver}
+                dragHandleProps={{}} />
+            </div>
+          </React.Fragment>
+        );
+      })}
       {addingExercise ? (
         <form onSubmit={handleAddExercise} className="flex items-center gap-2 mt-2">
           <input autoFocus value={newName} onChange={e => setNewName(e.target.value)}
@@ -1319,11 +1329,19 @@ export default function Gym() {
           {/* Workout day tabs with double-confirm delete + drag reorder */}
           {(gymData.workout_days || []).map((day, idx) => {
             const isPending = pendingDeleteDayId === day.id;
+            const isDragging = dayDragIndex === idx;
             const isDayDragOver = dayDragOverIndex === idx && dayDragIndex !== idx;
             return (
+              <React.Fragment key={day.id}>
+                {/* Blue insertion line — appears before the tab we're hovering over */}
+                {isDayDragOver && (
+                  <div className="w-0.5 self-stretch my-1.5 rounded-full bg-indigo-500 flex-shrink-0 transition-all" />
+                )}
               <div
-                key={day.id}
-                className={cn("relative flex-shrink-0 group/tab cursor-grab active:cursor-grabbing transition-all", isDayDragOver && "opacity-50")}
+                className={cn(
+                  "relative flex-shrink-0 group/tab cursor-grab active:cursor-grabbing transition-all duration-150",
+                  isDragging && "opacity-40 scale-95 shadow-lg",
+                )}
                 draggable
                 onDragStart={() => setDayDragIndex(idx)}
                 onDragOver={(e) => { e.preventDefault(); setDayDragOverIndex(idx); }}
@@ -1358,6 +1376,7 @@ export default function Gym() {
                   </button>
                 )}
               </div>
+              </React.Fragment>
             );
           })}
 
