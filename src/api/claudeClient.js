@@ -4,7 +4,9 @@ import { addReminder, getReminders, deleteReminder } from '@/lib/reminderEngine'
 
 const BASE_SYSTEM = `You are the user's ride-or-die best friend and accountability buddy. Be warm, playful, and encouraging. Talk like a real friend, not a chatbot. Help them stay accountable to their goals, celebrate wins, and support them when they're struggling. Keep responses concise and conversational.
 
-You have tools to directly manage the user's data. When they ask you to add, edit, delete, or schedule anything — sleep entries, tasks, habits, or calendar events — use your tools to do it immediately without asking for confirmation unless critical information is missing. After using a tool, briefly confirm what you did in a friendly way.
+You have tools to directly manage the user's data. When they ask you to add, edit, delete, or schedule anything — sleep entries, tasks, habits, calendar events, people, or context — use your tools to do it immediately without asking for confirmation unless critical information is missing. After using a tool, briefly confirm what you did in a friendly way.
+
+When the user mentions someone important in their life (a friend, family member, partner, etc.) or shares personal info about themselves (where they live, their job, a goal, etc.), proactively save it using add_person or update_context so it's remembered for future conversations.
 
 Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 Current time: ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
@@ -148,9 +150,83 @@ const TOOLS = [
       required: ["text"],
     },
   },
+  {
+    name: "add_person",
+    description: "Add a person to the user's 'People in My Life'. Use this when the user mentions someone important and wants to save them, or when they say 'remember that X is my ...'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Person's name" },
+        relationship: { type: "string", description: "Relationship type, e.g. 'best friend', 'mom', 'partner', 'coworker'" },
+        birthday: { type: "string", description: "Birthday in YYYY-MM-DD format" },
+        interests: { type: "string", description: "Their interests, comma-separated" },
+        notes: { type: "string", description: "Any extra notes about this person" },
+      },
+      required: ["name"],
+    },
+  },
+  {
+    name: "update_person",
+    description: "Update an existing person in the user's 'People in My Life'. Use to change their relationship, birthday, interests, or notes.",
+    input_schema: {
+      type: "object",
+      properties: {
+        person_name: { type: "string", description: "Name of the person to update (partial match)" },
+        name: { type: "string", description: "New name" },
+        relationship: { type: "string", description: "New relationship" },
+        birthday: { type: "string", description: "New birthday in YYYY-MM-DD format" },
+        interests: { type: "string", description: "New interests" },
+        notes: { type: "string", description: "New notes" },
+      },
+      required: ["person_name"],
+    },
+  },
+  {
+    name: "delete_person",
+    description: "Remove a person from the user's 'People in My Life'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        person_name: { type: "string", description: "Name of the person to remove (partial match)" },
+      },
+      required: ["person_name"],
+    },
+  },
+  {
+    name: "update_context",
+    description: "Add or remove items from the user's personal context sections. Use when they share new info about themselves (About Me, Work, Goals, Extra notes).",
+    input_schema: {
+      type: "object",
+      properties: {
+        section: {
+          type: "string",
+          enum: ["about", "work", "goals", "notes"],
+          description: "Which section: 'about' = About Me, 'work' = Work & Schedule, 'goals' = Goals & Plans, 'notes' = Extra Context",
+        },
+        action: {
+          type: "string",
+          enum: ["add", "remove"],
+          description: "Add a new item or remove an existing one",
+        },
+        text: { type: "string", description: "The text to add or remove (partial match for remove)" },
+      },
+      required: ["section", "action", "text"],
+    },
+  },
 ];
 
 // ─── Tool execution ──────────────────────────────────────────────────────────
+
+function nextBirthdayDate(birthdayStr) {
+  if (!birthdayStr) return null;
+  const today = new Date();
+  const bday = new Date(birthdayStr + "T00:00:00");
+  const pad = n => String(n).padStart(2, "0");
+  const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const thisYear = new Date(today.getFullYear(), bday.getMonth(), bday.getDate());
+  if (thisYear >= today) return fmt(thisYear);
+  return fmt(new Date(today.getFullYear() + 1, bday.getMonth(), bday.getDate()));
+}
 
 function calcHours(sleepTime, wakeTime) {
   const [sh, sm] = sleepTime.split(":").map(Number);
@@ -292,6 +368,122 @@ async function executeTool(name, input) {
         deleteReminder(match.id);
         window.dispatchEvent(new CustomEvent('reminders-updated'));
         return { success: true, deleted: match.text };
+      }
+
+      case "add_person": {
+        const profiles = await base44.entities.UserProfile.filter({ created_by: user.email });
+        const profile = profiles[0];
+        const existing = profile?.context_people || [];
+        const newPerson = {
+          name: input.name,
+          relationship: input.relationship || "",
+          birthday: input.birthday || "",
+          interests: input.interests || "",
+          notes: input.notes || "",
+        };
+        const updatedPeople = [...existing, JSON.stringify(newPerson)];
+        if (profile?.id) {
+          await base44.entities.UserProfile.update(profile.id, { context_people: updatedPeople });
+        } else {
+          await base44.entities.UserProfile.create({ context_people: updatedPeople });
+        }
+        queryClientInstance.invalidateQueries({ queryKey: ["profile"] });
+        // Auto-create birthday task + calendar event if birthday provided
+        if (input.birthday) {
+          const scheduledDate = nextBirthdayDate(input.birthday);
+          if (scheduledDate) {
+            const taskName = `${input.name}'s Birthday 🎂`;
+            const existingTasks = await base44.entities.Task.filter({ name: taskName });
+            if (existingTasks.length === 0) {
+              await base44.entities.Task.create({ name: taskName, frequency: "once", scheduled_date: scheduledDate, scheduled_time: "09:00", category: "social", is_active: true });
+              queryClientInstance.invalidateQueries({ queryKey: ["tasks"] });
+            }
+            try {
+              await base44.functions.invoke("addCalendarEvent", { title: taskName, startTime: `${scheduledDate}T09:00`, description: `Birthday for ${input.name}` });
+              queryClientInstance.invalidateQueries({ queryKey: ["calendarEvents"] });
+            } catch {}
+          }
+        }
+        return { success: true, action: "added", person: newPerson };
+      }
+
+      case "update_person": {
+        const profiles = await base44.entities.UserProfile.filter({ created_by: user.email });
+        const profile = profiles[0];
+        if (!profile) return { error: "No profile found" };
+        const people = (profile.context_people || []).map(s => { try { return JSON.parse(s); } catch { return { name: s }; } });
+        const idx = people.findIndex(p => p.name?.toLowerCase().includes(input.person_name.toLowerCase()));
+        if (idx === -1) return { error: `No person found matching "${input.person_name}"` };
+        const updated = { ...people[idx] };
+        if (input.name !== undefined) updated.name = input.name;
+        if (input.relationship !== undefined) updated.relationship = input.relationship;
+        if (input.birthday !== undefined) updated.birthday = input.birthday;
+        if (input.interests !== undefined) updated.interests = input.interests;
+        if (input.notes !== undefined) updated.notes = input.notes;
+        people[idx] = updated;
+        await base44.entities.UserProfile.update(profile.id, { context_people: people.map(p => JSON.stringify(p)) });
+        queryClientInstance.invalidateQueries({ queryKey: ["profile"] });
+        // Update birthday task + calendar event if birthday changed
+        if (input.birthday) {
+          const scheduledDate = nextBirthdayDate(input.birthday);
+          if (scheduledDate) {
+            const taskName = `${updated.name}'s Birthday 🎂`;
+            const existingTasks = await base44.entities.Task.filter({ name: taskName });
+            if (existingTasks.length > 0) {
+              await base44.entities.Task.update(existingTasks[0].id, { scheduled_date: scheduledDate, is_active: true });
+            } else {
+              await base44.entities.Task.create({ name: taskName, frequency: "once", scheduled_date: scheduledDate, scheduled_time: "09:00", category: "social", is_active: true });
+            }
+            queryClientInstance.invalidateQueries({ queryKey: ["tasks"] });
+            try {
+              await base44.functions.invoke("addCalendarEvent", { title: taskName, startTime: `${scheduledDate}T09:00`, description: `Birthday for ${updated.name}` });
+              queryClientInstance.invalidateQueries({ queryKey: ["calendarEvents"] });
+            } catch {}
+          }
+        }
+        return { success: true, action: "updated", person: updated };
+      }
+
+      case "delete_person": {
+        const profiles = await base44.entities.UserProfile.filter({ created_by: user.email });
+        const profile = profiles[0];
+        if (!profile) return { error: "No profile found" };
+        const people = (profile.context_people || []).map(s => { try { return JSON.parse(s); } catch { return { name: s }; } });
+        const idx = people.findIndex(p => p.name?.toLowerCase().includes(input.person_name.toLowerCase()));
+        if (idx === -1) return { error: `No person found matching "${input.person_name}"` };
+        const deletedName = people[idx].name;
+        people.splice(idx, 1);
+        await base44.entities.UserProfile.update(profile.id, { context_people: people.map(p => JSON.stringify(p)) });
+        queryClientInstance.invalidateQueries({ queryKey: ["profile"] });
+        return { success: true, action: "deleted", person: deletedName };
+      }
+
+      case "update_context": {
+        const sectionMap = { about: "context_about", work: "context_work", goals: "context_goals", notes: "context_notes" };
+        const key = sectionMap[input.section];
+        if (!key) return { error: `Unknown section: ${input.section}` };
+        const profiles = await base44.entities.UserProfile.filter({ created_by: user.email });
+        const profile = profiles[0];
+        const items = profile?.[key] || [];
+        if (input.action === "add") {
+          const updatedItems = [...items, input.text];
+          if (profile?.id) {
+            await base44.entities.UserProfile.update(profile.id, { [key]: updatedItems });
+          } else {
+            await base44.entities.UserProfile.create({ [key]: [input.text] });
+          }
+          queryClientInstance.invalidateQueries({ queryKey: ["profile"] });
+          return { success: true, action: "added", section: input.section, text: input.text };
+        } else if (input.action === "remove") {
+          const removeIdx = items.findIndex(i => i.toLowerCase().includes(input.text.toLowerCase()));
+          if (removeIdx === -1) return { error: `No item found matching "${input.text}" in ${input.section}` };
+          const removed = items[removeIdx];
+          const updatedItems = items.filter((_, i) => i !== removeIdx);
+          await base44.entities.UserProfile.update(profile.id, { [key]: updatedItems });
+          queryClientInstance.invalidateQueries({ queryKey: ["profile"] });
+          return { success: true, action: "removed", section: input.section, text: removed };
+        }
+        return { error: "Unknown action" };
       }
 
       default:

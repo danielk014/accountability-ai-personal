@@ -374,6 +374,15 @@ export default function ContextSidebar() {
         await base44.entities.Task.create({ name: taskName, frequency: "once", scheduled_date: scheduledDate, scheduled_time: "09:00", category: "social", is_active: true });
       }
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      // Also add to the calendar widget
+      try {
+        await base44.functions.invoke("addCalendarEvent", {
+          title: taskName,
+          startTime: `${scheduledDate}T09:00`,
+          description: `Birthday for ${name}`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["calendarEvents"] });
+      } catch {}
     },
   });
 
