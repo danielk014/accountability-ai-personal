@@ -543,13 +543,41 @@ export async function sendMessageToClaudeWithContext(history, extraContext) {
 const _GYM_KEY_SUFFIX = 'gym_tracker_v1';
 const _getGymKey = () => `${getUserPrefix()}${_GYM_KEY_SUFFIX}`;
 
+function _migrateGymData(parsed) {
+  const days = [];
+  if (Array.isArray(parsed.push_exercises)) {
+    days.push({ id: 'push-default', name: 'Push', colorIndex: 0, exercises: parsed.push_exercises });
+  }
+  if (Array.isArray(parsed.pull_exercises)) {
+    days.push({ id: 'pull-default', name: 'Pull', colorIndex: 1, exercises: parsed.pull_exercises });
+  }
+  if (Array.isArray(parsed.legs_exercises)) {
+    days.push({ id: 'legs-default', name: 'Legs', colorIndex: 2, exercises: parsed.legs_exercises });
+  }
+  if (days.length === 0) {
+    days.push(
+      { id: 'push-default', name: 'Push', colorIndex: 0, exercises: [] },
+      { id: 'pull-default', name: 'Pull', colorIndex: 1, exercises: [] },
+      { id: 'legs-default', name: 'Legs', colorIndex: 2, exercises: [] },
+    );
+  }
+  return { weight_unit: parsed.weight_unit || 'kg', workout_days: days };
+}
+
 function _loadGymData() {
   try {
     const raw = localStorage.getItem(_getGymKey());
-    return raw ? JSON.parse(raw) : { push_exercises: [], pull_exercises: [], legs_exercises: [], current_weight: "", weight_unit: "kg" };
-  } catch {
-    return { push_exercises: [], pull_exercises: [], legs_exercises: [], current_weight: "", weight_unit: "kg" };
-  }
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (!parsed.workout_days) {
+        const migrated = _migrateGymData(parsed);
+        localStorage.setItem(_getGymKey(), JSON.stringify(migrated));
+        return migrated;
+      }
+      return parsed;
+    }
+  } catch {}
+  return { weight_unit: 'kg', workout_days: [] };
 }
 
 function _saveGymData(data) {
@@ -561,110 +589,116 @@ function _gymId() {
   return Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
 }
 
+function _findDay(data, dayName) {
+  return (data.workout_days || []).find(d =>
+    d.name.toLowerCase() === dayName.toLowerCase() ||
+    d.name.toLowerCase().includes(dayName.toLowerCase())
+  ) || null;
+}
+
+function _findExercise(day, exerciseName) {
+  return (day.exercises || []).find(e =>
+    e.name.toLowerCase().includes(exerciseName.toLowerCase())
+  ) || null;
+}
+
 const GYM_TOOLS = [
   {
     name: "gym_get_data",
-    description: "Get the user's current gym data. ALWAYS call this first before answering questions or giving advice, so you have accurate current information.",
+    description: "Get the user's current gym data including all workout days and exercises. ALWAYS call this first before answering questions or giving advice.",
     input_schema: { type: "object", properties: {} },
   },
   {
     name: "gym_add_exercise",
-    description: "Add a new exercise to push, pull, or legs day. Call this immediately when the user asks to add an exercise — do not just say you added it.",
+    description: "Add a new exercise to a workout day. Call this immediately when the user asks to add an exercise.",
     input_schema: {
       type: "object",
       properties: {
-        day: { type: "string", enum: ["push", "pull", "legs"], description: "Workout day" },
+        day_name: { type: "string", description: "Name of the workout day (e.g. 'Push', 'Upper', 'Monday')" },
         name: { type: "string", description: "Exercise name e.g. 'Bench Press'" },
       },
-      required: ["day", "name"],
+      required: ["day_name", "name"],
     },
   },
   {
     name: "gym_delete_exercise",
-    description: "Delete an exercise from the workout plan.",
+    description: "Delete an exercise from a workout day.",
     input_schema: {
       type: "object",
       properties: {
-        day: { type: "string", enum: ["push", "pull", "legs"] },
+        day_name: { type: "string", description: "Name of the workout day" },
         exercise_name: { type: "string", description: "Exercise name to delete (partial match)" },
       },
-      required: ["day", "exercise_name"],
+      required: ["day_name", "exercise_name"],
     },
   },
   {
     name: "gym_log_progress",
-    description: "Record a weight progression entry for an exercise (with today's date) so the user can track strength progress over time.",
+    description: "Record a weight progression entry for an exercise (with today's date) so the user can track strength gains over time.",
     input_schema: {
       type: "object",
       properties: {
-        day: { type: "string", enum: ["push", "pull", "legs"] },
+        day_name: { type: "string", description: "Name of the workout day" },
         exercise_name: { type: "string", description: "Exercise name (partial match)" },
         weight: { type: "number", description: "Weight used in the user's unit (kg or lbs)" },
         reps: { type: "number", description: "Reps performed" },
         note: { type: "string", description: "Optional note e.g. 'new PR', 'felt strong'" },
       },
-      required: ["day", "exercise_name", "weight", "reps"],
+      required: ["day_name", "exercise_name", "weight", "reps"],
     },
   },
   {
     name: "gym_add_set",
-    description: "Add a set (weight + reps) to an exercise for today's workout session.",
+    description: "Add a set (weight + reps) to an exercise for the current workout session.",
     input_schema: {
       type: "object",
       properties: {
-        day: { type: "string", enum: ["push", "pull", "legs"] },
+        day_name: { type: "string", description: "Name of the workout day" },
         exercise_name: { type: "string", description: "Exercise name (partial match)" },
         weight: { type: "number" },
         reps: { type: "number" },
       },
-      required: ["day", "exercise_name", "weight", "reps"],
+      required: ["day_name", "exercise_name", "weight", "reps"],
     },
   },
 ];
-
-const _GYM_FIELD_MAP = { push: "push_exercises", pull: "pull_exercises", legs: "legs_exercises" };
 
 async function _executeGymTool(name, input) {
   const data = _loadGymData();
   switch (name) {
     case "gym_get_data": {
-      const result = { weight_unit: data.weight_unit, current_weight: data.current_weight, days: {} };
-      for (const [day, field] of Object.entries(_GYM_FIELD_MAP)) {
-        result.days[day] = (data[field] || []).map(ex => ({
+      const days = (data.workout_days || []).map(day => ({
+        name: day.name,
+        exercises: (day.exercises || []).map(ex => ({
           name: ex.name,
           sets: ex.sets || [],
           progress_entries: (ex.weight_log || []).length,
           latest_weight: (ex.weight_log || []).at(-1)?.weight ?? (ex.sets || []).at(-1)?.weight ?? null,
-        }));
-      }
-      return result;
+        })),
+      }));
+      return { weight_unit: data.weight_unit, current_weight: data.current_weight, days };
     }
     case "gym_add_exercise": {
-      const field = _GYM_FIELD_MAP[input.day];
-      if (!field) return { error: "Invalid day" };
-      const exercises = data[field] || [];
-      if (exercises.find(e => e.name.toLowerCase() === input.name.toLowerCase())) {
-        return { error: `"${input.name}" already exists on ${input.day} day` };
-      }
-      data[field] = [...exercises, { id: _gymId(), name: input.name, sets: [], weight_log: [] }];
+      const day = _findDay(data, input.day_name);
+      if (!day) return { error: `No workout day matching "${input.day_name}". Available: ${(data.workout_days || []).map(d => d.name).join(', ')}` };
+      if (_findExercise(day, input.name)) return { error: `"${input.name}" already exists in ${day.name}` };
+      day.exercises = [...(day.exercises || []), { id: _gymId(), name: input.name, sets: [], weight_log: [] }];
       _saveGymData(data);
-      return { success: true, message: `Added "${input.name}" to ${input.day} day` };
+      return { success: true, message: `Added "${input.name}" to ${day.name} day` };
     }
     case "gym_delete_exercise": {
-      const field = _GYM_FIELD_MAP[input.day];
-      if (!field) return { error: "Invalid day" };
-      const exercises = data[field] || [];
-      const idx = exercises.findIndex(e => e.name.toLowerCase().includes(input.exercise_name.toLowerCase()));
-      if (idx === -1) return { error: `No exercise matching "${input.exercise_name}" on ${input.day} day` };
-      const deleted = exercises[idx].name;
-      data[field] = exercises.filter((_, i) => i !== idx);
+      const day = _findDay(data, input.day_name);
+      if (!day) return { error: `No workout day matching "${input.day_name}"` };
+      const ex = _findExercise(day, input.exercise_name);
+      if (!ex) return { error: `No exercise matching "${input.exercise_name}" in ${day.name}` };
+      day.exercises = day.exercises.filter(e => e.id !== ex.id);
       _saveGymData(data);
-      return { success: true, message: `Deleted "${deleted}"` };
+      return { success: true, message: `Deleted "${ex.name}" from ${day.name}` };
     }
     case "gym_log_progress": {
-      const field = _GYM_FIELD_MAP[input.day];
-      if (!field) return { error: "Invalid day" };
-      const ex = (data[field] || []).find(e => e.name.toLowerCase().includes(input.exercise_name.toLowerCase()));
+      const day = _findDay(data, input.day_name);
+      if (!day) return { error: `No workout day matching "${input.day_name}"` };
+      const ex = _findExercise(day, input.exercise_name);
       if (!ex) return { error: `No exercise matching "${input.exercise_name}"` };
       if (!ex.weight_log) ex.weight_log = [];
       ex.weight_log.push({ id: _gymId(), date: new Date().toISOString().split('T')[0], weight: input.weight, reps: input.reps, note: input.note || null });
@@ -672,9 +706,9 @@ async function _executeGymTool(name, input) {
       return { success: true, message: `Logged ${input.weight}${data.weight_unit} × ${input.reps} for "${ex.name}"` };
     }
     case "gym_add_set": {
-      const field = _GYM_FIELD_MAP[input.day];
-      if (!field) return { error: "Invalid day" };
-      const ex = (data[field] || []).find(e => e.name.toLowerCase().includes(input.exercise_name.toLowerCase()));
+      const day = _findDay(data, input.day_name);
+      if (!day) return { error: `No workout day matching "${input.day_name}"` };
+      const ex = _findExercise(day, input.exercise_name);
       if (!ex) return { error: `No exercise matching "${input.exercise_name}"` };
       if (!ex.sets) ex.sets = [];
       ex.sets.push({ id: _gymId(), weight: input.weight, reps: input.reps });

@@ -85,4 +85,9 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Prevent iOS auto-zoom on input focus — inputs must be at least 16px */
+  input, textarea, select {
+    font-size: max(16px, 1em);
+  }
 }
