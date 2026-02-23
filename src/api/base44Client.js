@@ -1,4 +1,4 @@
-import { localDB } from './localDB';
+import { supabaseDB } from './supabaseDB';
 
-// Local development mode — all data stored in localStorage
-export const base44 = localDB;
+// All data stored in Supabase
+export const base44 = supabaseDB;
