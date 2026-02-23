@@ -8,12 +8,19 @@ import { setCurrentUser, clearCurrentUser } from '@/lib/userStore';
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser]       = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser]                     = useState(null);
+  const [loading, setLoading]               = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
-  // On mount, restore session from Supabase (it persists the token in localStorage automatically)
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        // User clicked the reset link — show reset form, don't route to app
+        setIsPasswordRecovery(true);
+        setLoading(false);
+        return;
+      }
+
       if (session?.user) {
         const u = session.user;
         _setUser(u.id, u.email);
@@ -58,11 +65,17 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   }, []);
 
+  const clearPasswordRecovery = useCallback(() => {
+    setIsPasswordRecovery(false);
+  }, []);
+
   return (
     <AuthContext.Provider value={{
       user,
       isAuthenticated: !!user,
       isLoading: loading,
+      isPasswordRecovery,
+      clearPasswordRecovery,
       login,
       register,
       logout,
