@@ -13,7 +13,11 @@ export const AuthProvider = ({ children }) => {
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   useEffect(() => {
+    // Safety net: unblock loading after 5s if Supabase never responds (e.g. missing env vars)
+    const timeout = setTimeout(() => setLoading(false), 5000);
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      clearTimeout(timeout);
       if (event === 'PASSWORD_RECOVERY') {
         // User clicked the reset link — show reset form, don't route to app
         setIsPasswordRecovery(true);
@@ -41,7 +45,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => { clearTimeout(timeout); subscription.unsubscribe(); };
   }, []);
 
   const login = useCallback(async (email, password) => {
