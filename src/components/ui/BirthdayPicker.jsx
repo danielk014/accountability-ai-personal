@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 
 const DAYS_SHORT = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: CURRENT_YEAR - 1920 + 1 }, (_, i) => CURRENT_YEAR - i);
 
 /**
  * BirthdayPicker — a calendar-style date picker with easy month + year navigation.
@@ -106,16 +108,14 @@ export default function BirthdayPicker({ value, onChange, className = "" }) {
                 {MONTHS_SHORT.map((m, i) => <option key={m} value={i}>{m}</option>)}
               </select>
 
-              {/* Year with +/− buttons */}
-              <div className="flex items-center gap-0.5">
-                <button type="button" onClick={() => setViewYear(y => y - 1)} className="p-0.5 rounded hover:bg-slate-100 transition">
-                  <ChevronLeft className="w-3 h-3 text-slate-400" />
-                </button>
-                <span className="text-xs font-semibold text-slate-800 w-10 text-center">{viewYear}</span>
-                <button type="button" onClick={() => setViewYear(y => y + 1)} className="p-0.5 rounded hover:bg-slate-100 transition">
-                  <ChevronRight className="w-3 h-3 text-slate-400" />
-                </button>
-              </div>
+              {/* Year dropdown */}
+              <select
+                value={viewYear}
+                onChange={e => setViewYear(Number(e.target.value))}
+                className="text-xs font-semibold text-slate-800 bg-transparent border-none outline-none cursor-pointer"
+              >
+                {YEAR_OPTIONS.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
             </div>
 
             <button type="button" onClick={nextMonth} className="p-1 rounded-lg hover:bg-slate-100 transition">

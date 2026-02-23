@@ -1359,22 +1359,21 @@ export default function Gym() {
                 >
                   {day.name}
                 </button>
-                {/* Delete button — first click shows "Delete?", second click confirms */}
-                {isPending ? (
-                  <button
-                    onClick={e => { e.stopPropagation(); handleDeleteDay(day.id); }}
-                    className="absolute right-0.5 top-1/2 -translate-y-1/2 mt-[-2px] px-1.5 py-0.5 rounded text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition"
-                  >
-                    Del?
-                  </button>
-                ) : (
-                  <button
-                    onClick={e => { e.stopPropagation(); setPendingDeleteDayId(day.id); }}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 mt-[-2px] p-0.5 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 transition opacity-0 group-hover/tab:opacity-100"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
+                {/* Delete button — first click arms it (red), second click confirms */}
+                <button
+                  onClick={e => {
+                    e.stopPropagation();
+                    isPending ? handleDeleteDay(day.id) : setPendingDeleteDayId(day.id);
+                  }}
+                  className={cn(
+                    "absolute right-1 top-1/2 -translate-y-1/2 mt-[-2px] p-0.5 rounded transition",
+                    isPending
+                      ? "text-red-500 bg-red-50 opacity-100"
+                      : "text-slate-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover/tab:opacity-100"
+                  )}
+                >
+                  <X className="w-3 h-3" />
+                </button>
               </div>
               </React.Fragment>
             );

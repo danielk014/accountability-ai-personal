@@ -337,30 +337,6 @@ export async function buildSystemPrompt() {
         lines.push(`## People in My Life\n${text}`);
       }
       if (profile.ai_personality) lines.push(`## How to Talk to Me\n${profile.ai_personality}`);
-
-      // Screentime — manual logs (last 7 days) + screenshot analyses
-      const stManualKey = `${getUserPrefix()}screentime_v2`;
-      let manualStLines = [];
-      try {
-        const manualLogs = JSON.parse(localStorage.getItem(stManualKey) || '[]');
-        const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
-        const cutoffStr = cutoff.toISOString().split('T')[0];
-        const recent = manualLogs.filter(l => l.date >= cutoffStr);
-        if (recent.length > 0) {
-          const grouped = recent.reduce((acc, l) => {
-            if (!acc[l.date]) acc[l.date] = [];
-            acc[l.date].push(`${l.app}: ${l.minutes}min`);
-            return acc;
-          }, {});
-          manualStLines = Object.entries(grouped)
-            .sort(([a], [b]) => b.localeCompare(a))
-            .map(([d, apps]) => `- ${d}: ${apps.join(', ')}`);
-        }
-      } catch {}
-
-      if (manualStLines.length > 0) {
-        lines.push(`## My Screen Time (last 7 days)\n${manualStLines.join('\n')}`);
-      }
     }
 
     if (projects.length > 0) {

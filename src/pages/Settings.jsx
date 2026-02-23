@@ -15,10 +15,12 @@ function nextBirthdayDate(birthdayStr) {
   if (!birthdayStr) return null;
   const today = new Date();
   const bday = new Date(birthdayStr + "T00:00:00");
+  const pad = n => String(n).padStart(2, "0");
+  const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const thisYear = new Date(today.getFullYear(), bday.getMonth(), bday.getDate());
-  if (thisYear >= today) return thisYear.toISOString().split("T")[0];
+  if (thisYear >= today) return fmt(thisYear);
   const nextYear = new Date(today.getFullYear() + 1, bday.getMonth(), bday.getDate());
-  return nextYear.toISOString().split("T")[0];
+  return fmt(nextYear);
 }
 
 const TIMEZONES = [
