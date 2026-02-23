@@ -38,7 +38,11 @@ function createEntityStore(entityType) {
 
   return {
     async filter(criteria = {}, sort = null, limit = null) {
-      if (!_currentUserId) return []
+      if (!_currentUserId) {
+        // Try to recover session before giving up
+        try { await authStore.me() } catch { return [] }
+        if (!_currentUserId) return []
+      }
 
       const { data, error } = await supabase
         .from('user_entities')
@@ -72,7 +76,10 @@ function createEntityStore(entityType) {
     },
 
     async create(data) {
-      if (!_currentUserId) throw new Error('Not authenticated')
+      if (!_currentUserId) {
+        try { await authStore.me() } catch {}
+        if (!_currentUserId) throw new Error('Not authenticated')
+      }
       const id = generateId()
       const record = {
         ...data,
@@ -162,15 +169,19 @@ const authStore = {
     }
   },
 
-  me() {
-    if (!_currentUserId || !_currentUserEmail) {
-      return Promise.reject(new Error('Not authenticated'))
+  async me() {
+    // Use in-memory cache if already set
+    if (_currentUserId && _currentUserEmail) {
+      return { id: _currentUserId, email: _currentUserEmail, full_name: _currentUserEmail.split('@')[0] }
     }
-    return Promise.resolve({
-      id:        _currentUserId,
-      email:     _currentUserEmail,
-      full_name: _currentUserEmail.split('@')[0],
-    })
+    // Fall back to Supabase session (handles timing race on page load)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.user) {
+      const u = session.user
+      _setUser(u.id, u.email)
+      return { id: u.id, email: u.email, full_name: u.user_metadata?.name || u.email.split('@')[0] }
+    }
+    throw new Error('Not authenticated')
   },
 
   logout() {
