@@ -412,8 +412,8 @@ export default function Settings() {
     birthdayTaskMutation.mutate({ name, birthday });
   };
 
-  const handleSignOut = () => {
-    logout();
+  const handleSignOut = async () => {
+    await logout();
     navigate("/Login");
   };
 

@@ -64,9 +64,9 @@ export const AuthProvider = ({ children }) => {
     _clearUser();
     clearCurrentUser();
     clearStorage();
-    await supabaseDB.auth.logout();
     queryClientInstance.clear();
     setUser(null);
+    try { await supabaseDB.auth.logout(); } catch {}
   }, []);
 
   const clearPasswordRecovery = useCallback(() => {
