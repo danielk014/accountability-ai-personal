@@ -1,50 +1,83 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Check, Flag, RotateCcw, Plus, Trash2, Smartphone, Brain, Upload } from "lucide-react";
-import { format, subDays } from "date-fns";
+import { Loader2, Check, Flag, RotateCcw, Plus, Trash2, Smartphone } from "lucide-react";
+import { format, subDays, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { runCleanup } from "@/api/localDB";
 
 import TimeActivityChart from "../components/progress/TimeActivityChart";
 import SleepChart from "../components/progress/SleepChart";
-import ScreentimeUpload from "../components/screentime/ScreentimeUpload";
+import ScreentimeAIChat from "../components/screentime/ScreentimeUpload";
+import ScreentimeWeekChart from "../components/screentime/ScreentimeWeekChart";
 
-const SCREENTIME_KEY = "accountable_screentime_manual_v1";
-
-function loadScreentimeLogs() {
-  try { return JSON.parse(localStorage.getItem(SCREENTIME_KEY) || "[]"); } catch { return []; }
+function fmtMins(m) {
+  if (!m) return "0m";
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  return h > 0 ? (r > 0 ? `${h}h ${r}m` : `${h}h`) : `${r}m`;
 }
-function saveScreentimeLogs(logs) {
-  localStorage.setItem(SCREENTIME_KEY, JSON.stringify(logs));
-}
 
-function ScreentimeTab({ profile, saveMutation }) {
-  const [subTab, setSubTab] = useState("log");
-  const [logs, setLogs] = useState(loadScreentimeLogs);
+function ScreentimeTab({ profile, saveMutation, user }) {
+  const [subTab, setSubTab] = useState("chart");
   const [form, setForm] = useState({ app: "", minutes: "", date: format(new Date(), "yyyy-MM-dd") });
+
+  // User-scoped storage key (email-based to match claudeClient prefix)
+  const storageKey = user?.email
+    ? `${user.email.toLowerCase().replace(/[^a-z0-9]/g, "_")}__screentime_v2`
+    : "screentime_v2_anon";
+
+  function loadLogs() {
+    try { return JSON.parse(localStorage.getItem(storageKey) || "[]"); } catch { return []; }
+  }
+  function saveLogs(logs) {
+    localStorage.setItem(storageKey, JSON.stringify(logs));
+  }
+
+  const [logs, setLogs] = useState(loadLogs);
+
+  // Trim to 30 days on mount
+  useEffect(() => {
+    const cutoff = format(subDays(new Date(), 30), "yyyy-MM-dd");
+    const trimmed = logs.filter(l => l.date >= cutoff);
+    if (trimmed.length !== logs.length) { setLogs(trimmed); saveLogs(trimmed); }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAdd = (e) => {
     e.preventDefault();
     if (!form.app.trim() || !form.minutes) return;
-    const entry = { id: Date.now().toString(), app: form.app.trim(), minutes: parseInt(form.minutes), date: form.date };
+    const entry = {
+      id: Date.now().toString(),
+      app: form.app.trim(),
+      minutes: parseInt(form.minutes),
+      date: form.date,
+    };
     const updated = [entry, ...logs];
     setLogs(updated);
-    saveScreentimeLogs(updated);
+    saveLogs(updated);
     setForm(f => ({ ...f, app: "", minutes: "" }));
     toast.success("Logged!");
   };
 
   const handleDelete = (id) => {
-    if (!window.confirm("Delete this screentime entry?")) return;
-    if (!window.confirm("Are you sure? This cannot be undone.")) return;
     const updated = logs.filter(l => l.id !== id);
     setLogs(updated);
-    saveScreentimeLogs(updated);
+    saveLogs(updated);
   };
 
-  // Group logs by date
+  // Called by AI chat when it extracts entries from a screenshot
+  const handleLogEntries = (entries, logDate) => {
+    // Replace any existing entries for that date+app combo to avoid duplicates
+    const filtered = logs.filter(l => !(l.date === logDate && entries.some(e => e.app === l.app)));
+    const updated = [...filtered, ...entries];
+    setLogs(updated);
+    saveLogs(updated);
+    toast.success(`Logged ${entries.length} app${entries.length !== 1 ? "s" : ""} for ${logDate}`);
+  };
+
+  // Group by date, newest first
   const grouped = logs.reduce((acc, l) => {
     if (!acc[l.date]) acc[l.date] = [];
     acc[l.date].push(l);
@@ -56,19 +89,27 @@ function ScreentimeTab({ profile, saveMutation }) {
     <div className="space-y-6">
       {/* Sub-tabs */}
       <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit">
-        {[{ key: "log", label: "Log", icon: Smartphone }, { key: "ai", label: "AI", icon: Brain }].map(({ key, label, icon: Icon }) => (
+        {[
+          { key: "chart", label: "Chart" },
+          { key: "log",   label: "Log"   },
+          { key: "ai",    label: "AI"    },
+        ].map(({ key, label }) => (
           <button key={key} onClick={() => setSubTab(key)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               subTab === key ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
             }`}>
-            <Icon className="w-4 h-4" />{label}
+            {label}
           </button>
         ))}
       </div>
 
+      {/* ── Chart ── */}
+      {subTab === "chart" && <ScreentimeWeekChart logs={logs} />}
+
+      {/* ── Log ── */}
       {subTab === "log" && (
-        <div className="space-y-6">
-          {/* Manual log form */}
+        <div className="space-y-5">
+          {/* Add entry form */}
           <div className="bg-white border border-slate-200 rounded-2xl p-5">
             <h3 className="text-sm font-bold text-slate-700 mb-4">Log Screen Time</h3>
             <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-3">
@@ -76,17 +117,16 @@ function ScreentimeTab({ profile, saveMutation }) {
                 value={form.app}
                 onChange={e => setForm(f => ({ ...f, app: e.target.value }))}
                 placeholder="App name (e.g. Instagram)"
-                className="flex-1 text-sm rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 required
+                className="flex-1 text-sm rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
               />
               <input
-                type="number"
+                type="number" min="1"
                 value={form.minutes}
                 onChange={e => setForm(f => ({ ...f, minutes: e.target.value }))}
                 placeholder="Minutes"
-                min="1"
-                className="w-28 text-sm rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
                 required
+                className="w-28 text-sm rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
               />
               <input
                 type="date"
@@ -101,43 +141,66 @@ function ScreentimeTab({ profile, saveMutation }) {
             </form>
           </div>
 
-          {/* Log entries */}
+          {/* Apple-style daily cards */}
           {sortedDates.length === 0 ? (
-            <div className="text-center py-10 text-slate-400">
+            <div className="text-center py-12 text-slate-400">
               <Smartphone className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p className="font-medium">No entries yet</p>
-              <p className="text-sm mt-1">Log your screen time above or use the AI tab to upload screenshots</p>
+              <p className="font-medium">No screen time logged yet</p>
+              <p className="text-sm mt-1">Add entries above or use the AI tab to upload a screenshot</p>
             </div>
           ) : (
             <div className="space-y-4">
               {sortedDates.map(date => {
-                const dayLogs = grouped[date];
+                const dayLogs  = grouped[date].sort((a, b) => b.minutes - a.minutes);
                 const totalMin = dayLogs.reduce((s, l) => s + l.minutes, 0);
-                const totalHr = Math.floor(totalMin / 60);
-                const remMin = totalMin % 60;
+                const maxMin   = dayLogs[0]?.minutes || 1;
+
                 return (
                   <div key={date} className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-                    <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                      <span className="text-sm font-bold text-slate-700">{date}</span>
-                      <span className="text-xs text-slate-500">{totalHr > 0 ? `${totalHr}h ` : ""}{remMin}m total</span>
+                    {/* Day header */}
+                    <div className="px-5 py-4 flex items-center justify-between border-b border-slate-100">
+                      <div>
+                        <p className="text-sm font-bold text-slate-800">
+                          {format(parseISO(date), "EEEE, MMMM d")}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {dayLogs.length} app{dayLogs.length !== 1 ? "s" : ""}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-orange-500">{fmtMins(totalMin)}</p>
+                        <p className="text-xs text-slate-400">total</p>
+                      </div>
                     </div>
-                    <div className="divide-y divide-slate-50">
-                      {dayLogs.sort((a, b) => b.minutes - a.minutes).map(entry => (
-                        <div key={entry.id} className="flex items-center gap-3 px-4 py-2.5 group">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-800">{entry.app}</p>
+
+                    {/* App rows with progress bars */}
+                    <div className="px-5 py-2 divide-y divide-slate-50">
+                      {dayLogs.map(entry => {
+                        const barPct = Math.round((entry.minutes / maxMin) * 100);
+                        return (
+                          <div key={entry.id} className="py-3 group">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-sm font-medium text-slate-700">{entry.app}</span>
+                              <div className="flex items-center gap-3">
+                                <span className="text-sm font-semibold text-slate-500">{fmtMins(entry.minutes)}</span>
+                                <button
+                                  onClick={() => handleDelete(entry.id)}
+                                  className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-slate-300 hover:text-red-400 transition"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                            {/* Horizontal progress bar */}
+                            <div className="h-1.5 bg-orange-50 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-orange-400 rounded-full transition-all"
+                                style={{ width: `${barPct}%` }}
+                              />
+                            </div>
                           </div>
-                          <span className="text-sm text-slate-500 flex-shrink-0">
-                            {Math.floor(entry.minutes / 60) > 0 ? `${Math.floor(entry.minutes / 60)}h ` : ""}{entry.minutes % 60}m
-                          </span>
-                          <button
-                            onClick={() => handleDelete(entry.id)}
-                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition flex-shrink-0"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -147,19 +210,13 @@ function ScreentimeTab({ profile, saveMutation }) {
         </div>
       )}
 
+      {/* ── AI Chat ── */}
       {subTab === "ai" && (
-        <div className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
-            <div className="flex items-start gap-3">
-              <Brain className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-blue-800">AI Screen Time Logger</p>
-                <p className="text-xs text-blue-600 mt-0.5">Upload screenshots of your screen time (from iPhone Settings or Android Digital Wellbeing) and the AI will analyze and log them for you.</p>
-              </div>
-            </div>
-          </div>
-          <ScreentimeUpload profile={profile} saveMutation={saveMutation} />
-        </div>
+        <ScreentimeAIChat
+          logs={logs}
+          onLogEntries={handleLogEntries}
+          today={format(new Date(), "yyyy-MM-dd")}
+        />
       )}
     </div>
   );
@@ -397,7 +454,7 @@ export default function Progress() {
       {tab === "sleep" && <SleepChart sleepData={sleep} />}
 
       {tab === "screentime" && (
-        <ScreentimeTab profile={profile} saveMutation={saveMutation} />
+        <ScreentimeTab profile={profile} saveMutation={saveMutation} user={user} />
       )}
     </div>
   );

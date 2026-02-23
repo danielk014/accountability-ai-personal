@@ -338,18 +338,28 @@ export async function buildSystemPrompt() {
       }
       if (profile.ai_personality) lines.push(`## How to Talk to Me\n${profile.ai_personality}`);
 
-      // Screentime analysis — include any analyzed screenshots
-      const analyzedScreentime = (profile.screentime_files || []).filter(f => f.analysis);
-      if (analyzedScreentime.length > 0) {
-        const stText = analyzedScreentime.map(f => {
-          const a = f.analysis;
-          const parts = [];
-          if (a.total_time) parts.push(`Total: ${a.total_time}`);
-          if (a.top_apps?.length) parts.push(`Top apps: ${a.top_apps.slice(0, 4).join(', ')}`);
-          if (a.summary) parts.push(a.summary);
-          return `- ${f.name} (${new Date(f.uploaded_at).toLocaleDateString()}): ${parts.join(' | ')}`;
-        }).join('\n');
-        lines.push(`## My Screen Time Data\n${stText}`);
+      // Screentime — manual logs (last 7 days) + screenshot analyses
+      const stManualKey = `${getUserPrefix()}screentime_v2`;
+      let manualStLines = [];
+      try {
+        const manualLogs = JSON.parse(localStorage.getItem(stManualKey) || '[]');
+        const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 7);
+        const cutoffStr = cutoff.toISOString().split('T')[0];
+        const recent = manualLogs.filter(l => l.date >= cutoffStr);
+        if (recent.length > 0) {
+          const grouped = recent.reduce((acc, l) => {
+            if (!acc[l.date]) acc[l.date] = [];
+            acc[l.date].push(`${l.app}: ${l.minutes}min`);
+            return acc;
+          }, {});
+          manualStLines = Object.entries(grouped)
+            .sort(([a], [b]) => b.localeCompare(a))
+            .map(([d, apps]) => `- ${d}: ${apps.join(', ')}`);
+        }
+      } catch {}
+
+      if (manualStLines.length > 0) {
+        lines.push(`## My Screen Time (last 7 days)\n${manualStLines.join('\n')}`);
       }
     }
 
