@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   Plus, Trash2, Pencil, Check, X, Dumbbell, Send, Loader2, Bot,
-  Scale, Paperclip, Camera, ArrowLeft, TrendingUp, CheckSquare, Square, ChevronLeft, ChevronRight,
+  Scale, Paperclip, Camera, ArrowLeft, CheckSquare, Square, ChevronLeft, ChevronRight,
+  GripVertical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getUserPrefix } from "@/lib/userStore";
@@ -233,7 +234,7 @@ function GymDatePicker({ selectedDate, onSelect, label }) {
 }
 
 // ── ExerciseCard ─────────────────────────────────────────────────────────────
-function ExerciseCard({ exercise, dayConfig, weightUnit, onDelete, onAddSet, onDeleteSet, onEditSet, onEditName }) {
+function ExerciseCard({ exercise, dayConfig, weightUnit, onDelete, onAddSet, onDeleteSet, onEditSet, onEditName, isDragOver, dragHandleProps }) {
   const [addingSet, setAddingSet]   = useState(false);
   const [setForm, setSetForm]       = useState({ weight: "", reps: "" });
   const [editingName, setEditingName] = useState(false);
@@ -272,9 +273,13 @@ function ExerciseCard({ exercise, dayConfig, weightUnit, onDelete, onAddSet, onD
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-5 mb-3">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1 min-w-0 mr-3">
+    <div className={cn("bg-white rounded-2xl border p-5 mb-3 transition-all", isDragOver ? "border-indigo-400 shadow-md" : "border-slate-200")}>
+      <div className="flex items-start gap-2 mb-3">
+        {/* Drag handle */}
+        <div {...dragHandleProps} className="mt-1 cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 transition flex-shrink-0 pt-0.5">
+          <GripVertical className="w-4 h-4" />
+        </div>
+        <div className="flex-1 min-w-0">
           {editingName ? (
             <form onSubmit={handleSaveName} className="flex items-center gap-2">
               <input autoFocus value={nameValue} onChange={e => setNameValue(e.target.value)}
@@ -294,7 +299,7 @@ function ExerciseCard({ exercise, dayConfig, weightUnit, onDelete, onAddSet, onD
           <p className="text-xs text-slate-400 mt-0.5">{exercise.sets.length} set{exercise.sets.length !== 1 ? "s" : ""}</p>
         </div>
         <button onClick={() => onDelete(exercise.id)}
-          className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition flex-shrink-0">
+          className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition flex-shrink-0 mt-0.5">
           <Trash2 className="w-4 h-4" />
         </button>
       </div>
@@ -360,6 +365,13 @@ function WorkoutTab({ day, weightUnit, onUpdate }) {
   const exercises     = day.exercises || [];
   const [addingExercise, setAddingExercise] = useState(false);
   const [newName, setNewName] = useState("");
+  const [dragIndex, setDragIndex]         = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
+
+  function getBestWeight(sets) {
+    if (!sets || sets.length === 0) return null;
+    return Math.max(...sets.map(s => s.weight));
+  }
 
   function handleAddExercise(e) {
     e.preventDefault();
@@ -380,19 +392,45 @@ function WorkoutTab({ day, weightUnit, onUpdate }) {
   }
 
   function handleDeleteSet(exerciseId, setId) {
-    onUpdate(exercises.map(ex => ex.id === exerciseId ? { ...ex, sets: ex.sets.filter(s => s.id !== setId) } : ex));
+    onUpdate(exercises.map(ex => {
+      if (ex.id !== exerciseId) return ex;
+      const oldBest = getBestWeight(ex.sets);
+      const newSets = ex.sets.filter(s => s.id !== setId);
+      const newBest = getBestWeight(newSets);
+      return {
+        ...ex,
+        sets: newSets,
+        ...(oldBest !== null && newBest !== oldBest ? { prev_best_weight: oldBest } : {}),
+      };
+    }));
   }
 
   function handleEditSet(exerciseId, setId, updates) {
-    onUpdate(exercises.map(ex =>
-      ex.id === exerciseId
-        ? { ...ex, sets: ex.sets.map(s => s.id === setId ? { ...s, ...updates } : s) }
-        : ex
-    ));
+    onUpdate(exercises.map(ex => {
+      if (ex.id !== exerciseId) return ex;
+      const oldBest = getBestWeight(ex.sets);
+      const newSets = ex.sets.map(s => s.id === setId ? { ...s, ...updates } : s);
+      const newBest = getBestWeight(newSets);
+      return {
+        ...ex,
+        sets: newSets,
+        ...(oldBest !== null && newBest !== oldBest ? { prev_best_weight: oldBest } : {}),
+      };
+    }));
   }
 
   function handleEditName(exerciseId, newNameVal) {
     onUpdate(exercises.map(ex => ex.id === exerciseId ? { ...ex, name: newNameVal } : ex));
+  }
+
+  function handleReorder(from, to) {
+    if (from === null || from === to) { setDragIndex(null); setDragOverIndex(null); return; }
+    const next = [...exercises];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    onUpdate(next);
+    setDragIndex(null);
+    setDragOverIndex(null);
   }
 
   return (
@@ -404,10 +442,21 @@ function WorkoutTab({ day, weightUnit, onUpdate }) {
           <p className="text-xs mt-1">Add your first exercise for {day.name}</p>
         </div>
       )}
-      {exercises.map(ex => (
-        <ExerciseCard key={ex.id} exercise={ex} dayConfig={dayConfig} weightUnit={weightUnit}
-          onDelete={handleDeleteExercise} onAddSet={handleAddSet}
-          onDeleteSet={handleDeleteSet} onEditSet={handleEditSet} onEditName={handleEditName} />
+      {exercises.map((ex, idx) => (
+        <div
+          key={ex.id}
+          draggable
+          onDragStart={() => setDragIndex(idx)}
+          onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
+          onDrop={() => handleReorder(dragIndex, idx)}
+          onDragEnd={() => { setDragIndex(null); setDragOverIndex(null); }}
+        >
+          <ExerciseCard exercise={ex} dayConfig={dayConfig} weightUnit={weightUnit}
+            onDelete={handleDeleteExercise} onAddSet={handleAddSet}
+            onDeleteSet={handleDeleteSet} onEditSet={handleEditSet} onEditName={handleEditName}
+            isDragOver={dragOverIndex === idx && dragIndex !== idx}
+            dragHandleProps={{}} />
+        </div>
       ))}
       {addingExercise ? (
         <form onSubmit={handleAddExercise} className="flex items-center gap-2 mt-2">
@@ -490,55 +539,55 @@ function PhotosTab({ physique, onUpdate }) {
     <>
       {/* Fullscreen overlay */}
       {fullscreenPanel && (
-        <div className="fixed inset-0 z-50 bg-black/95 flex flex-col" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0 }}>
+        <div className="fixed inset-0 z-50 bg-white flex flex-col" style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0 }}>
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-4 flex-shrink-0">
+          <div className="flex items-center justify-between px-4 py-4 flex-shrink-0 border-b border-slate-100">
             <button onClick={() => setFullscreenPanel(null)}
-              className="flex items-center gap-2 text-white/80 hover:text-white transition text-sm font-medium">
+              className="flex items-center gap-2 text-slate-700 hover:text-slate-900 transition text-sm font-medium">
               <ArrowLeft className="w-5 h-5" /> Back
             </button>
             <div className="text-center">
-              <p className="text-white font-semibold text-sm">
+              <p className="text-slate-800 font-semibold text-sm">
                 {new Date(fullscreenPanel.date + "T12:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
               </p>
               {fullscreenPanel.label && (
-                <p className="text-white/60 text-xs">{fullscreenPanel.label}</p>
+                <p className="text-slate-500 text-xs">{fullscreenPanel.label}</p>
               )}
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => fsPhotoRef.current?.click()}
-                className="text-xs text-white/70 hover:text-white border border-white/20 px-3 py-1.5 rounded-xl transition flex items-center gap-1">
+                className="text-xs text-slate-600 hover:text-slate-800 border border-slate-300 px-3 py-1.5 rounded-xl transition flex items-center gap-1">
                 <Plus className="w-3.5 h-3.5" /> Photos
               </button>
               <input ref={fsPhotoRef} type="file" accept="image/*" multiple className="hidden"
                 onChange={e => { handleAddImages(fullscreenPanel.id, e.target.files, true); e.target.value = ""; }} />
               <button onClick={() => handleDeletePanel(fullscreenPanel.id)}
-                className="p-2 rounded-xl border border-white/20 text-red-400 hover:text-red-300 hover:border-red-400/40 transition">
+                className="p-2 rounded-xl border border-slate-200 text-red-400 hover:text-red-500 hover:border-red-300 transition">
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
           </div>
 
           {/* Images */}
-          <div className="flex-1 overflow-y-auto px-4 pb-6">
+          <div className="flex-1 overflow-y-auto px-4 pb-6 pt-4">
             {fullscreenPanel.images.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-white/40 gap-3">
+              <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
                 <Camera className="w-12 h-12 opacity-40" />
                 <p className="text-sm">No photos yet</p>
                 <button onClick={() => fsPhotoRef.current?.click()}
-                  className="text-sm text-indigo-400 border border-indigo-400/40 px-4 py-2 rounded-xl hover:bg-indigo-400/10 transition">
+                  className="text-sm text-indigo-600 border border-indigo-300 px-4 py-2 rounded-xl hover:bg-indigo-50 transition">
                   Add photos
                 </button>
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-2xl mx-auto">
                 {fullscreenPanel.images.map(img => (
-                  <div key={img.id} className="relative group aspect-square rounded-2xl overflow-hidden bg-white/5">
+                  <div key={img.id} className="relative group aspect-square rounded-2xl overflow-hidden bg-slate-100">
                     <img src={img.dataUrl} alt={img.name} className="w-full h-full object-cover" />
                     <button
                       onClick={() => handleDeleteImage(fullscreenPanel.id, img.id, true)}
-                      className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition">
+                      className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white opacity-0 group-hover:opacity-100 transition">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -729,17 +778,6 @@ function ProgressTab({ gymData, bodyweight }) {
     bodyfat: l.bodyfat ?? null,
   }));
 
-  // Collect all exercises with weight_log entries across all days
-  const exercisesWithHistory = [];
-  for (const day of (gymData.workout_days || [])) {
-    for (const ex of (day.exercises || [])) {
-      const wlog = (ex.weight_log || []).sort((a, b) => a.date.localeCompare(b.date));
-      if (wlog.length >= 2) {
-        exercisesWithHistory.push({ name: ex.name, dayName: day.name, log: wlog });
-      }
-    }
-  }
-
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload?.length) {
       const d = payload[0].payload;
@@ -748,19 +786,6 @@ function ProgressTab({ gymData, bodyweight }) {
           <p className="text-xs font-semibold text-slate-700">{d.date}</p>
           <p className="text-xs text-indigo-600">{d.weight} kg</p>
           {d.bodyfat && <p className="text-xs text-slate-500">{d.bodyfat}% body fat</p>}
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const StrengthTooltip = ({ active, payload }) => {
-    if (active && payload?.length) {
-      const d = payload[0].payload;
-      return (
-        <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-lg">
-          <p className="text-xs font-semibold text-slate-700">{d.date}</p>
-          <p className="text-xs text-emerald-600">{d.weight} kg × {d.reps} reps</p>
         </div>
       );
     }
@@ -799,56 +824,7 @@ function ProgressTab({ gymData, bodyweight }) {
         )}
       </div>
 
-      {/* Strength gains */}
-      <div>
-        <h3 className="text-sm font-semibold text-slate-700 mb-3">Strength Progress</h3>
-        {exercisesWithHistory.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-100 px-5 py-8 text-center text-slate-400">
-            <TrendingUp className="w-8 h-8 mx-auto mb-2 opacity-30" />
-            <p className="text-sm">No strength data yet</p>
-            <p className="text-xs mt-1">Ask the AI Coach to log your progress entries</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {exercisesWithHistory.map(({ name, dayName, log }) => {
-              const chartData = log.map(e => ({
-                date: new Date(e.date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-                weight: e.weight,
-                reps: e.reps,
-              }));
-              const latest = log[log.length - 1];
-              const first  = log[0];
-              const gain   = latest.weight - first.weight;
-              return (
-                <div key={name} className="bg-white rounded-2xl border border-slate-200 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800">{name}</p>
-                      <p className="text-xs text-slate-400">{dayName} day</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-slate-700">{latest.weight} kg × {latest.reps}</p>
-                      {gain !== 0 && (
-                        <p className={cn("text-xs font-medium", gain > 0 ? "text-emerald-600" : "text-red-500")}>
-                          {gain > 0 ? "+" : ""}{gain.toFixed(1)} kg
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <ResponsiveContainer width="100%" height={80}>
-                    <LineChart data={chartData}>
-                      <Line type="monotone" dataKey="weight" stroke="#10b981" strokeWidth={2} dot={{ r: 2.5, fill: "#10b981" }} />
-                      <Tooltip content={<StrengthTooltip />} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Current exercise summary */}
+      {/* Current exercise summary with previous kg */}
       <div>
         <h3 className="text-sm font-semibold text-slate-700 mb-3">Current Programme</h3>
         <div className="space-y-3">
@@ -859,15 +835,22 @@ function ProgressTab({ gymData, bodyweight }) {
             return (
               <div key={day.id} className={cn("rounded-2xl border px-4 py-3", cfg.lightBg, cfg.border)}>
                 <p className={cn("text-sm font-bold mb-2", cfg.text)}>{day.name}</p>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   {exs.map(ex => {
                     const best = (ex.sets || []).reduce((b, s) => (!b || s.weight > b.weight ? s : b), null);
+                    const prev = ex.prev_best_weight;
+                    const showPrev = prev !== undefined && prev !== null && best && prev !== best.weight;
                     return (
-                      <div key={ex.id} className="flex items-center justify-between">
-                        <p className="text-xs text-slate-600">{ex.name}</p>
-                        {best && (
-                          <p className="text-xs text-slate-500">Best: {best.weight} kg × {best.reps}</p>
-                        )}
+                      <div key={ex.id} className="flex items-center justify-between gap-2">
+                        <p className="text-xs text-slate-600 min-w-0 truncate">{ex.name}</p>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {showPrev && (
+                            <p className="text-xs text-slate-400 line-through">{prev} kg</p>
+                          )}
+                          {best && (
+                            <p className="text-xs font-semibold text-slate-700">{best.weight} kg × {best.reps}</p>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -1140,10 +1123,22 @@ export default function Gym() {
     const d = loadData();
     return d.workout_days?.[0]?.id || "physique";
   });
-  const [editingWeight, setEditingWeight] = useState(false);
-  const [weightDraft, setWeightDraft] = useState("");
-  const [addingDay, setAddingDay]     = useState(false);
-  const [newDayName, setNewDayName]   = useState("");
+  const [addingDay, setAddingDay]         = useState(false);
+  const [newDayName, setNewDayName]       = useState("");
+  const [pendingDeleteDayId, setPendingDeleteDayId] = useState(null);
+  const [dayDragIndex, setDayDragIndex]   = useState(null);
+  const [dayDragOverIndex, setDayDragOverIndex] = useState(null);
+  const tabBarRef = useRef(null);
+
+  // Cancel pending delete when clicking outside tab bar
+  useEffect(() => {
+    if (!pendingDeleteDayId) return;
+    const handler = (e) => {
+      if (!tabBarRef.current?.contains(e.target)) setPendingDeleteDayId(null);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [pendingDeleteDayId]);
 
   function updateAndSave(patch) {
     const updated = { ...gymData, ...patch };
@@ -1154,16 +1149,6 @@ export default function Gym() {
   function handleExercisesUpdate(dayId, exercises) {
     const newDays = gymData.workout_days.map(d => d.id === dayId ? { ...d, exercises } : d);
     updateAndSave({ workout_days: newDays });
-  }
-
-  function handleSaveWeight(e) {
-    e.preventDefault();
-    const val = parseFloat(weightDraft);
-    if (!isNaN(val) && val > 0) {
-      updateAndSave({ current_weight: val });
-      toast.success("Weight updated!");
-    }
-    setEditingWeight(false);
   }
 
   function handlePhysiqueUpdate(patch) {
@@ -1198,11 +1183,25 @@ export default function Gym() {
     if (!day) return;
     const newDays = gymData.workout_days.filter(d => d.id !== dayId);
     updateAndSave({ workout_days: newDays });
-    if (activeTab === dayId) {
-      setActiveTab(newDays[0]?.id || "physique");
-    }
+    if (activeTab === dayId) setActiveTab(newDays[0]?.id || "physique");
+    setPendingDeleteDayId(null);
     toast.success(`"${day.name}" day removed.`);
   }
+
+  function handleDayReorder(from, to) {
+    if (from === null || from === to) { setDayDragIndex(null); setDayDragOverIndex(null); return; }
+    const next = [...gymData.workout_days];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    updateAndSave({ workout_days: next });
+    setDayDragIndex(null);
+    setDayDragOverIndex(null);
+  }
+
+  // Current weight from most recent bodyweight log
+  const latestBodyweightLog = (bodyweight.logs || []).length > 0
+    ? [...bodyweight.logs].sort((a, b) => b.date.localeCompare(a.date))[0]
+    : null;
 
   const totalExercises = (gymData.workout_days || []).reduce((sum, d) => sum + (d.exercises?.length || 0), 0);
 
@@ -1231,30 +1230,19 @@ export default function Gym() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-4 mb-8">
-        {/* Current Weight */}
+        {/* Current Weight — read-only, sourced from Bodyweight tab */}
         <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4">
           <div className="flex items-start justify-between">
             <p className="text-xs text-slate-500 font-medium">Current Weight</p>
             <Scale className="w-4 h-4 text-indigo-400" />
           </div>
-          {editingWeight ? (
-            <form onSubmit={handleSaveWeight} className="flex items-center gap-1.5 mt-2">
-              <input autoFocus type="number" value={weightDraft} onChange={e => setWeightDraft(e.target.value)}
-                placeholder="80" className="w-20 text-sm border border-slate-300 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                step="0.1" min="1" />
-              <button type="submit" className="p-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"><Check className="w-3.5 h-3.5" /></button>
-              <button type="button" onClick={() => setEditingWeight(false)} className="p-1 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 transition"><X className="w-3.5 h-3.5" /></button>
-            </form>
+          {latestBodyweightLog ? (
+            <div className="flex items-baseline gap-1 mt-2">
+              <span className="text-2xl font-bold text-indigo-600">{latestBodyweightLog.weight}</span>
+              <span className="text-sm text-slate-500">kg</span>
+            </div>
           ) : (
-            <button onClick={() => { setEditingWeight(true); setWeightDraft(gymData.current_weight || ""); }}
-              className="flex items-baseline gap-1 mt-2 hover:opacity-70 transition">
-              {gymData.current_weight ? (
-                <><span className="text-2xl font-bold text-indigo-600">{gymData.current_weight}</span>
-                  <span className="text-sm text-slate-500">{gymData.weight_unit}</span></>
-              ) : (
-                <span className="text-sm text-slate-400 italic">Tap to set</span>
-              )}
-            </button>
+            <p className="text-sm text-slate-400 italic mt-2">Log in Bodyweight tab</p>
           )}
           <div className="flex gap-1 mt-2">
             {["kg", "lbs"].map(unit => (
@@ -1298,29 +1286,51 @@ export default function Gym() {
 
       {/* Tabs */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <div className="flex gap-1 border-b border-slate-100 mb-6 -mx-1 overflow-x-auto">
-          {/* Workout day tabs with delete X */}
-          {(gymData.workout_days || []).map(day => (
-            <div key={day.id} className="relative flex-shrink-0 group/tab">
-              <button
-                onClick={() => setActiveTab(day.id)}
-                className={cn(
-                  "pl-4 pr-7 py-2.5 text-sm font-medium rounded-t-lg transition-all -mb-px border-b-2 whitespace-nowrap",
-                  activeTab === day.id
-                    ? "text-indigo-600 border-indigo-500 bg-indigo-50/60"
-                    : "text-slate-500 border-transparent hover:text-slate-700 hover:bg-slate-50"
+        <div ref={tabBarRef} className="flex gap-1 border-b border-slate-100 mb-6 -mx-1 overflow-x-auto">
+          {/* Workout day tabs with double-confirm delete + drag reorder */}
+          {(gymData.workout_days || []).map((day, idx) => {
+            const isPending = pendingDeleteDayId === day.id;
+            const isDayDragOver = dayDragOverIndex === idx && dayDragIndex !== idx;
+            return (
+              <div
+                key={day.id}
+                className={cn("relative flex-shrink-0 group/tab cursor-grab active:cursor-grabbing transition-all", isDayDragOver && "opacity-50")}
+                draggable
+                onDragStart={() => setDayDragIndex(idx)}
+                onDragOver={(e) => { e.preventDefault(); setDayDragOverIndex(idx); }}
+                onDrop={() => handleDayReorder(dayDragIndex, idx)}
+                onDragEnd={() => { setDayDragIndex(null); setDayDragOverIndex(null); }}
+              >
+                <button
+                  onClick={() => { setActiveTab(day.id); setPendingDeleteDayId(null); }}
+                  className={cn(
+                    "pl-4 pr-7 py-2.5 text-sm font-medium rounded-t-lg transition-all -mb-px border-b-2 whitespace-nowrap",
+                    activeTab === day.id
+                      ? "text-indigo-600 border-indigo-500 bg-indigo-50/60"
+                      : "text-slate-500 border-transparent hover:text-slate-700 hover:bg-slate-50"
+                  )}
+                >
+                  {day.name}
+                </button>
+                {/* Delete button — first click shows "Delete?", second click confirms */}
+                {isPending ? (
+                  <button
+                    onClick={e => { e.stopPropagation(); handleDeleteDay(day.id); }}
+                    className="absolute right-0.5 top-1/2 -translate-y-1/2 mt-[-2px] px-1.5 py-0.5 rounded text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition"
+                  >
+                    Del?
+                  </button>
+                ) : (
+                  <button
+                    onClick={e => { e.stopPropagation(); setPendingDeleteDayId(day.id); }}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 mt-[-2px] p-0.5 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 transition opacity-0 group-hover/tab:opacity-100"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 )}
-              >
-                {day.name}
-              </button>
-              <button
-                onClick={e => { e.stopPropagation(); handleDeleteDay(day.id); }}
-                className="absolute right-1 top-1/2 -translate-y-1/2 mt-[-2px] p-0.5 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 transition opacity-0 group-hover/tab:opacity-100"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
+              </div>
+            );
+          })}
 
           {/* Add day button */}
           {addingDay ? (
