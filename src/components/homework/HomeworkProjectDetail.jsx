@@ -341,7 +341,7 @@ async function callSummaryAI(messages, systemPrompt) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6",
+      model: "claude-sonnet-4-5",
       max_tokens: 1500,
       system: systemPrompt,
       messages: messages.map(m => ({ role: m.role, content: m.content })),
@@ -357,7 +357,7 @@ async function callObjectivesAI(messages, systemPrompt) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6",
+      model: "claude-sonnet-4-5",
       max_tokens: 1500,
       system: systemPrompt,
       messages: messages.map(m => ({ role: m.role, content: m.content })),
@@ -373,7 +373,7 @@ async function callFlashcardsAI(messages, systemPrompt) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6",
+      model: "claude-sonnet-4-5",
       max_tokens: 2000,
       system: systemPrompt,
       messages: messages.map(m => ({ role: m.role, content: m.content })),

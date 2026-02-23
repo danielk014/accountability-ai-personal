@@ -364,6 +364,10 @@ export default function DayView({ date, tasks, completions, onToggle, onDropTask
   const handleDragOver = (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
+    // Auto-scroll the page when dragging near top/bottom edges
+    const ZONE = 80, SPEED = 10;
+    if (e.clientY > window.innerHeight - ZONE) window.scrollBy(0, SPEED);
+    else if (e.clientY < ZONE) window.scrollBy(0, -SPEED);
     const yPx = getGridTop(e.clientY);
     const hourIdx = Math.min(Math.floor(yPx / SLOT_HEIGHT), HOURS.length - 1);
     setDragOver(HOURS[hourIdx]);

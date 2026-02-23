@@ -1,6 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Clock, Dumbbell, Briefcase, BookOpen, User, Users, Brain, MoreHorizontal } from "lucide-react";
+import { Check, Clock, Dumbbell, Briefcase, BookOpen, User, Users, Brain, MoreHorizontal, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const categoryConfig = {
@@ -13,7 +13,7 @@ const categoryConfig = {
   other: { icon: MoreHorizontal, color: "text-slate-500", bg: "bg-slate-50", border: "border-slate-200" },
 };
 
-export default function TaskCard({ task, isCompleted, onToggle, isUpcoming }) {
+export default function TaskCard({ task, isCompleted, onToggle, onDelete, isUpcoming }) {
   const config = categoryConfig[task.category] || categoryConfig.other;
   const Icon = config.icon;
 
@@ -86,6 +86,17 @@ export default function TaskCard({ task, isCompleted, onToggle, isUpcoming }) {
           <span className={cn("text-xs capitalize", config.color)}>{task.frequency}</span>
         </div>
       </div>
+
+      {/* Delete button */}
+      {onDelete && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(task); }}
+          className="opacity-0 group-hover:opacity-100 flex-shrink-0 p-2 rounded-xl hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all"
+          title="Delete task"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
     </motion.div>
   );
 }

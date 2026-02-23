@@ -1,5 +1,5 @@
 import React from "react";
-import { GripVertical, Clock, Zap, X } from "lucide-react";
+import { GripVertical, Clock, Zap, X, Trash2 } from "lucide-react";
 
 const CATEGORY_COLORS = {
   health: "bg-emerald-100 border-emerald-300 text-emerald-800",
@@ -11,7 +11,7 @@ const CATEGORY_COLORS = {
   other: "bg-gray-100 border-gray-300 text-gray-800",
 };
 
-function TaskList({ tasks, onDragStart, onMobileDragStart }) {
+function TaskList({ tasks, onDragStart, onMobileDragStart, onDeleteTask }) {
   return (
     <div className="p-2 space-y-1.5 overflow-y-auto flex-1">
       {tasks.length === 0 && (
@@ -34,7 +34,7 @@ function TaskList({ tasks, onDragStart, onMobileDragStart }) {
               onMobileDragStart?.(task, e);
             }}
             style={{ touchAction: "none" }}
-            className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium cursor-grab active:cursor-grabbing transition-all hover:shadow-sm select-none ${color}`}
+            className={`group flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-medium cursor-grab active:cursor-grabbing transition-all hover:shadow-sm select-none ${color}`}
           >
             <GripVertical className="w-3 h-3 opacity-50 flex-shrink-0" />
             <span className="flex-1 truncate">{task.name}</span>
@@ -44,6 +44,20 @@ function TaskList({ tasks, onDragStart, onMobileDragStart }) {
                 {task.scheduled_time}
               </span>
             )}
+            {onDeleteTask && (
+              <button
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  onDeleteTask(task);
+                }}
+                className="opacity-0 group-hover:opacity-100 flex-shrink-0 p-0.5 rounded hover:bg-red-100 hover:text-red-600 text-current transition-all"
+                title="Delete task"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            )}
           </div>
         );
       })}
@@ -52,7 +66,7 @@ function TaskList({ tasks, onDragStart, onMobileDragStart }) {
 }
 
 // Desktop sidebar (always rendered in the md+ layout)
-function DesktopSidebar({ tasks, onDragStart, onMobileDragStart }) {
+function DesktopSidebar({ tasks, onDragStart, onMobileDragStart, onDeleteTask }) {
   return (
     <div className="w-56 flex-shrink-0">
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden sticky top-24 flex flex-col" style={{ maxHeight: "calc(100vh - 200px)" }}>
@@ -62,14 +76,14 @@ function DesktopSidebar({ tasks, onDragStart, onMobileDragStart }) {
           <span className="ml-auto text-xs text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">{tasks.length}</span>
         </div>
         <p className="text-xs text-slate-400 px-4 pt-3 pb-1 flex-shrink-0">Drag onto the schedule</p>
-        <TaskList tasks={tasks} onDragStart={onDragStart} onMobileDragStart={onMobileDragStart} />
+        <TaskList tasks={tasks} onDragStart={onDragStart} onMobileDragStart={onMobileDragStart} onDeleteTask={onDeleteTask} />
       </div>
     </div>
   );
 }
 
 // Mobile drawer (overlay from the right)
-function MobileDrawer({ tasks, onDragStart, onMobileDragStart, open, onClose }) {
+function MobileDrawer({ tasks, onDragStart, onMobileDragStart, onDeleteTask, open, onClose }) {
   if (!open) return null;
   return (
     <>
@@ -92,19 +106,20 @@ function MobileDrawer({ tasks, onDragStart, onMobileDragStart, open, onClose }) 
           </button>
         </div>
         <p className="text-xs text-slate-400 px-4 pt-3 pb-1 flex-shrink-0">Drag onto the schedule or tap to select</p>
-        <TaskList tasks={tasks} onDragStart={onDragStart} onMobileDragStart={onMobileDragStart} />
+        <TaskList tasks={tasks} onDragStart={onDragStart} onMobileDragStart={onMobileDragStart} onDeleteTask={onDeleteTask} />
       </div>
     </>
   );
 }
 
-export default function TaskSidebar({ tasks, completedIds = new Set(), onDragStart, onToggle, onMobileDragStart, mobileOpen, onClose, mobileOnly }) {
+export default function TaskSidebar({ tasks, completedIds = new Set(), onDragStart, onToggle, onMobileDragStart, onDeleteTask, mobileOpen, onClose, mobileOnly }) {
   if (mobileOnly) {
     return (
       <MobileDrawer
         tasks={tasks}
         onDragStart={onDragStart}
         onMobileDragStart={onMobileDragStart}
+        onDeleteTask={onDeleteTask}
         open={mobileOpen}
         onClose={onClose}
       />
@@ -115,6 +130,7 @@ export default function TaskSidebar({ tasks, completedIds = new Set(), onDragSta
       tasks={tasks}
       onDragStart={onDragStart}
       onMobileDragStart={onMobileDragStart}
+      onDeleteTask={onDeleteTask}
     />
   );
 }

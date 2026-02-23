@@ -1,8 +1,7 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { Plus, X, Brain, ChevronDown, ChevronUp, User, Briefcase, Users, Target, StickyNote, ChevronLeft, ChevronRight, Pencil, Check, Sparkles, Upload, File, Loader2, Bell } from "lucide-react";
-import ScreentimeUpload from "@/components/screentime/ScreentimeUpload";
+import { Plus, X, Brain, ChevronDown, ChevronUp, User, Briefcase, Users, Target, StickyNote, ChevronLeft, ChevronRight, Pencil, Check, Sparkles, Bell } from "lucide-react";
 import RemindersPanel from "@/components/chat/RemindersPanel";
 import { toast } from "sonner";
 
@@ -85,131 +84,6 @@ function TextSection({ section, items, onAdd, onDelete, onUpdate }) {
   );
 }
 
-function readFileAsText(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsText(file);
-  });
-}
-
-function readFileAsDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function FilesSection({ files = [], profile, saveMutation, queryClient }) {
-  const [open, setOpen] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = React.useRef(null);
-
-  const handleFileSelect = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIsUploading(true);
-    try {
-      const isText = file.type === 'text/plain' || file.type === 'text/csv'
-        || file.name.endsWith('.txt') || file.name.endsWith('.csv');
-      let content, type;
-      if (isText) {
-        content = await readFileAsText(file);
-        type = 'text';
-      } else {
-        content = await readFileAsDataUrl(file);
-        type = file.type || 'application/octet-stream';
-      }
-      const newFiles = [...files, { name: file.name, content, type, uploaded_at: new Date().toISOString() }];
-      if (profile?.id) {
-        await saveMutation.mutateAsync({ context_files: newFiles });
-        toast.success("File uploaded!");
-      }
-    } catch {
-      toast.error("Failed to upload file");
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  const handleDelete = (idx) => {
-    const newFiles = files.filter((_, i) => i !== idx);
-    if (profile?.id) {
-      saveMutation.mutate({ context_files: newFiles });
-      toast.success("File removed");
-    }
-  };
-
-  return (
-    <div className="border-b border-slate-100">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition"
-      >
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 bg-cyan-100 text-cyan-600">
-            <File className="w-4 h-4" />
-          </div>
-          <div className="text-left">
-            <p className="text-sm font-semibold text-slate-700">Context Files</p>
-            <p className="text-xs text-slate-400">{files.length > 0 ? `${files.length} file${files.length === 1 ? "" : "s"}` : "No files yet"}</p>
-          </div>
-        </div>
-        {open ? <ChevronUp className="w-3.5 h-3.5 text-slate-300" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-300" />}
-      </button>
-
-      {open && (
-        <div className="px-4 pb-4 space-y-2">
-          {files.map((file, i) => (
-            <div key={i} className="flex items-start gap-2 bg-white border border-cyan-100 rounded-lg px-3 py-2 group">
-              <File className="w-3.5 h-3.5 text-cyan-600 flex-shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-slate-700 truncate">{file.name}</p>
-                <p className="text-xs text-slate-400">{new Date(file.uploaded_at).toLocaleDateString()}</p>
-              </div>
-              <button
-                onClick={() => handleDelete(i)}
-                className="p-0.5 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition flex-shrink-0"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
-
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="w-full py-2 rounded-lg border border-dashed border-cyan-300 text-xs text-cyan-500 hover:bg-cyan-50 disabled:opacity-50 transition flex items-center justify-center gap-1.5"
-          >
-            {isUploading ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              <>
-                <Upload className="w-3.5 h-3.5" />
-                Upload file
-              </>
-            )}
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            onChange={handleFileSelect}
-            className="hidden"
-            accept=".txt,.csv,.pdf"
-          />
-          <p className="text-xs text-slate-400 text-center">PDF, Word, Excel, CSV, TXT</p>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function PersonalitySection({ profile, saveMutation, queryClient }) {
   const [open, setOpen] = useState(true);
@@ -219,13 +93,14 @@ function PersonalitySection({ profile, saveMutation, queryClient }) {
   const currentPersonality = profile?.ai_personality || "";
 
   const handleSave = () => {
-    if (input.trim()) {
-      if (profile?.id) {
-        saveMutation.mutate({ ai_personality: input.trim() });
+    if (!input.trim()) return;
+    saveMutation.mutate({ ai_personality: input.trim() }, {
+      onSuccess: () => {
         setIsEditing(false);
         toast.success("AI personality updated!");
-      }
-    }
+      },
+      onError: () => toast.error("Failed to save. Please try again."),
+    });
   };
 
   const handleEdit = () => {
@@ -264,7 +139,7 @@ function PersonalitySection({ profile, saveMutation, queryClient }) {
                   <Pencil className="w-3 h-3" />
                 </button>
                 <button
-                  onClick={() => { if (profile?.id) { saveMutation.mutate({ ai_personality: "" }); toast.success("Cleared!"); } }}
+                  onClick={() => saveMutation.mutate({ ai_personality: "" }, { onSuccess: () => toast.success("Cleared!") })}
                   className="p-0.5 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition"
                 >
                   <X className="w-3 h-3" />
@@ -527,14 +402,8 @@ export default function ContextSidebar() {
 
           {activeTab === 'context' ? (
             <div className="flex-1 overflow-y-auto">
-              {/* Screen Time Section */}
-              <ScreentimeUpload profile={profile} saveMutation={saveMutation} compact={true} />
-
-              {/* Files Section */}
-              <FilesSection files={profile?.context_files || []} profile={profile} saveMutation={saveMutation} queryClient={queryClient} />
-
               {/* Personality Section */}
-              <PersonalitySection profile={profile} saveMutation={saveMutation} queryClient={queryClient} />
+              <PersonalitySection profile={profile} saveMutation={saveMutation} />
 
               {SECTIONS.map((section) =>
                 section.key === "context_people" ? (

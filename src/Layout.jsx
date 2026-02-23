@@ -57,7 +57,7 @@ export default function Layout({ children, currentPageName }) {
             <span className="font-bold text-slate-800 text-base sm:text-lg tracking-tight hidden sm:block">Accountable</span>
           </div>
 
-          <nav className="flex items-center gap-0 sm:gap-1 overflow-x-auto scrollbar-hide">
+          <nav className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide">
             {navItems.map(item => {
               const isActive = currentPageName === item.page;
               const showBadge = item.page === 'Chat' && !isActive && unread > 0;
@@ -66,14 +66,14 @@ export default function Layout({ children, currentPageName }) {
                   key={item.page}
                   to={createPageUrl(item.page)}
                   className={cn(
-                    "relative flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-xl text-sm font-medium transition-all flex-shrink-0",
+                    "relative flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2 rounded-xl text-sm font-medium transition-all flex-shrink-0 min-w-[44px] sm:min-w-0",
                     isActive
                       ? "bg-indigo-50 text-indigo-700"
                       : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                   )}
                 >
-                  <item.icon className="w-4 h-4" />
-                  <span className="hidden sm:inline">{item.name}</span>
+                  <item.icon className="w-5 h-5 sm:w-4 sm:h-4" />
+                  <span className="text-[9px] sm:text-sm sm:inline leading-none">{item.name}</span>
                   {showBadge && (
                     <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-violet-500 text-white text-[10px] font-bold flex items-center justify-center px-1 shadow-sm">
                       {unread > 99 ? '99+' : unread}
@@ -84,9 +84,9 @@ export default function Layout({ children, currentPageName }) {
             })}
             <Link
               to={createPageUrl("Settings")}
-              className="flex items-center gap-1.5 px-2 sm:px-3 py-2 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex-shrink-0"
+              className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex-shrink-0 min-w-[44px] sm:min-w-0"
             >
-              <span className="hidden sm:inline">Settings</span>
+              <span className="text-[9px] sm:text-sm">Settings</span>
             </Link>
 
             {user && (

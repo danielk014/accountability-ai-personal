@@ -101,6 +101,12 @@ export default function Calendar() {
     },
   });
 
+  const deleteTaskWithConfirm = (task) => {
+    if (!window.confirm(`Delete "${task.name}"?`)) return;
+    if (!window.confirm("This is permanent and cannot be undone. Delete anyway?")) return;
+    deleteTaskMutation.mutate(task);
+  };
+
   const createTaskMutation = useMutation({
     mutationFn: (data) => base44.entities.Task.create(data),
     onSuccess: () => {
@@ -277,15 +283,11 @@ export default function Calendar() {
 
       {/* Calendar + sidebar — stacked on mobile, side-by-side on md+ */}
       <div className="flex flex-col md:flex-row gap-4 items-start">
-        {/* Desktop sidebar (right side) */}
-        <div className="hidden md:block">
-          <TaskSidebar tasks={sidebarTasks} onMobileDragStart={handleMobileDragStart} />
-        </div>
-
         {/* Mobile sidebar drawer */}
         <TaskSidebar
           tasks={sidebarTasks}
           onMobileDragStart={handleMobileDragStart}
+          onDeleteTask={deleteTaskWithConfirm}
           mobileOpen={mobileSidebarOpen}
           onClose={() => setMobileSidebarOpen(false)}
           mobileOnly
@@ -299,7 +301,7 @@ export default function Calendar() {
               tasks={activeTasks.filter(t => taskAppliesOnDate(t, currentDate))}
               completions={completions}
               onToggle={(task, date) => toggleCompletionMutation.mutate({ task, date })}
-              onRemoveTask={(task) => deleteTaskMutation.mutate(task)}
+              onRemoveTask={(task) => unscheduleTaskMutation.mutate(task)}
               onDropTask={onDropTask}
               timezone={timezone}
             />
@@ -313,10 +315,15 @@ export default function Calendar() {
                 base44.entities.Task.update(taskId, { scheduled_time: time, scheduled_date: dayStr });
                 queryClient.invalidateQueries({ queryKey: ["tasks"] });
               }}
-              onRemoveTask={(task) => deleteTaskMutation.mutate(task)}
+              onRemoveTask={(task) => unscheduleTaskMutation.mutate(task)}
               timezone={timezone}
             />
           )}
+        </div>
+
+        {/* Desktop sidebar — RIGHT side */}
+        <div className="hidden md:block">
+          <TaskSidebar tasks={sidebarTasks} onMobileDragStart={handleMobileDragStart} onDeleteTask={deleteTaskWithConfirm} />
         </div>
       </div>
 

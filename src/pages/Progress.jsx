@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Check, Flag, RotateCcw } from "lucide-react";
+import { Loader2, Check, Flag, RotateCcw, Plus, Trash2, Smartphone, Brain, Upload } from "lucide-react";
 import { format, subDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -9,6 +9,161 @@ import { runCleanup } from "@/api/localDB";
 
 import TimeActivityChart from "../components/progress/TimeActivityChart";
 import SleepChart from "../components/progress/SleepChart";
+import ScreentimeUpload from "../components/screentime/ScreentimeUpload";
+
+const SCREENTIME_KEY = "accountable_screentime_manual_v1";
+
+function loadScreentimeLogs() {
+  try { return JSON.parse(localStorage.getItem(SCREENTIME_KEY) || "[]"); } catch { return []; }
+}
+function saveScreentimeLogs(logs) {
+  localStorage.setItem(SCREENTIME_KEY, JSON.stringify(logs));
+}
+
+function ScreentimeTab({ profile, saveMutation }) {
+  const [subTab, setSubTab] = useState("log");
+  const [logs, setLogs] = useState(loadScreentimeLogs);
+  const [form, setForm] = useState({ app: "", minutes: "", date: format(new Date(), "yyyy-MM-dd") });
+
+  const handleAdd = (e) => {
+    e.preventDefault();
+    if (!form.app.trim() || !form.minutes) return;
+    const entry = { id: Date.now().toString(), app: form.app.trim(), minutes: parseInt(form.minutes), date: form.date };
+    const updated = [entry, ...logs];
+    setLogs(updated);
+    saveScreentimeLogs(updated);
+    setForm(f => ({ ...f, app: "", minutes: "" }));
+    toast.success("Logged!");
+  };
+
+  const handleDelete = (id) => {
+    if (!window.confirm("Delete this screentime entry?")) return;
+    if (!window.confirm("Are you sure? This cannot be undone.")) return;
+    const updated = logs.filter(l => l.id !== id);
+    setLogs(updated);
+    saveScreentimeLogs(updated);
+  };
+
+  // Group logs by date
+  const grouped = logs.reduce((acc, l) => {
+    if (!acc[l.date]) acc[l.date] = [];
+    acc[l.date].push(l);
+    return acc;
+  }, {});
+  const sortedDates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
+  return (
+    <div className="space-y-6">
+      {/* Sub-tabs */}
+      <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit">
+        {[{ key: "log", label: "Log", icon: Smartphone }, { key: "ai", label: "AI", icon: Brain }].map(({ key, label, icon: Icon }) => (
+          <button key={key} onClick={() => setSubTab(key)}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              subTab === key ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+            }`}>
+            <Icon className="w-4 h-4" />{label}
+          </button>
+        ))}
+      </div>
+
+      {subTab === "log" && (
+        <div className="space-y-6">
+          {/* Manual log form */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-5">
+            <h3 className="text-sm font-bold text-slate-700 mb-4">Log Screen Time</h3>
+            <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-3">
+              <input
+                value={form.app}
+                onChange={e => setForm(f => ({ ...f, app: e.target.value }))}
+                placeholder="App name (e.g. Instagram)"
+                className="flex-1 text-sm rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                required
+              />
+              <input
+                type="number"
+                value={form.minutes}
+                onChange={e => setForm(f => ({ ...f, minutes: e.target.value }))}
+                placeholder="Minutes"
+                min="1"
+                className="w-28 text-sm rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                required
+              />
+              <input
+                type="date"
+                value={form.date}
+                onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                className="w-36 text-sm rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              />
+              <button type="submit"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition flex-shrink-0">
+                <Plus className="w-4 h-4" /> Add
+              </button>
+            </form>
+          </div>
+
+          {/* Log entries */}
+          {sortedDates.length === 0 ? (
+            <div className="text-center py-10 text-slate-400">
+              <Smartphone className="w-10 h-10 mx-auto mb-3 opacity-30" />
+              <p className="font-medium">No entries yet</p>
+              <p className="text-sm mt-1">Log your screen time above or use the AI tab to upload screenshots</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {sortedDates.map(date => {
+                const dayLogs = grouped[date];
+                const totalMin = dayLogs.reduce((s, l) => s + l.minutes, 0);
+                const totalHr = Math.floor(totalMin / 60);
+                const remMin = totalMin % 60;
+                return (
+                  <div key={date} className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                    <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+                      <span className="text-sm font-bold text-slate-700">{date}</span>
+                      <span className="text-xs text-slate-500">{totalHr > 0 ? `${totalHr}h ` : ""}{remMin}m total</span>
+                    </div>
+                    <div className="divide-y divide-slate-50">
+                      {dayLogs.sort((a, b) => b.minutes - a.minutes).map(entry => (
+                        <div key={entry.id} className="flex items-center gap-3 px-4 py-2.5 group">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-800">{entry.app}</p>
+                          </div>
+                          <span className="text-sm text-slate-500 flex-shrink-0">
+                            {Math.floor(entry.minutes / 60) > 0 ? `${Math.floor(entry.minutes / 60)}h ` : ""}{entry.minutes % 60}m
+                          </span>
+                          <button
+                            onClick={() => handleDelete(entry.id)}
+                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition flex-shrink-0"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {subTab === "ai" && (
+        <div className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+            <div className="flex items-start gap-3">
+              <Brain className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-blue-800">AI Screen Time Logger</p>
+                <p className="text-xs text-blue-600 mt-0.5">Upload screenshots of your screen time (from iPhone Settings or Android Digital Wellbeing) and the AI will analyze and log them for you.</p>
+              </div>
+            </div>
+          </div>
+          <ScreentimeUpload profile={profile} saveMutation={saveMutation} />
+        </div>
+      )}
+    </div>
+  );
+}
 
 const priorityConfig = {
   urgent: { label: "Urgent", bg: "bg-red-50 border-red-200 text-red-600" },
@@ -41,6 +196,23 @@ export default function Progress() {
   const { data: user } = useQuery({
     queryKey: ["me"],
     queryFn: () => base44.auth.me(),
+  });
+
+  const { data: profiles = [] } = useQuery({
+    queryKey: ["profile", user?.email],
+    queryFn: () => user?.email ? base44.entities.UserProfile.filter({ created_by: user.email }) : [],
+  });
+  const profile = profiles[0];
+
+  const saveMutation = useMutation({
+    mutationFn: async (data) => {
+      if (profile?.id) {
+        await base44.entities.UserProfile.update(profile.id, data);
+      } else {
+        await base44.entities.UserProfile.create(data);
+      }
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["profile"] }),
   });
 
   const { data: tasks = [], isLoading: loadingTasks } = useQuery({
@@ -108,26 +280,23 @@ export default function Progress() {
 
       {/* Tabs */}
       <div className="flex gap-2 mb-8 border-b border-slate-200">
-        <button
-          onClick={() => setTab("activity")}
-          className={`px-4 py-2 font-medium transition-colors ${
-            tab === "activity"
-              ? "text-indigo-600 border-b-2 border-indigo-600"
-              : "text-slate-600 hover:text-slate-700"
-          }`}
-        >
-          Activity
-        </button>
-        <button
-          onClick={() => setTab("sleep")}
-          className={`px-4 py-2 font-medium transition-colors ${
-            tab === "sleep"
-              ? "text-indigo-600 border-b-2 border-indigo-600"
-              : "text-slate-600 hover:text-slate-700"
-          }`}
-        >
-          Sleep
-        </button>
+        {[
+          { key: "activity", label: "Activity" },
+          { key: "sleep", label: "Sleep" },
+          { key: "screentime", label: "Screen Time" },
+        ].map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={`px-4 py-2 font-medium transition-colors ${
+              tab === key
+                ? "text-indigo-600 border-b-2 border-indigo-600"
+                : "text-slate-600 hover:text-slate-700"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {tab === "activity" && (
@@ -226,6 +395,10 @@ export default function Progress() {
       )}
 
       {tab === "sleep" && <SleepChart sleepData={sleep} />}
+
+      {tab === "screentime" && (
+        <ScreentimeTab profile={profile} saveMutation={saveMutation} />
+      )}
     </div>
   );
 }

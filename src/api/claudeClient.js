@@ -338,22 +338,6 @@ export async function buildSystemPrompt() {
       }
       if (profile.ai_personality) lines.push(`## How to Talk to Me\n${profile.ai_personality}`);
 
-      // Context files — include text content directly, note PDFs/other files
-      const textFiles = (profile.context_files || []).filter(f => f.type === 'text' && f.content);
-      if (textFiles.length > 0) {
-        const filesText = textFiles.map(f => {
-          const preview = f.content.length > 2000
-            ? f.content.slice(0, 2000) + '\n...(truncated)'
-            : f.content;
-          return `### ${f.name}\n${preview}`;
-        }).join('\n\n');
-        lines.push(`## My Context Files\n${filesText}`);
-      }
-      const nonTextFiles = (profile.context_files || []).filter(f => f.type !== 'text');
-      if (nonTextFiles.length > 0) {
-        lines.push(`## Uploaded Files (share in chat for AI to read)\n${nonTextFiles.map(f => `- ${f.name}`).join('\n')}`);
-      }
-
       // Screentime analysis — include any analyzed screenshots
       const analyzedScreentime = (profile.screentime_files || []).filter(f => f.analysis);
       if (analyzedScreentime.length > 0) {

@@ -385,6 +385,8 @@ function WorkoutTab({ day, weightUnit, onUpdate }) {
   }
 
   function handleDeleteExercise(id) {
+    if (!window.confirm("Remove this exercise?")) return;
+    if (!window.confirm("Are you sure? This cannot be undone.")) return;
     onUpdate(exercises.filter(ex => ex.id !== id));
     toast.success("Exercise removed.");
   }
@@ -394,6 +396,8 @@ function WorkoutTab({ day, weightUnit, onUpdate }) {
   }
 
   function handleDeleteSet(exerciseId, setId) {
+    if (!window.confirm("Remove this set?")) return;
+    if (!window.confirm("Are you sure? This cannot be undone.")) return;
     onUpdate(exercises.map(ex => {
       if (ex.id !== exerciseId) return ex;
       const oldBest = getBestWeight(ex.sets);

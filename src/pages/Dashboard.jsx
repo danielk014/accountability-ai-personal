@@ -496,6 +496,17 @@ export default function Dashboard() {
     },
   });
 
+  const deleteTaskMutation = useMutation({
+    mutationFn: (id) => base44.entities.Task.delete(id),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["tasks"] }); toast.success("Task deleted"); },
+  });
+
+  const deleteTaskWithConfirm = (task) => {
+    if (!window.confirm(`Delete "${task.name}"?`)) return;
+    if (!window.confirm("This is permanent and cannot be undone. Delete anyway?")) return;
+    deleteTaskMutation.mutate(task.id);
+  };
+
   const toggleCompletionMutation = useMutation({
     mutationFn: async (task) => {
       if (completedTaskIds.has(task.id)) {
@@ -635,6 +646,7 @@ export default function Dashboard() {
               task={task}
               isCompleted={completedTaskIds.has(task.id)}
               onToggle={(t) => toggleCompletionMutation.mutate(t)}
+              onDelete={deleteTaskWithConfirm}
               isUpcoming={isUpcomingInFiveMinutes(task.scheduled_time)}
             />
           ))}
@@ -696,7 +708,11 @@ export default function Dashboard() {
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingTodo(item); setShowTodoForm(true); }}>
                     <Pencil className="w-4 h-4 text-slate-400" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => deleteTodoMutation.mutate(item.id)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                    if (!window.confirm(`Delete "${item.name}"?`)) return;
+                    if (!window.confirm("This is permanent and cannot be undone. Delete anyway?")) return;
+                    deleteTodoMutation.mutate(item.id);
+                  }}>
                     <Trash2 className="w-4 h-4 text-red-400" />
                   </Button>
                 </div>
