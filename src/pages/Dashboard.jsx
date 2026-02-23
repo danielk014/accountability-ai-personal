@@ -432,6 +432,7 @@ export default function Dashboard() {
   }
   const queryClient = useQueryClient();
   const today = format(new Date(), "yyyy-MM-dd");
+  const tomorrow = format(new Date(Date.now() + 86400000), "yyyy-MM-dd");
 
   // Re-render every minute so the "upcoming in 5 min" highlight stays current
   useEffect(() => {
@@ -541,6 +542,20 @@ export default function Dashboard() {
 
   const sortedTasks = [...todaysTasks]
     .filter(t => !completedTaskIds.has(t.id))
+    .sort((a, b) => (a.scheduled_time || "99:99").localeCompare(b.scheduled_time || "99:99"));
+
+  const tomorrowDayOfWeek = format(new Date(Date.now() + 86400000), "EEEE").toLowerCase();
+  const isTomorrowWeekday = !["saturday", "sunday"].includes(tomorrowDayOfWeek);
+  const tomorrowsTasks = activeTasks
+    .filter(t => {
+      if (t.scheduled_date && t.scheduled_date > tomorrow && t.frequency !== "once") return false;
+      if (t.frequency === "once") return t.scheduled_date === tomorrow;
+      if (t.frequency === "daily") return true;
+      if (t.frequency === "weekdays") return isTomorrowWeekday;
+      if (t.frequency === "weekends") return !isTomorrowWeekday;
+      if (t.frequency === tomorrowDayOfWeek) return true;
+      return false;
+    })
     .sort((a, b) => (a.scheduled_time || "99:99").localeCompare(b.scheduled_time || "99:99"));
 
   // ── To-Do List ───────────────────────────────────────────────────────────
@@ -658,6 +673,32 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* ── Tomorrow's Tasks ── */}
+      {tomorrowsTasks.length > 0 && (
+        <div className="mb-10">
+          <h2 className="text-lg font-bold text-slate-800 mb-4">
+            Tomorrow's tasks
+            <span className="ml-2 text-xs font-semibold text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">{tomorrowsTasks.length}</span>
+          </h2>
+          <div className="space-y-2">
+            {tomorrowsTasks.map(task => (
+              <div key={task.id} className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-2xl opacity-75">
+                <div className="w-4 h-4 rounded-full border-2 border-slate-200 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-600">{task.name}</p>
+                  {task.scheduled_time && (
+                    <p className="text-xs text-slate-400 mt-0.5">{task.scheduled_time}</p>
+                  )}
+                </div>
+                {task.category && (
+                  <span className="text-xs text-slate-400 capitalize">{task.category}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── To-Do List ── */}
       <div className="flex items-center justify-between mb-4">

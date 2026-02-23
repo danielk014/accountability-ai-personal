@@ -138,23 +138,26 @@ function createEntityStore(name) {
 
 // ─── Auth store ───────────────────────────────────────────────────────────────
 
+function hashFNV(password) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < password.length; i++) {
+    h ^= password.charCodeAt(i);
+    h = (h * 0x01000193) >>> 0;
+  }
+  return 'local_' + h.toString(16).padStart(8, '0');
+}
+
 async function hashPassword(password) {
   if (!window?.crypto?.subtle) {
-    // Fallback for non-secure contexts (HTTP, some browsers): use a deterministic
-    // pure-JS hash so registration and login always produce the same result.
-    let h = 0x811c9dc5;
-    for (let i = 0; i < password.length; i++) {
-      h ^= password.charCodeAt(i);
-      h = (h * 0x01000193) >>> 0;
-    }
-    return 'local_' + h.toString(16).padStart(8, '0');
+    return hashFNV(password);
   }
   try {
     const data = new TextEncoder().encode(password);
     const buf  = await crypto.subtle.digest('SHA-256', data);
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
-  } catch (e) {
-    throw new Error('Password hashing failed. Please try again or use a different browser.');
+  } catch {
+    // crypto.subtle failed — fall back to FNV-1a so login always works
+    return hashFNV(password);
   }
 }
 
@@ -169,14 +172,16 @@ function saveUsers(users) {
 
 const authStore = {
   async register(email, password, name) {
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
     const users = getUsers();
-    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) {
+    if (users.find(u => u.email.toLowerCase() === trimmedEmail.toLowerCase())) {
       throw new Error('An account with this email already exists.');
     }
-    const hash = await hashPassword(password);
+    const hash = await hashPassword(trimmedPassword);
     const user = {
       id: generateId(),
-      email: email.toLowerCase(),
+      email: trimmedEmail.toLowerCase(),
       name: name || email.split('@')[0],
       password_hash: hash,
       created_at: new Date().toISOString(),
@@ -202,10 +207,18 @@ const authStore = {
   },
 
   async login(email, password) {
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
     const users = getUsers();
-    const user  = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+    const user  = users.find(u => u.email.toLowerCase() === trimmedEmail.toLowerCase());
     if (!user) throw new Error('No account found with this email.');
-    const hash = await hashPassword(password);
+    // Match hash algorithm to what was used at registration time
+    let hash;
+    if (user.password_hash?.startsWith('local_')) {
+      hash = hashFNV(trimmedPassword);
+    } else {
+      hash = await hashPassword(trimmedPassword);
+    }
     if (hash !== user.password_hash) throw new Error('Incorrect password.');
     const session = { id: user.id, email: user.email, name: user.name, picture: user.picture };
     localStorage.setItem('auth_session', JSON.stringify(session));

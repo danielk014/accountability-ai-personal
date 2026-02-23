@@ -19,19 +19,21 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-    if (!email || !password) { setError("Please fill in all fields."); return; }
-    if (mode === "register" && password.length < 6) {
+    const trimEmail = email.trim();
+    const trimPassword = password.trim();
+    if (!trimEmail || !trimPassword) { setError("Please fill in all fields."); return; }
+    if (mode === "register" && trimPassword.length < 6) {
       setError("Password must be at least 6 characters.");
       return;
     }
     setLoading(true);
-    localStorage.setItem("last_login_email", email);
+    localStorage.setItem("last_login_email", trimEmail);
     try {
       if (mode === "login") {
-        await login(email, password);
+        await login(trimEmail, trimPassword);
         navigate(createPageUrl("Dashboard"));
       } else {
-        await register(email, password, name);
+        await register(trimEmail, trimPassword, name.trim());
         navigate(createPageUrl("Onboarding"));
       }
     } catch (err) {

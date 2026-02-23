@@ -3,7 +3,19 @@ import { base44 } from "@/api/base44Client";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Plus, X, Brain, ChevronDown, ChevronUp, User, Briefcase, Users, Target, StickyNote, ChevronLeft, ChevronRight, Pencil, Check, Sparkles, Bell } from "lucide-react";
 import RemindersPanel from "@/components/chat/RemindersPanel";
+import BirthdayPicker from "@/components/ui/BirthdayPicker";
 import { toast } from "sonner";
+
+// Returns the next occurrence of a birthday (YYYY-MM-DD) as a task scheduled_date
+function nextBirthdayDate(birthdayStr) {
+  if (!birthdayStr) return null;
+  const today = new Date();
+  const bday = new Date(birthdayStr + "T00:00:00");
+  const thisYear = new Date(today.getFullYear(), bday.getMonth(), bday.getDate());
+  if (thisYear >= today) return thisYear.toISOString().split("T")[0];
+  const nextYear = new Date(today.getFullYear() + 1, bday.getMonth(), bday.getDate());
+  return nextYear.toISOString().split("T")[0];
+}
 
 const SECTIONS = [
   { key: "context_about", label: "About Me", icon: User, color: "bg-violet-100 text-violet-600", placeholder: "e.g. I'm 28, live in NYC, introvert who loves hiking..." },
@@ -187,7 +199,7 @@ function PersonalitySection({ profile, saveMutation, queryClient }) {
   );
 }
 
-function PeopleSection({ items, onAdd, onDelete, onUpdate }) {
+function PeopleSection({ items, onAdd, onDelete, onUpdate, onBirthdayTask }) {
   const [open, setOpen] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", relationship: "", birthday: "", interests: "", notes: "" });
@@ -200,12 +212,14 @@ function PeopleSection({ items, onAdd, onDelete, onUpdate }) {
   const handleSave = () => {
     if (!form.name.trim()) return;
     onAdd(JSON.stringify(form));
+    if (form.birthday) onBirthdayTask?.(form.name.trim(), form.birthday);
     setForm({ name: "", relationship: "", birthday: "", interests: "", notes: "" });
     setShowForm(false);
   };
 
   const handleUpdate = (idx) => {
     onUpdate(idx, JSON.stringify(editForm));
+    if (editForm.birthday) onBirthdayTask?.(editForm.name?.trim(), editForm.birthday);
     setEditIdx(null);
   };
 
@@ -234,8 +248,7 @@ function PeopleSection({ items, onAdd, onDelete, onUpdate }) {
                   className="w-full text-xs rounded-lg border border-pink-200 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white" />
                 <input value={editForm.relationship || ""} onChange={e => setEditForm(f => ({ ...f, relationship: e.target.value }))} placeholder="Relationship"
                   className="w-full text-xs rounded-lg border border-pink-200 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white" />
-                <input value={editForm.birthday || ""} onChange={e => setEditForm(f => ({ ...f, birthday: e.target.value }))} placeholder="Birthday"
-                  className="w-full text-xs rounded-lg border border-pink-200 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white" />
+                <BirthdayPicker value={editForm.birthday || ""} onChange={v => setEditForm(f => ({ ...f, birthday: v }))} />
                 <input value={editForm.interests || ""} onChange={e => setEditForm(f => ({ ...f, interests: e.target.value }))} placeholder="Interests"
                   className="w-full text-xs rounded-lg border border-pink-200 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white" />
                 <textarea value={editForm.notes || ""} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} placeholder="Extra notes" rows={2}
@@ -280,8 +293,7 @@ function PeopleSection({ items, onAdd, onDelete, onUpdate }) {
                 className="w-full text-xs rounded-lg border border-pink-200 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white" />
               <input value={form.relationship} onChange={e => setForm(f => ({ ...f, relationship: e.target.value }))} placeholder="Relationship (e.g. best friend, mom)"
                 className="w-full text-xs rounded-lg border border-pink-200 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white" />
-              <input value={form.birthday} onChange={e => setForm(f => ({ ...f, birthday: e.target.value }))} placeholder="Birthday"
-                className="w-full text-xs rounded-lg border border-pink-200 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white" />
+              <BirthdayPicker value={form.birthday} onChange={v => setForm(f => ({ ...f, birthday: v }))} />
               <input value={form.interests} onChange={e => setForm(f => ({ ...f, interests: e.target.value }))} placeholder="Interests"
                 className="w-full text-xs rounded-lg border border-pink-200 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-pink-300 bg-white" />
               <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Anything else..." rows={2}
@@ -349,6 +361,27 @@ export default function ContextSidebar() {
     saveMutation.mutate({ [key]: getItems(key).filter((_, i) => i !== idx) });
   };
 
+  const birthdayTaskMutation = useMutation({
+    mutationFn: async ({ name, birthday }) => {
+      const scheduledDate = nextBirthdayDate(birthday);
+      if (!scheduledDate) return;
+      const taskName = `${name}'s Birthday 🎂`;
+      // Check if a birthday task for this person already exists and update it
+      const existing = await base44.entities.Task.filter({ name: taskName });
+      if (existing.length > 0) {
+        await base44.entities.Task.update(existing[0].id, { scheduled_date: scheduledDate, scheduled_time: "09:00", frequency: "once", is_active: true });
+      } else {
+        await base44.entities.Task.create({ name: taskName, frequency: "once", scheduled_date: scheduledDate, scheduled_time: "09:00", category: "social", is_active: true });
+      }
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+
+  const handleBirthdayTask = (name, birthday) => {
+    if (!name || !birthday) return;
+    birthdayTaskMutation.mutate({ name, birthday });
+  };
+
   const totalNotes = SECTIONS.reduce((sum, s) => sum + getItems(s.key).length, 0);
 
   return (
@@ -413,6 +446,7 @@ export default function ContextSidebar() {
                     onAdd={(val) => handleAdd("context_people", val)}
                     onDelete={(idx) => handleDelete("context_people", idx)}
                     onUpdate={(idx, val) => handleUpdate("context_people", idx, val)}
+                    onBirthdayTask={handleBirthdayTask}
                   />
                 ) : (
                   <TextSection
