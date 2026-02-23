@@ -57,7 +57,10 @@ export default function Layout({ children, currentPageName }) {
             <span className="font-bold text-slate-800 text-base sm:text-lg tracking-tight hidden sm:block">Accountable</span>
           </div>
 
-          <nav className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide">
+          <nav
+            className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide min-w-0 overscroll-x-contain"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {navItems.map(item => {
               const isActive = currentPageName === item.page;
               const showBadge = item.page === 'Chat' && !isActive && unread > 0;
