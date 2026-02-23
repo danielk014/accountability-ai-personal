@@ -398,10 +398,6 @@ async function executeTool(name, input) {
               await base44.entities.Task.create({ name: taskName, frequency: "once", scheduled_date: scheduledDate, scheduled_time: "09:00", category: "social", is_active: true });
               queryClientInstance.invalidateQueries({ queryKey: ["tasks"] });
             }
-            try {
-              await base44.functions.invoke("addCalendarEvent", { title: taskName, startTime: `${scheduledDate}T09:00`, description: `Birthday for ${input.name}` });
-              queryClientInstance.invalidateQueries({ queryKey: ["calendarEvents"] });
-            } catch {}
           }
         }
         return { success: true, action: "added", person: newPerson };
@@ -435,10 +431,6 @@ async function executeTool(name, input) {
               await base44.entities.Task.create({ name: taskName, frequency: "once", scheduled_date: scheduledDate, scheduled_time: "09:00", category: "social", is_active: true });
             }
             queryClientInstance.invalidateQueries({ queryKey: ["tasks"] });
-            try {
-              await base44.functions.invoke("addCalendarEvent", { title: taskName, startTime: `${scheduledDate}T09:00`, description: `Birthday for ${updated.name}` });
-              queryClientInstance.invalidateQueries({ queryKey: ["calendarEvents"] });
-            } catch {}
           }
         }
         return { success: true, action: "updated", person: updated };

@@ -1,43 +1,86 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
-import { Calendar, Loader2, Plus, Clock, MapPin } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Calendar, Loader2, Plus, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import AddEventDialog from "./AddEventDialog";
+
+// Returns the next upcoming Date for a task, or null if not upcoming
+function getNextOccurrence(task) {
+  const today = new Date();
+  const todayStr = format(today, "yyyy-MM-dd");
+
+  if (task.frequency === "once") {
+    if (task.scheduled_date && task.scheduled_date >= todayStr) {
+      return new Date(task.scheduled_date + "T" + (task.scheduled_time || "00:00"));
+    }
+    return null;
+  }
+
+  // For recurring tasks, find the next occurrence within 7 days
+  for (let i = 0; i <= 7; i++) {
+    const d = addDays(today, i);
+    const dow = format(d, "EEEE").toLowerCase();
+    const isWeekday = !["saturday", "sunday"].includes(dow);
+    let applies = false;
+    if (task.frequency === "daily") applies = true;
+    else if (task.frequency === "weekdays") applies = isWeekday;
+    else if (task.frequency === "weekends") applies = !isWeekday;
+    else if (task.frequency === dow) applies = true;
+    if (applies) {
+      return new Date(format(d, "yyyy-MM-dd") + "T" + (task.scheduled_time || "00:00"));
+    }
+  }
+  return null;
+}
 
 export default function CalendarWidget() {
   const [showAddEvent, setShowAddEvent] = useState(false);
+  const queryClient = useQueryClient();
 
-  const { data: events = [], isLoading, refetch } = useQuery({
-    queryKey: ["calendarEvents"],
-    queryFn: async () => {
-      try {
-        const response = await base44.functions.invoke("getCalendarEvents");
-        return response.data.events || [];
-      } catch (error) {
-        toast.error("Failed to load calendar events");
-        return [];
-      }
-    },
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+  const { data: user } = useQuery({
+    queryKey: ["me"],
+    queryFn: () => base44.auth.me(),
+  });
+
+  const { data: tasks = [], isLoading } = useQuery({
+    queryKey: ["tasks", user?.email],
+    queryFn: () => user?.email ? base44.entities.Task.filter({ created_by: user.email }) : [],
+    enabled: !!user?.email,
   });
 
   const handleAddEvent = async (eventData) => {
     try {
-      await base44.functions.invoke("addCalendarEvent", eventData);
+      const startDate = new Date(eventData.startTime);
+      await base44.entities.Task.create({
+        name: eventData.title,
+        frequency: "once",
+        scheduled_date: format(startDate, "yyyy-MM-dd"),
+        scheduled_time: format(startDate, "HH:mm"),
+        category: "personal",
+        is_active: true,
+      });
       toast.success("Event added to calendar!");
-      refetch();
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
       setShowAddEvent(false);
-    } catch (error) {
+    } catch {
       toast.error("Failed to add event");
     }
   };
 
-  // Sort and limit to next 5 events
-  const upcomingEvents = events
-    .sort((a, b) => new Date(a.start.dateTime || a.start.date) - new Date(b.start.dateTime || b.start.date))
+  // Show upcoming one-time events (birthdays, appointments, etc.)
+  // plus timed recurring tasks within the next 7 days
+  const upcomingEvents = (tasks || [])
+    .filter(t => t.is_active !== false)
+    .filter(t => t.frequency === "once" || t.scheduled_time?.trim())
+    .map(task => {
+      const date = getNextOccurrence(task);
+      return date ? { task, date } : null;
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.date - b.date)
     .slice(0, 5);
 
   return (
@@ -45,7 +88,7 @@ export default function CalendarWidget() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Calendar className="w-5 h-5 text-indigo-600" />
-          <h3 className="font-semibold text-slate-800">Calendar</h3>
+          <h3 className="font-semibold text-slate-800">Upcoming</h3>
         </div>
         <Button
           onClick={() => setShowAddEvent(true)}
@@ -64,41 +107,26 @@ export default function CalendarWidget() {
       ) : upcomingEvents.length === 0 ? (
         <div className="text-center py-8 text-slate-500 text-sm">
           <p>No upcoming events</p>
-          <p className="text-xs mt-1">Add your first event to get started</p>
+          <p className="text-xs mt-1">Add an event or save a birthday to get started</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {upcomingEvents.map((event) => {
-            const startDate = new Date(event.start.dateTime || event.start.date);
-            const isAllDay = !event.start.dateTime;
-
-            return (
-              <div key={event.id} className="border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-slate-800 text-sm truncate">{event.summary}</p>
-                    <div className="flex items-center gap-4 mt-1 text-xs text-slate-600">
-                      {!isAllDay && (
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>{format(startDate, "MMM d, h:mm a")}</span>
-                        </div>
-                      )}
-                      {isAllDay && (
-                        <span>{format(startDate, "MMM d")}</span>
-                      )}
-                      {event.location && (
-                        <div className="flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5" />
-                          <span>{event.location}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+          {upcomingEvents.map(({ task, date }) => (
+            <div key={task.id} className="border border-slate-200 rounded-lg p-3 hover:bg-slate-50 transition">
+              <p className="font-medium text-slate-800 text-sm truncate">{task.name}</p>
+              <div className="flex items-center gap-1 mt-1 text-xs text-slate-500">
+                <Clock className="w-3.5 h-3.5" />
+                <span>
+                  {task.scheduled_time?.trim()
+                    ? format(date, "MMM d, h:mm a")
+                    : format(date, "MMM d")}
+                </span>
+                {task.category && (
+                  <span className="ml-2 capitalize text-slate-400">{task.category}</span>
+                )}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
 
