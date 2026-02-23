@@ -11,9 +11,20 @@ export default function FloatingChatBubble({ currentPageName }) {
   const [messages, setMessages] = useState(() => loadHistory());
   const [isLoading, setIsLoading] = useState(false);
   const [unread, setUnread] = useState(getUnreadCount);
+  const [embeddedChatActive, setEmbeddedChatActive] = useState(false);
   const messagesEndRef = useRef(null);
   const chatWindowRef = useRef(null);
   const buttonRef = useRef(null);
+
+  // Hide when any embedded chat (e.g. screentime AI) is visible
+  useEffect(() => {
+    const handler = (e) => {
+      setEmbeddedChatActive(e.detail);
+      if (e.detail) setIsOpen(false); // close if open
+    };
+    window.addEventListener("embedded-chat-active", handler);
+    return () => window.removeEventListener("embedded-chat-active", handler);
+  }, []);
 
   const displayMessages = messages.filter(m => m.role !== "system");
 
@@ -112,7 +123,7 @@ export default function FloatingChatBubble({ currentPageName }) {
     }
   };
 
-  if (currentPageName === "Chat" || currentPageName === "Projects") return null;
+  if (currentPageName === "Chat" || currentPageName === "Projects" || embeddedChatActive) return null;
 
   return (
     <>

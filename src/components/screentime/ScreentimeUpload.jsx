@@ -84,6 +84,12 @@ export default function ScreentimeAIChat({ logs = [], onLogEntries, today }) {
   const fileRef   = useRef(null);
   const bottomRef = useRef(null);
 
+  // Tell FloatingChatBubble to hide while this chat is mounted
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("embedded-chat-active", { detail: true }));
+    return () => window.dispatchEvent(new CustomEvent("embedded-chat-active", { detail: false }));
+  }, []);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
