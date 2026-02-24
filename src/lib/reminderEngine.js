@@ -1,6 +1,7 @@
 import { sendOneOffPrompt, loadHistory, saveHistory } from '@/api/claudeClient';
 import { getUserPrefix } from '@/lib/userStore';
 import { supabaseStorage } from '@/api/supabaseStorage';
+import { showBrowserNotification, syncRemindersToSW } from '@/lib/notifications';
 
 const getRemindersKey = () => `${getUserPrefix()}accountable_reminders`;
 const getUnreadKey    = () => `${getUserPrefix()}accountable_unread`;
@@ -24,6 +25,7 @@ export function getReminders() {
 
 function _saveReminders(list) {
   supabaseStorage.setItem(getRemindersKey(), JSON.stringify(list));
+  syncRemindersToSW(list);
 }
 
 export function addReminder({ text, type, time, datetime }) {
@@ -71,6 +73,9 @@ Write a short, warm, natural message (1–2 sentences max). Sound like a friend 
 
     _incrementUnread();
     window.dispatchEvent(new CustomEvent('reminder-fired', { detail: { message: reply, reminderId: reminder.id } }));
+
+    // Show OS-level notification so user sees it even if the tab isn't focused
+    showBrowserNotification('Accountable reminder', reminder.text);
   } catch (err) {
     console.error('[reminderEngine] Failed to fire reminder:', err);
   }

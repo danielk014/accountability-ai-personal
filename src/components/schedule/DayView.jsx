@@ -144,7 +144,9 @@ function clampResizeNoOverlap(newTop, newHeight, taskId, allTimedCards) {
 
 function EventCard({ card, onToggle, onRemove, onMoveEnd, onResizeEnd, allCards }) {
   const colorClass = CATEGORY_COLORS[card.task.category] || CATEGORY_COLORS.other;
-  const dragState = useRef(null);
+  const dragRef = useRef(null);
+  const liveTopRef = useRef(null);
+  const liveHeightRef = useRef(null);
   const [liveTop, setLiveTop] = useState(null);
   const [liveHeight, setLiveHeight] = useState(null);
   const [completing, setCompleting] = useState(false);
@@ -152,55 +154,59 @@ function EventCard({ card, onToggle, onRemove, onMoveEnd, onResizeEnd, allCards 
   const displayTop = liveTop !== null ? liveTop : card.top;
   const displayHeight = liveHeight !== null ? liveHeight : card.height;
 
+  // Use document-level listeners so touch drag works correctly on mobile
   const onPointerDown = useCallback((e, type) => {
     e.preventDefault();
     e.stopPropagation();
-    dragState.current = { type, startY: e.clientY, startTop: card.top, startHeight: card.height };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  }, [card.top, card.height]);
+    dragRef.current = { type, startY: e.clientY, startTop: card.top, startHeight: card.height };
+    liveTopRef.current = null;
+    liveHeightRef.current = null;
 
-  const onPointerMove = useCallback((e) => {
-    if (!dragState.current) return;
-    const { type, startY, startTop, startHeight } = dragState.current;
-    const dy = e.clientY - startY;
+    const handleMove = (ev) => {
+      ev.preventDefault();
+      if (!dragRef.current) return;
+      const { type: t, startY, startTop, startHeight } = dragRef.current;
+      const dy = ev.clientY - startY;
 
-    if (type === "move") {
-      const rawTop = startTop + dy;
-      const snapped = snap(rawTop);
-      const [t] = clampNoOverlap(snapped, startHeight, card.id, allCards);
-      setLiveTop(t);
-      setLiveHeight(startHeight);
-    } else if (type === "resize-bottom") {
-      const rawHeight = startHeight + dy;
-      const snapped = snap(rawHeight);
-      const [, h] = clampResizeNoOverlap(startTop, snapped, card.id, allCards);
-      setLiveTop(startTop);
-      setLiveHeight(h);
-    } else if (type === "resize-top") {
-      const rawTop = startTop + dy;
-      const snappedTop = snap(rawTop);
-      const newHeight = startHeight - (snappedTop - startTop);
-      const [t, h] = clampResizeNoOverlap(snappedTop, newHeight, card.id, allCards);
-      setLiveTop(t);
-      setLiveHeight(h);
-    }
-  }, [card.id, allCards]);
+      let newTop, newHeight;
+      if (t === "move") {
+        const [top] = clampNoOverlap(snap(startTop + dy), startHeight, card.id, allCards);
+        newTop = top; newHeight = startHeight;
+      } else if (t === "resize-bottom") {
+        const [, h] = clampResizeNoOverlap(startTop, snap(startHeight + dy), card.id, allCards);
+        newTop = startTop; newHeight = h;
+      } else {
+        const snappedTop = snap(startTop + dy);
+        const [top, h] = clampResizeNoOverlap(snappedTop, startHeight - (snappedTop - startTop), card.id, allCards);
+        newTop = top; newHeight = h;
+      }
+      liveTopRef.current = newTop;
+      liveHeightRef.current = newHeight;
+      setLiveTop(newTop);
+      setLiveHeight(newHeight);
+    };
 
-  const onPointerUp = useCallback((e) => {
-    if (!dragState.current) return;
-    const { type } = dragState.current;
-    const finalTop = liveTop !== null ? liveTop : card.top;
-    const finalHeight = liveHeight !== null ? liveHeight : card.height;
-    dragState.current = null;
-    setLiveTop(null);
-    setLiveHeight(null);
+    const handleUp = () => {
+      document.removeEventListener('pointermove', handleMove);
+      document.removeEventListener('pointerup', handleUp);
+      document.removeEventListener('pointercancel', handleUp);
+      if (!dragRef.current) return;
+      const { type: t } = dragRef.current;
+      dragRef.current = null;
+      const finalTop = liveTopRef.current !== null ? liveTopRef.current : card.top;
+      const finalHeight = liveHeightRef.current !== null ? liveHeightRef.current : card.height;
+      liveTopRef.current = null;
+      liveHeightRef.current = null;
+      setLiveTop(null);
+      setLiveHeight(null);
+      if (t === "move") onMoveEnd(card.id, finalTop);
+      else onResizeEnd(card.id, finalTop, finalHeight);
+    };
 
-    if (type === "move") {
-      onMoveEnd(card.id, finalTop);
-    } else {
-      onResizeEnd(card.id, finalTop, finalHeight);
-    }
-  }, [liveTop, liveHeight, card.top, card.height, card.id, onMoveEnd, onResizeEnd]);
+    document.addEventListener('pointermove', handleMove, { passive: false });
+    document.addEventListener('pointerup', handleUp);
+    document.addEventListener('pointercancel', handleUp);
+  }, [card.top, card.height, card.id, allCards, onMoveEnd, onResizeEnd]);
 
   const handleToggle = (e) => {
     e.stopPropagation();
@@ -213,9 +219,6 @@ function EventCard({ card, onToggle, onRemove, onMoveEnd, onResizeEnd, allCards 
     <motion.div
       style={{ top: displayTop, height: displayHeight, left: LEFT_GUTTER + 4, right: 4, position: "absolute", zIndex: 10, touchAction: 'none' }}
       className={`rounded-xl border-l-4 shadow-sm select-none overflow-visible ${colorClass}`}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.3 } }}
@@ -223,7 +226,7 @@ function EventCard({ card, onToggle, onRemove, onMoveEnd, onResizeEnd, allCards 
     >
       {/* Top resize handle */}
       <div
-        className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize flex items-center justify-center group z-20"
+        className="absolute top-0 left-0 right-0 h-4 cursor-ns-resize flex items-center justify-center group z-20"
         style={{ touchAction: 'none' }}
         onPointerDown={(e) => onPointerDown(e, "resize-top")}
       >
@@ -262,7 +265,7 @@ function EventCard({ card, onToggle, onRemove, onMoveEnd, onResizeEnd, allCards 
 
       {/* Bottom resize handle */}
       <div
-        className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize flex items-center justify-center group z-20"
+        className="absolute bottom-0 left-0 right-0 h-4 cursor-ns-resize flex items-center justify-center group z-20"
         style={{ touchAction: 'none' }}
         onPointerDown={(e) => onPointerDown(e, "resize-bottom")}
       >

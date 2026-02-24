@@ -122,7 +122,7 @@ function TimedTaskBlock({ task, color, completing, onToggle, onRemove, onPointer
     >
       {/* Top resize handle */}
       <div
-        className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize flex items-center justify-center group z-20"
+        className="absolute top-0 left-0 right-0 h-4 cursor-ns-resize flex items-center justify-center group z-20"
         style={{ touchAction: 'none' }}
         onPointerDown={(e) => onPointerDown(e, "resize-top")}
       >
@@ -154,7 +154,7 @@ function TimedTaskBlock({ task, color, completing, onToggle, onRemove, onPointer
 
       {/* Bottom resize handle */}
       <div
-        className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize flex items-center justify-center group z-20"
+        className="absolute bottom-0 left-0 right-0 h-4 cursor-ns-resize flex items-center justify-center group z-20"
         style={{ touchAction: 'none' }}
         onPointerDown={(e) => onPointerDown(e, "resize-bottom")}
       >
@@ -389,8 +389,8 @@ export default function WeekView({ date, tasks, completions, onToggle, onDropTas
         })}
       </div>
 
-      {/* Timetable grid */}
-      <div ref={scrollContainerRef} className="flex overflow-y-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
+      {/* Timetable grid — disable touch scroll while a drag is active so finger movement maps to drag */}
+      <div ref={scrollContainerRef} className="flex overflow-y-auto" style={{ maxHeight: "calc(100vh - 220px)", touchAction: activeDrag ? 'none' : 'pan-y' }}>
         {/* Time gutter */}
         <div className="w-12 flex-shrink-0 border-r border-slate-100 relative" style={{ height: totalGridHeight }}>
           {HOURS.map((hour, idx) => (
