@@ -8,7 +8,6 @@ import {
   ChevronLeft, ChevronRight, Calendar,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { buildSystemPrompt } from "@/api/claudeClient";
 import { toast } from "sonner";
 import { getUserPrefix } from "@/lib/userStore";
 import { supabaseStorage } from "@/api/supabaseStorage";
@@ -319,11 +318,8 @@ function executeFinancialTool(name, input, update) {
 }
 
 async function financialAgenticLoop(history, fin, update) {
-  // Full user context (personality, goals, projects, tasks, etc.) + financial snapshot
-  const userContext = await buildSystemPrompt();
-  const financialPrompt = buildFinancialSystemPrompt(fin);
-  // Financial advisor persona + financial data comes first, user context appended after
-  const systemPrompt = `${financialPrompt}\n\n---\n\n${userContext}`;
+  // Financial Advisor only sees financial data — not gym, projects, sleep, etc.
+  const systemPrompt = buildFinancialSystemPrompt(fin);
 
   let messages = history.map(m => ({ role: m.role, content: m.content }));
   for (let turn = 0; turn < 8; turn++) {

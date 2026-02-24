@@ -621,6 +621,69 @@ export async function buildSystemPrompt() {
       }
     } catch {}
 
+    // Gym data from supabaseStorage
+    try {
+      const gymKey = `${getUserPrefix()}gym_tracker_v1`;
+      const gymRaw = supabaseStorage.getItem(gymKey) || localStorage.getItem(gymKey);
+      if (gymRaw) {
+        const gym = JSON.parse(gymRaw);
+        const days = gym.workout_days || [];
+        if (days.length > 0) {
+          const unit = gym.weight_unit || 'kg';
+          const gymLines = days.map(d => {
+            const exs = (d.exercises || []);
+            if (exs.length === 0) return `  ${d.name}: (no exercises yet)`;
+            return `  ${d.name}:\n` + exs.map(e => {
+              const lastSet = (e.sets || []).at(-1);
+              const lastLog = (e.weight_log || []).at(-1);
+              const best = lastSet ? `${lastSet.weight}${unit} × ${lastSet.reps}` : lastLog ? `${lastLog.weight}${unit}` : null;
+              return `    - ${e.name}${best ? ` (last: ${best})` : ''}`;
+            }).join('\n');
+          });
+          let gymSection = `## My Gym Workout Plan\n${gymLines.join('\n')}`;
+          // Append current bodyweight if available
+          const bwRaw = supabaseStorage.getItem(`${getUserPrefix()}gym_bodyweight_v1`);
+          if (bwRaw) {
+            const bw = JSON.parse(bwRaw);
+            const sorted = [...(bw.logs || [])].sort((a, b) => b.date.localeCompare(a.date));
+            if (sorted.length > 0) gymSection += `\nCurrent bodyweight: ${sorted[0].weight}${unit} (logged ${sorted[0].date})`;
+          }
+          lines.push(gymSection);
+        }
+      }
+    } catch {}
+
+    // Upcoming events and birthdays (next 30 days)
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const in30 = new Date(); in30.setDate(in30.getDate() + 30);
+      const in30Str = in30.toISOString().split('T')[0];
+
+      const upcomingEvents = activeTasks
+        .filter(t => t.frequency === 'once' && t.scheduled_date >= todayStr && t.scheduled_date <= in30Str)
+        .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
+
+      const upcomingBirthdays = [];
+      if (profile?.context_people?.length) {
+        const people = profile.context_people.map(p => { try { return JSON.parse(p); } catch { return { name: p }; } });
+        for (const person of people) {
+          if (!person.birthday) continue;
+          const bdayDate = nextBirthdayDate(person.birthday);
+          if (bdayDate && bdayDate >= todayStr && bdayDate <= in30Str) {
+            upcomingBirthdays.push({ name: person.name, date: bdayDate, relationship: person.relationship });
+          }
+        }
+        upcomingBirthdays.sort((a, b) => a.date.localeCompare(b.date));
+      }
+
+      if (upcomingEvents.length > 0 || upcomingBirthdays.length > 0) {
+        const bdayLines = upcomingBirthdays.map(b => `- ${b.date}: 🎂 ${b.name}'s Birthday${b.relationship ? ` (${b.relationship})` : ''}`);
+        const eventLines = upcomingEvents.map(t => `- ${t.scheduled_date}: ${t.name}${t.scheduled_time ? ` at ${t.scheduled_time}` : ''}${t.category ? ` [${t.category}]` : ''}`);
+        const allLines = [...bdayLines, ...eventLines].sort((a, b) => a.localeCompare(b));
+        lines.push(`## Upcoming Events & Birthdays (Next 30 Days)\n${allLines.join('\n')}`);
+      }
+    } catch {}
+
     if (lines.length === 0) return BASE_SYSTEM;
 
     return `${BASE_SYSTEM}

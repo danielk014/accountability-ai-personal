@@ -63,6 +63,7 @@ export const AuthProvider = ({ children }) => {
         _clearUser();
         clearCurrentUser();
         clearStorage();
+        queryClientInstance.clear();
         setUser(null);
       }
     });
