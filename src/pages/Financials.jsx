@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { isStorageReady } from "@/api/supabaseStorage";
 import { createPortal } from "react-dom";
 import {
   TrendingUp, TrendingDown, Wallet,
@@ -1010,6 +1011,14 @@ const TABS = ["Overview", "Income", "Expenses", "AI Advisor"];
 export default function Financials() {
   const [fin, setFin] = useState(loadFin);
   const [activeTab, setActiveTab] = useState("Income");
+
+  // Reload from supabaseStorage once it finishes hydrating from Supabase
+  useEffect(() => {
+    if (isStorageReady()) { setFin(loadFin()); return; }
+    const handler = () => setFin(loadFin());
+    window.addEventListener('supabase-storage-ready', handler);
+    return () => window.removeEventListener('supabase-storage-ready', handler);
+  }, []);
 
   const update = (patch) => {
     setFin(prev => {

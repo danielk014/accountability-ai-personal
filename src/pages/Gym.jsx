@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getUserPrefix } from "@/lib/userStore";
-import { supabaseStorage } from "@/api/supabaseStorage";
+import { supabaseStorage, isStorageReady } from "@/api/supabaseStorage";
 import { sendGymMessage } from "@/api/claudeClient";
 import { toast } from "sonner";
 import {
@@ -1183,6 +1183,20 @@ export default function Gym() {
   const [dayDragIndex, setDayDragIndex]   = useState(null);
   const [dayDragOverIndex, setDayDragOverIndex] = useState(null);
   const tabBarRef = useRef(null);
+
+  // Reload from supabaseStorage once it finishes hydrating from Supabase
+  useEffect(() => {
+    const reload = () => {
+      const d = loadData();
+      setGymData(d);
+      setPhysique(loadPhysique());
+      setBodyweight(loadBodyweight());
+      setActiveTab(d.workout_days?.[0]?.id || "physique");
+    };
+    if (isStorageReady()) { reload(); return; }
+    window.addEventListener('supabase-storage-ready', reload);
+    return () => window.removeEventListener('supabase-storage-ready', reload);
+  }, []);
 
   // Cancel pending delete when clicking outside tab bar
   useEffect(() => {

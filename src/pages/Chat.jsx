@@ -6,6 +6,7 @@ import ChatInput from "../components/chat/ChatInput";
 import ContextSidebar from "../components/chat/ContextSidebar";
 import { sendMessageToClaude, loadHistory, saveHistory, clearHistory } from "@/api/claudeClient";
 import { clearUnread } from "@/lib/reminderEngine";
+import { isStorageReady } from "@/api/supabaseStorage";
 
 export default function Chat() {
   const [messages, setMessages] = useState(() => loadHistory());
@@ -17,6 +18,14 @@ export default function Chat() {
   // Clear unread count when Chat page mounts
   useEffect(() => {
     clearUnread();
+  }, []);
+
+  // Load chat history once supabaseStorage finishes hydrating
+  useEffect(() => {
+    if (isStorageReady()) { setMessages(loadHistory()); return; }
+    const handler = () => setMessages(loadHistory());
+    window.addEventListener('supabase-storage-ready', handler);
+    return () => window.removeEventListener('supabase-storage-ready', handler);
   }, []);
 
   // Sync messages when a reminder fires from outside this page

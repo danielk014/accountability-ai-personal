@@ -11,13 +11,18 @@ import { supabase } from './supabaseClient'
 
 const _cache  = new Map()
 let   _userId = null
+let   _ready  = false
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
+
+/** True once the initial user_kv load has completed (or failed). */
+export function isStorageReady() { return _ready }
 
 /** Load all KV rows for this user into the in-memory cache. */
 export async function hydrateStorage(userId) {
   _userId = userId
   _cache.clear()
+  _ready  = false
   try {
     const { data, error } = await supabase
       .from('user_kv')
@@ -29,12 +34,15 @@ export async function hydrateStorage(userId) {
   } catch (err) {
     console.warn('[supabaseStorage] hydration failed:', err)
   }
+  _ready = true
+  window.dispatchEvent(new CustomEvent('supabase-storage-ready'))
 }
 
 /** Clear the cache on logout. */
 export function clearStorage() {
   _cache.clear()
   _userId = null
+  _ready  = false
 }
 
 // ─── Storage API (same shape as localStorage) ─────────────────────────────────

@@ -24,7 +24,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     let active = true;
 
-    // Step 1: restore session and WAIT for storage hydration so pages render with data
+    // Step 1: restore session immediately, hydrate storage in the background
     const initAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -32,8 +32,7 @@ export const AuthProvider = ({ children }) => {
           const u = session.user;
           _setUser(u.id, u.email);
           setCurrentUser(u.email);
-          // Await hydration so supabaseStorage cache is ready before pages render
-          await hydrateStorage(u.id).catch(() => {});
+          hydrateStorage(u.id).catch(() => {}); // fire-and-forget — pages listen for 'supabase-storage-ready'
           if (active) setUser(buildUserObj(u));
         }
       } catch {}
@@ -43,7 +42,7 @@ export const AuthProvider = ({ children }) => {
     initAuth();
 
     // Step 2: listen for subsequent auth changes (sign in, sign out, token refresh, recovery)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'INITIAL_SESSION') return; // already handled by initAuth() above
 
       if (event === 'PASSWORD_RECOVERY') {
@@ -55,9 +54,9 @@ export const AuthProvider = ({ children }) => {
         const u = session.user;
         _setUser(u.id, u.email);
         setCurrentUser(u.email);
-        // Hydrate storage on actual sign-in so new user data is available immediately
+        // Hydrate storage on actual sign-in (fire-and-forget — pages listen for event)
         if (event === 'SIGNED_IN') {
-          await hydrateStorage(u.id).catch(() => {});
+          hydrateStorage(u.id).catch(() => {});
         }
         setUser(buildUserObj(u));
       } else {
