@@ -228,13 +228,17 @@ const TOOLS = [
 
 function nextBirthdayDate(birthdayStr) {
   if (!birthdayStr) return null;
+  // Parse components directly to avoid timezone ambiguity with new Date(string)
+  const parts = birthdayStr.split('-');
+  if (parts.length < 3) return null;
+  const birthMonth = parseInt(parts[1], 10) - 1; // 0-indexed for Date constructor
+  const birthDay = parseInt(parts[2], 10);
   const today = new Date();
-  const bday = new Date(birthdayStr + "T00:00:00");
   const pad = n => String(n).padStart(2, "0");
   const fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  const thisYear = new Date(today.getFullYear(), bday.getMonth(), bday.getDate());
+  const thisYear = new Date(today.getFullYear(), birthMonth, birthDay);
   if (thisYear >= today) return fmt(thisYear);
-  return fmt(new Date(today.getFullYear() + 1, bday.getMonth(), bday.getDate()));
+  return fmt(new Date(today.getFullYear() + 1, birthMonth, birthDay));
 }
 
 function calcHours(sleepTime, wakeTime) {
@@ -500,11 +504,13 @@ async function executeTool(name, input) {
 export async function buildSystemPrompt() {
   try {
     const user = await base44.auth.me();
-    const [profiles, projects, allProjectTasks, tasks] = await Promise.all([
+    const [profiles, projects, allProjectTasks, tasks, recentCompletions, recentSleep] = await Promise.all([
       base44.entities.UserProfile.filter({ created_by: user.email }),
       base44.entities.Project.filter({ created_by: user.email }, "-created_at"),
       base44.entities.ProjectTask.filter({ created_by: user.email }),
       base44.entities.Task.filter({ created_by: user.email }),
+      base44.entities.TaskCompletion.filter({ created_by: user.email }),
+      base44.entities.Sleep.filter({ created_by: user.email }, "-date", 14),
     ]);
     const profile = profiles[0];
 
@@ -559,6 +565,36 @@ export async function buildSystemPrompt() {
         return desc;
       }).join('\n');
       lines.push(`## My Habits & Tasks\n${taskText}`);
+    }
+
+    // Recently completed tasks (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+    const filteredCompletions = recentCompletions.filter(c => c.completed_date >= sevenDaysAgoStr);
+    if (filteredCompletions.length > 0) {
+      const taskMap = {};
+      for (const t of tasks) taskMap[t.id] = t.name;
+      const byDate = {};
+      for (const c of filteredCompletions) {
+        if (!byDate[c.completed_date]) byDate[c.completed_date] = [];
+        const name = taskMap[c.task_id] || 'Unknown task';
+        if (!byDate[c.completed_date].includes(name)) byDate[c.completed_date].push(name);
+      }
+      const completionText = Object.entries(byDate)
+        .sort(([a], [b]) => b.localeCompare(a))
+        .map(([date, names]) => `${date}: ${names.join(', ')}`)
+        .join('\n');
+      lines.push(`## Recently Completed Tasks (Last 7 Days)\n${completionText}`);
+    }
+
+    // Recent sleep schedule
+    if (recentSleep.length > 0) {
+      const sleepText = recentSleep.map(s => {
+        const hours = s.hours ?? calcHours(s.sleep_time, s.wake_time);
+        return `${s.date}: slept ${s.sleep_time}–${s.wake_time} (${hours}h)`;
+      }).join('\n');
+      lines.push(`## Recent Sleep Schedule\n${sleepText}`);
     }
 
     // Financial snapshot from supabaseStorage

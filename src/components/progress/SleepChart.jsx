@@ -155,18 +155,18 @@ function TimePicker({ value, onChange, label, icon: Icon }) {
   const onWheelM = (e) => { e.preventDefault(); e.deltaY < 0 ? incM() : decM(); };
 
   return (
-    <div className="flex-1">
+    <div className="flex-1 min-w-0 overflow-hidden">
       <p className="text-xs font-medium text-slate-500 mb-2 flex items-center gap-1">
         <Icon className="w-3 h-3" /> {label}
       </p>
-      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 flex items-center justify-center gap-1">
+      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-2 flex items-center justify-center gap-1">
 
         {/* Hour column */}
         <div className="flex flex-col items-center" onWheel={onWheelH}>
           <button type="button" onClick={incH} className="text-slate-300 hover:text-violet-500 p-1 rounded-lg transition-colors">
             <ChevronUp className="w-4 h-4" />
           </button>
-          <span className="text-2xl font-bold text-slate-800 w-10 text-center select-none cursor-default">
+          <span className="text-2xl font-bold text-slate-800 w-9 text-center select-none cursor-default">
             {String(h).padStart(2, "0")}
           </span>
           <button type="button" onClick={decH} className="text-slate-300 hover:text-violet-500 p-1 rounded-lg transition-colors">
@@ -181,7 +181,7 @@ function TimePicker({ value, onChange, label, icon: Icon }) {
           <button type="button" onClick={incM} className="text-slate-300 hover:text-violet-500 p-1 rounded-lg transition-colors">
             <ChevronUp className="w-4 h-4" />
           </button>
-          <span className="text-2xl font-bold text-slate-800 w-10 text-center select-none cursor-default">
+          <span className="text-2xl font-bold text-slate-800 w-9 text-center select-none cursor-default">
             {String(snappedM).padStart(2, "0")}
           </span>
           <button type="button" onClick={decM} className="text-slate-300 hover:text-violet-500 p-1 rounded-lg transition-colors">
@@ -190,13 +190,13 @@ function TimePicker({ value, onChange, label, icon: Icon }) {
         </div>
 
         {/* AM / PM */}
-        <div className="flex flex-col gap-1 ml-2">
+        <div className="flex flex-col gap-1 ml-1">
           {["AM", "PM"].map(ap => (
             <button
               key={ap}
               type="button"
               onClick={() => setAmpm(ap)}
-              className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-colors ${
+              className={`text-xs font-semibold px-2 py-1 rounded-lg transition-colors ${
                 ampm === ap
                   ? "bg-violet-600 text-white shadow-sm"
                   : "bg-slate-200 text-slate-400 hover:bg-slate-300"
@@ -209,13 +209,13 @@ function TimePicker({ value, onChange, label, icon: Icon }) {
       </div>
 
       {/* Quick minute strip */}
-      <div className="flex gap-1 mt-2 flex-wrap">
+      <div className="flex gap-0.5 mt-2 flex-wrap">
         {MINUTE_STEPS.map(min => (
           <button
             key={min}
             type="button"
             onClick={() => setM(min)}
-            className={`flex-1 min-w-[2rem] text-[11px] font-semibold py-1 rounded-lg transition-colors ${
+            className={`flex-1 min-w-[1.75rem] text-[11px] font-semibold py-1 rounded-lg transition-colors ${
               snappedM === min
                 ? "bg-violet-600 text-white"
                 : "bg-slate-100 text-slate-500 hover:bg-violet-50 hover:text-violet-600"
@@ -547,7 +547,7 @@ export default function SleepChart({ sleepData }) {
         </div>
 
         {/* Time pickers */}
-        <div className="flex gap-3 mb-4">
+        <div className="flex gap-2 mb-4 min-w-0 overflow-hidden">
           <TimePicker
             value={formData.sleep_time}
             onChange={(v) => setFormData({ ...formData, sleep_time: v })}

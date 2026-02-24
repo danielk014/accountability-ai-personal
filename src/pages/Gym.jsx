@@ -1179,7 +1179,6 @@ export default function Gym() {
   });
   const [addingDay, setAddingDay]         = useState(false);
   const [newDayName, setNewDayName]       = useState("");
-  const [pendingDeleteDayId, setPendingDeleteDayId] = useState(null);
   const [dayDragIndex, setDayDragIndex]   = useState(null);
   const [dayDragOverIndex, setDayDragOverIndex] = useState(null);
   const tabBarRef = useRef(null);
@@ -1197,16 +1196,6 @@ export default function Gym() {
     window.addEventListener('supabase-storage-ready', reload);
     return () => window.removeEventListener('supabase-storage-ready', reload);
   }, []);
-
-  // Cancel pending delete when clicking outside tab bar
-  useEffect(() => {
-    if (!pendingDeleteDayId) return;
-    const handler = (e) => {
-      if (!tabBarRef.current?.contains(e.target)) setPendingDeleteDayId(null);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [pendingDeleteDayId]);
 
   function updateAndSave(patch) {
     const updated = { ...gymData, ...patch };
@@ -1249,10 +1238,10 @@ export default function Gym() {
   function handleDeleteDay(dayId) {
     const day = gymData.workout_days.find(d => d.id === dayId);
     if (!day) return;
+    if (!window.confirm(`Delete "${day.name}" day and all its exercises?\nThis cannot be undone.`)) return;
     const newDays = gymData.workout_days.filter(d => d.id !== dayId);
     updateAndSave({ workout_days: newDays });
     if (activeTab === dayId) setActiveTab(newDays[0]?.id || "physique");
-    setPendingDeleteDayId(null);
     toast.success(`"${day.name}" day removed.`);
   }
 
@@ -1351,7 +1340,6 @@ export default function Gym() {
         <div ref={tabBarRef} className="flex gap-1 border-b border-slate-100 mb-6 -mx-1 overflow-x-auto">
           {/* Workout day tabs with double-confirm delete + drag reorder */}
           {(gymData.workout_days || []).map((day, idx) => {
-            const isPending = pendingDeleteDayId === day.id;
             const isDragging = dayDragIndex === idx;
             const isDayDragOver = dayDragOverIndex === idx && dayDragIndex !== idx;
             return (
@@ -1372,7 +1360,7 @@ export default function Gym() {
                 onDragEnd={() => { setDayDragIndex(null); setDayDragOverIndex(null); }}
               >
                 <button
-                  onClick={() => { setActiveTab(day.id); setPendingDeleteDayId(null); }}
+                  onClick={() => setActiveTab(day.id)}
                   className={cn(
                     "pl-4 pr-7 py-2.5 text-sm font-medium rounded-t-lg transition-all -mb-px border-b-2 whitespace-nowrap",
                     activeTab === day.id
@@ -1382,18 +1370,13 @@ export default function Gym() {
                 >
                   {day.name}
                 </button>
-                {/* Delete button — first click arms it (red), second click confirms */}
+                {/* Delete button — click shows confirm dialog */}
                 <button
                   onClick={e => {
                     e.stopPropagation();
-                    isPending ? handleDeleteDay(day.id) : setPendingDeleteDayId(day.id);
+                    handleDeleteDay(day.id);
                   }}
-                  className={cn(
-                    "absolute right-1 top-1/2 -translate-y-1/2 mt-[-2px] p-0.5 rounded transition",
-                    isPending
-                      ? "text-red-500 bg-red-50 opacity-100"
-                      : "text-slate-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover/tab:opacity-100"
-                  )}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 mt-[-2px] p-0.5 rounded transition text-slate-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover/tab:opacity-100"
                 >
                   <X className="w-3 h-3" />
                 </button>

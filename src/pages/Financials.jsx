@@ -3,7 +3,7 @@ import { isStorageReady } from "@/api/supabaseStorage";
 import { createPortal } from "react-dom";
 import {
   TrendingUp, TrendingDown, Wallet,
-  Plus, Trash2, Upload, Send, Loader2, Sparkles,
+  Plus, Trash2, Send, Loader2, Sparkles,
   AlertCircle, Pencil, Check, X, CheckSquare, Square,
   ChevronLeft, ChevronRight, Calendar,
 } from "lucide-react";
@@ -462,102 +462,14 @@ function ItemRow({ item, onDelete, onUpdate, dayLabel = "Due" }) {
   );
 }
 
-// ── Salary slip upload → AI parse ──────────────────────────────────────────────
-function SalaryUpload({ onParsed }) {
-  const [loading, setLoading] = useState(false);
-  const ref = useRef(null);
-
-  const handle = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const isImage = file.type.startsWith("image/");
-    const isPdf = file.type === "application/pdf";
-    if (!isImage && !isPdf) { toast.error("Images and PDFs only"); return; }
-    if (file.size > 20 * 1024 * 1024) { toast.error("Max 20 MB"); return; }
-
-    setLoading(true);
-    try {
-      const b64 = await new Promise((res, rej) => {
-        const r = new FileReader();
-        r.onload = ev => res(ev.target.result.split(",")[1]);
-        r.onerror = rej;
-        r.readAsDataURL(file);
-      });
-
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": import.meta.env.VITE_ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
-          ...(isPdf ? { "anthropic-beta": "pdfs-2024-09-25" } : {}),
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-5",
-          max_tokens: 64,
-          messages: [{
-            role: "user",
-            content: [
-              isPdf
-                ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: b64 } }
-                : { type: "image", source: { type: "base64", media_type: file.type, data: b64 } },
-              { type: "text", text: "Extract the net take-home pay from this salary slip. Reply with ONLY a plain number — no symbols, no text, no commas. If not found, reply: unknown" },
-            ],
-          }],
-        }),
-      });
-      if (!resp.ok) throw new Error(`API ${resp.status}`);
-      const data = await resp.json();
-      const raw = data.content?.[0]?.text?.trim() || "";
-      const parsed = parseFloat(raw.replace(/[^0-9.]/g, ""));
-      if (!isNaN(parsed) && parsed > 0) {
-        onParsed(parsed);
-        toast.success(`Net pay detected: $${fmt(parsed)}`);
-      } else {
-        toast.error("Couldn't read the salary — enter it manually");
-      }
-    } catch (err) {
-      toast.error("Failed: " + err.message);
-    } finally {
-      setLoading(false);
-      if (ref.current) ref.current.value = "";
-    }
-  };
-
-  return (
-    <>
-      <button
-        onClick={() => ref.current?.click()}
-        disabled={loading}
-        className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-slate-300 text-xs text-slate-500 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 transition"
-      >
-        {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-        {loading ? "Reading slip..." : "Upload salary slip"}
-      </button>
-      <input ref={ref} type="file" accept="image/*,.pdf" onChange={handle} className="hidden" />
-    </>
-  );
-}
-
 // ── INCOME TAB ────────────────────────────────────────────────────────────────
 function IncomeTab({ fin, update }) {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-          <div>
-            <h3 className="font-semibold text-slate-800 text-base">Income Sources</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Add all sources of monthly income</p>
-          </div>
-          <SalaryUpload onParsed={(val) => {
-            const existing = fin.income_sources.find(s => s.name.toLowerCase() === "salary");
-            if (existing) {
-              update({ income_sources: fin.income_sources.map(s => s.id === existing.id ? { ...s, amount: val } : s) });
-            } else {
-              update({ income_sources: [...fin.income_sources, { id: uid(), name: "Salary", amount: val }] });
-            }
-          }} />
+        <div className="px-6 py-5 border-b border-slate-100">
+          <h3 className="font-semibold text-slate-800 text-base">Income Sources</h3>
+          <p className="text-xs text-slate-400 mt-0.5">Add all sources of monthly income</p>
         </div>
 
         <div className="px-6 pb-2">
@@ -677,11 +589,12 @@ function ExpensesTab({ fin, update }) {
 // ── OVERVIEW TAB ──────────────────────────────────────────────────────────────
 function OverviewTab({ fin }) {
   const [yearly, setYearly] = useState(false);
-  const mul = yearly ? 12 : 1;
 
-  const income    = sum(fin.income_sources)    * mul;
-  const recurring = sum(fin.recurring_expenses) * mul;
-  const wishlist  = sum(fin.wishlist_expenses)  * mul;
+  // Income and optional spending show exactly what was entered (no x12).
+  // Only recurring/fixed expenses are annualised for the yearly view.
+  const income    = sum(fin.income_sources);
+  const recurring = sum(fin.recurring_expenses) * (yearly ? 12 : 1);
+  const wishlist  = sum(fin.wishlist_expenses);
   const totalExp  = recurring + wishlist;
   const savings   = income - totalExp;
   const rate      = (sum(fin.income_sources)) > 0

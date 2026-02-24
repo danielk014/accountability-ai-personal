@@ -198,23 +198,26 @@ const authStore = {
 export async function runCleanup() {
   if (!_currentUserId) return
 
+  const cutoff7 = new Date()
+  cutoff7.setDate(cutoff7.getDate() - 7)
+  const cutoffDate7 = cutoff7.toISOString().split('T')[0]
+
   const cutoff30 = new Date()
   cutoff30.setDate(cutoff30.getDate() - 30)
-  const cutoffDate30 = cutoff30.toISOString().split('T')[0]
   const cutoffISO30  = cutoff30.toISOString()
 
   const cutoff90 = new Date()
   cutoff90.setDate(cutoff90.getDate() - 90)
   const cutoffDate90 = cutoff90.toISOString().split('T')[0]
 
-  // TaskCompletion: drop records older than 30 days
+  // TaskCompletion: drop records older than 7 days
   try {
     await supabase
       .from('user_entities')
       .delete()
       .eq('user_id', _currentUserId)
       .eq('entity_type', 'TaskCompletion')
-      .filter('data->>completed_date', 'lt', cutoffDate30)
+      .filter('data->>completed_date', 'lt', cutoffDate7)
   } catch {}
 
   // TodoItem: drop completed items older than 30 days (filter in JS)

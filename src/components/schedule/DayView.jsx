@@ -211,7 +211,7 @@ function EventCard({ card, onToggle, onRemove, onMoveEnd, onResizeEnd, allCards 
 
   return (
     <motion.div
-      style={{ top: displayTop, height: displayHeight, left: LEFT_GUTTER + 4, right: 4, position: "absolute", zIndex: 10 }}
+      style={{ top: displayTop, height: displayHeight, left: LEFT_GUTTER + 4, right: 4, position: "absolute", zIndex: 10, touchAction: 'none' }}
       className={`rounded-xl border-l-4 shadow-sm select-none overflow-visible ${colorClass}`}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
@@ -224,6 +224,7 @@ function EventCard({ card, onToggle, onRemove, onMoveEnd, onResizeEnd, allCards 
       {/* Top resize handle */}
       <div
         className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize flex items-center justify-center group z-20"
+        style={{ touchAction: 'none' }}
         onPointerDown={(e) => onPointerDown(e, "resize-top")}
       >
         <div className="w-8 h-0.5 rounded-full bg-current opacity-20 group-hover:opacity-50 transition-opacity" />
@@ -232,6 +233,7 @@ function EventCard({ card, onToggle, onRemove, onMoveEnd, onResizeEnd, allCards 
       {/* Main drag area */}
       <div
         className="flex items-start gap-1.5 px-2 py-1.5 h-full group cursor-grab active:cursor-grabbing"
+        style={{ touchAction: 'none' }}
         onPointerDown={(e) => onPointerDown(e, "move")}
       >
         <button
@@ -261,6 +263,7 @@ function EventCard({ card, onToggle, onRemove, onMoveEnd, onResizeEnd, allCards 
       {/* Bottom resize handle */}
       <div
         className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize flex items-center justify-center group z-20"
+        style={{ touchAction: 'none' }}
         onPointerDown={(e) => onPointerDown(e, "resize-bottom")}
       >
         <div className="w-8 h-0.5 rounded-full bg-current opacity-20 group-hover:opacity-50 transition-opacity" />

@@ -113,7 +113,7 @@ function TimedTaskBlock({ task, color, completing, onToggle, onRemove, onPointer
   const rightPct = ((totalCols - col - 1) / totalCols) * 100;
   return (
     <motion.div
-      style={{ top: top + 1, height: Math.max(MIN_HEIGHT, height - 3), zIndex: 5 + col, position: "absolute", left: `calc(${leftPct}% + 2px)`, right: `calc(${rightPct}% + 2px)` }}
+      style={{ top: top + 1, height: Math.max(MIN_HEIGHT, height - 3), zIndex: 5 + col, position: "absolute", left: `calc(${leftPct}% + 2px)`, right: `calc(${rightPct}% + 2px)`, touchAction: 'none' }}
       className={`rounded border-l-2 shadow-sm select-none overflow-visible ${color}`}
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -123,6 +123,7 @@ function TimedTaskBlock({ task, color, completing, onToggle, onRemove, onPointer
       {/* Top resize handle */}
       <div
         className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize flex items-center justify-center group z-20"
+        style={{ touchAction: 'none' }}
         onPointerDown={(e) => onPointerDown(e, "resize-top")}
       >
         <div className="w-6 h-0.5 rounded-full bg-current opacity-20 group-hover:opacity-60 transition-opacity" />
@@ -131,6 +132,7 @@ function TimedTaskBlock({ task, color, completing, onToggle, onRemove, onPointer
       {/* Main drag area */}
       <div
         className="flex items-center gap-1 px-1.5 py-0.5 h-full cursor-grab active:cursor-grabbing group"
+        style={{ touchAction: 'none' }}
         onPointerDown={(e) => { if (e.target.closest("button")) return; onPointerDown(e, "move"); }}
       >
         <button type="button" className="flex-shrink-0 z-20" onClick={(e) => { e.stopPropagation(); onToggle(); }}>
@@ -153,6 +155,7 @@ function TimedTaskBlock({ task, color, completing, onToggle, onRemove, onPointer
       {/* Bottom resize handle */}
       <div
         className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize flex items-center justify-center group z-20"
+        style={{ touchAction: 'none' }}
         onPointerDown={(e) => onPointerDown(e, "resize-bottom")}
       >
         <div className="w-6 h-0.5 rounded-full bg-current opacity-20 group-hover:opacity-60 transition-opacity" />
@@ -161,7 +164,7 @@ function TimedTaskBlock({ task, color, completing, onToggle, onRemove, onPointer
   );
 }
 
-export default function WeekView({ date, tasks, completions, onToggle, onDropTask, onRemoveTask, timezone }) {
+export default function WeekView({ date, tasks, completions, onToggle, onDropTask, onRemoveTask, timezone, onDateClick }) {
   const weekStart = startOfWeek(date, { weekStartsOn: 1 });
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const gridRefs = useRef({});
@@ -243,6 +246,7 @@ export default function WeekView({ date, tasks, completions, onToggle, onDropTas
 
     // Listen on document so we get events even outside the element
     const onMove = (ev) => {
+      ev.preventDefault();
       if (!dragRef.current) return;
       const { type, startClientY, startTop, startHeight, startDayIdx } = dragRef.current;
       const dy = ev.clientY - startClientY;
@@ -303,7 +307,7 @@ export default function WeekView({ date, tasks, completions, onToggle, onDropTas
       });
     };
 
-    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointermove", onMove, { passive: false });
     document.addEventListener("pointerup", onUp);
   }, [days, getDayIdxFromX, localData, onDropTask]);
 
@@ -365,9 +369,10 @@ export default function WeekView({ date, tasks, completions, onToggle, onDropTas
           return (
             <div
               key={dateStr}
+              onClick={() => onDateClick?.(day)}
               className={`flex-1 p-2 text-center border-r border-slate-100 last:border-0 transition-colors ${
                 isTargeted ? "bg-indigo-100" : isToday ? "bg-indigo-50" : ""
-              }`}
+              } ${onDateClick ? "cursor-pointer hover:bg-indigo-50 active:bg-indigo-100" : ""}`}
             >
               <p className={`text-xs font-semibold uppercase tracking-wide ${isToday || isTargeted ? "text-indigo-500" : "text-slate-400"}`}>
                 {format(day, "EEE")}

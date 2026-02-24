@@ -317,6 +317,7 @@ export default function Calendar() {
               }}
               onRemoveTask={(task) => unscheduleTaskMutation.mutate(task)}
               timezone={timezone}
+              onDateClick={(day) => { setCurrentDate(day); setView("day"); }}
             />
           )}
         </div>

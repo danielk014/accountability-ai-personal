@@ -13,8 +13,8 @@ const navItems = [
   { name: "Calendar", icon: CalendarDays, page: "Calendar" },
   { name: "Projects", icon: FolderKanban, page: "Projects" },
   { name: "Financials", icon: DollarSign, page: "Financials" },
-  { name: "Progress", icon: BarChart3, page: "Progress" },
   { name: "Gym", icon: Dumbbell, page: "Gym" },
+  { name: "Progress", icon: BarChart3, page: "Progress" },
 ];
 
 export default function Layout({ children, currentPageName }) {
