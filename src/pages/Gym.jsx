@@ -1181,6 +1181,7 @@ export default function Gym() {
   const [newDayName, setNewDayName]       = useState("");
   const [dayDragIndex, setDayDragIndex]   = useState(null);
   const [dayDragOverIndex, setDayDragOverIndex] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const tabBarRef = useRef(null);
 
   // Reload from supabaseStorage once it finishes hydrating from Supabase
@@ -1238,11 +1239,11 @@ export default function Gym() {
   function handleDeleteDay(dayId) {
     const day = gymData.workout_days.find(d => d.id === dayId);
     if (!day) return;
-    if (!window.confirm(`Delete "${day.name}" day and all its exercises?\nThis cannot be undone.`)) return;
     const newDays = gymData.workout_days.filter(d => d.id !== dayId);
     updateAndSave({ workout_days: newDays });
     if (activeTab === dayId) setActiveTab(newDays[0]?.id || "physique");
     toast.success(`"${day.name}" day removed.`);
+    setConfirmDeleteId(null);
   }
 
   function handleDayReorder(from, to) {
@@ -1337,7 +1338,7 @@ export default function Gym() {
 
       {/* Tabs */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <div ref={tabBarRef} className="flex gap-1 border-b border-slate-100 mb-6 -mx-1 overflow-x-auto">
+        <div ref={tabBarRef} className="flex gap-1 border-b border-slate-100 mb-6 -mx-1 overflow-x-auto scrollbar-hide overscroll-x-contain" style={{ touchAction: 'pan-x' }}>
           {/* Workout day tabs with double-confirm delete + drag reorder */}
           {(gymData.workout_days || []).map((day, idx) => {
             const isDragging = dayDragIndex === idx;
@@ -1374,7 +1375,7 @@ export default function Gym() {
                 <button
                   onClick={e => {
                     e.stopPropagation();
-                    handleDeleteDay(day.id);
+                    setConfirmDeleteId(day.id);
                   }}
                   className="absolute right-1 top-1/2 -translate-y-1/2 mt-[-2px] p-0.5 rounded transition text-slate-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover/tab:opacity-100"
                 >
@@ -1441,6 +1442,40 @@ export default function Gym() {
           })()
         )}
       </div>
+
+      {/* Delete day confirmation modal */}
+      {confirmDeleteId && (() => {
+        const day = gymData.workout_days.find(d => d.id === confirmDeleteId);
+        if (!day) return null;
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+            onClick={() => setConfirmDeleteId(null)}
+          >
+            <div
+              className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-sm"
+              onClick={e => e.stopPropagation()}
+            >
+              <h3 className="font-bold text-slate-800 text-base mb-1">Delete "{day.name}" day?</h3>
+              <p className="text-sm text-slate-500 mb-5">This will permanently remove the day and all its exercises. This cannot be undone.</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleDeleteDay(confirmDeleteId)}
+                  className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

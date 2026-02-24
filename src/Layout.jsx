@@ -44,7 +44,7 @@ export default function Layout({ children, currentPageName }) {
   }, [currentPageName]);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col overflow-x-hidden">
       <FloatingChatBubble currentPageName={currentPageName} />
 
       {/* Top nav */}

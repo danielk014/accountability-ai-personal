@@ -3,7 +3,7 @@ import { format, isSameDay } from "date-fns";
 import { CheckCircle2, Circle, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 6am–11pm
+const HOURS = Array.from({ length: 23 }, (_, i) => i + 1); // 1am–11pm
 
 function getNowInTimezone(timezone) {
   try {
@@ -46,7 +46,7 @@ function snap(val) {
 
 function topToTime(top) {
   const totalMin = Math.round((Math.max(0, top) / SLOT_HEIGHT) * 60 / 15) * 15;
-  const h = Math.floor(totalMin / 60) + 6;
+  const h = Math.floor(totalMin / 60) + 1;
   const m = totalMin % 60;
   return `${String(Math.min(h, 23)).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
@@ -62,7 +62,7 @@ function isValidTime(t) {
 
 function timeToTop(t) {
   const [h, m] = t.split(":").map(Number);
-  return ((h - 6) + m / 60) * SLOT_HEIGHT;
+  return ((h - 1) + m / 60) * SLOT_HEIGHT;
 }
 
 function topToMinutes(top) {
@@ -281,7 +281,15 @@ export default function DayView({ date, tasks, completions, onToggle, onDropTask
   const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
   const { hour: nowHour, minute: nowMin } = getNowInTimezone(tz);
   const gridRef = useRef(null);
+  const scrollRef = useRef(null);
   const [dragOver, setDragOver] = useState(null);
+
+  // Auto-scroll to 6am whenever the viewed date changes
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    const sixAmTop = (6 - 1) * SLOT_HEIGHT; // 6am offset from 1am start
+    scrollRef.current.scrollTop = sixAmTop;
+  }, [date]);
   // localTimes: { taskId: { time: "HH:MM", durationMin: number } }
   const [localData, setLocalData] = useState({});
 
@@ -307,7 +315,7 @@ export default function DayView({ date, tasks, completions, onToggle, onDropTask
     .map((t) => {
       const ld = localData[t.id];
       const time = (ld?.time && isValidTime(ld.time)) ? ld.time : t.scheduled_time;
-      const top = isValidTime(time) ? timeToTop(time) : 0;
+      const top = isValidTime(time) ? Math.max(0, timeToTop(time)) : 0;
       const durationMin = ld?.durationMin ?? 60;
       const height = Math.max(MIN_HEIGHT, minutesToTop(durationMin));
       return { id: t.id, task: t, top, height };
@@ -370,10 +378,14 @@ export default function DayView({ date, tasks, completions, onToggle, onDropTask
   const handleDragOver = (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
-    // Auto-scroll the page when dragging near top/bottom edges
-    const ZONE = 80, SPEED = 10;
-    if (e.clientY > window.innerHeight - ZONE) window.scrollBy(0, SPEED);
-    else if (e.clientY < ZONE) window.scrollBy(0, -SPEED);
+    // Auto-scroll the timeline container when dragging near its edges
+    const sc = scrollRef.current;
+    if (sc) {
+      const { top: scTop, bottom: scBottom } = sc.getBoundingClientRect();
+      const ZONE = 80, SPEED = 10;
+      if (e.clientY > scBottom - ZONE) sc.scrollTop += SPEED;
+      else if (e.clientY < scTop + ZONE) sc.scrollTop -= SPEED;
+    }
     const yPx = getGridTop(e.clientY);
     const hourIdx = Math.min(Math.floor(yPx / SLOT_HEIGHT), HOURS.length - 1);
     setDragOver(HOURS[hourIdx]);
@@ -381,13 +393,19 @@ export default function DayView({ date, tasks, completions, onToggle, onDropTask
 
   const totalGridHeight = HOURS.length * SLOT_HEIGHT;
   const nowTop = (() => {
-    const idx = nowHour - 6;
+    const idx = nowHour - 1; // HOURS starts at 1am
     if (idx < 0 || idx >= HOURS.length) return -1;
     return idx * SLOT_HEIGHT + (nowMin / 60) * SLOT_HEIGHT;
   })();
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden flex-1">
+      <div
+        ref={scrollRef}
+        data-calendar-scroll
+        className="overflow-y-auto"
+        style={{ maxHeight: "calc(100vh - 220px)" }}
+      >
       <div
         ref={gridRef}
         data-calendar-date={dateStr}
@@ -448,6 +466,7 @@ export default function DayView({ date, tasks, completions, onToggle, onDropTask
             <span className="text-xs text-indigo-500 font-medium">Drop here — {formatHour(dragOver)}</span>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

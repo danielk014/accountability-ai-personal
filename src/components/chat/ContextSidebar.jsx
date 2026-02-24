@@ -11,10 +11,13 @@ function nextBirthdayDate(birthdayStr) {
   if (!birthdayStr) return null;
   const today = new Date();
   const bday = new Date(birthdayStr + "T00:00:00");
+  const pad = (n) => String(n).padStart(2, "0");
+  const toDateStr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const todayStr = toDateStr(today);
   const thisYear = new Date(today.getFullYear(), bday.getMonth(), bday.getDate());
-  if (thisYear >= today) return thisYear.toISOString().split("T")[0];
+  if (toDateStr(thisYear) >= todayStr) return toDateStr(thisYear);
   const nextYear = new Date(today.getFullYear() + 1, bday.getMonth(), bday.getDate());
-  return nextYear.toISOString().split("T")[0];
+  return toDateStr(nextYear);
 }
 
 const SECTIONS = [

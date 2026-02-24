@@ -158,10 +158,14 @@ export default function Calendar() {
     setMobileDrag({ task, x: startEvent.clientX, y: startEvent.clientY });
     const onMove = (e) => {
       setMobileDrag(d => d ? { ...d, x: e.clientX, y: e.clientY } : null);
-      // Auto-scroll window when near top/bottom
+      // Auto-scroll the timeline scroll container when near its edges
       const ZONE = 80, SPEED = 10;
-      if (e.clientY > window.innerHeight - ZONE) window.scrollBy(0, SPEED);
-      else if (e.clientY < ZONE) window.scrollBy(0, -SPEED);
+      const calEl = document.querySelector('[data-calendar-scroll]');
+      if (calEl) {
+        const r = calEl.getBoundingClientRect();
+        if (e.clientY > r.bottom - ZONE) calEl.scrollTop += SPEED;
+        else if (e.clientY < r.top + ZONE) calEl.scrollTop -= SPEED;
+      }
     };
     const onUp = (e) => {
       document.removeEventListener("pointermove", onMove);
@@ -175,7 +179,7 @@ export default function Calendar() {
         const rect = col.getBoundingClientRect();
         const relY = Math.max(0, e.clientY - rect.top);
         const totalMin = Math.round((relY / slotHeight) * 60 / 15) * 15;
-        const hour = Math.min(23, Math.floor(totalMin / 60) + 6);
+        const hour = Math.min(23, Math.floor(totalMin / 60) + 1); // timeline starts at 1am
         const min = totalMin % 60;
         const time = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
         base44.entities.Task.update(task.id, { scheduled_time: time, scheduled_date: dateStr });

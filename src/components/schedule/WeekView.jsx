@@ -1,9 +1,9 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { CheckCircle2, Circle, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-const HOURS = Array.from({ length: 18 }, (_, i) => i + 6);
+const HOURS = Array.from({ length: 23 }, (_, i) => i + 1); // 1am–11pm
 const SLOT_HEIGHT = 44;
 
 function getNowInTimezone(timezone) {
@@ -57,14 +57,14 @@ function formatHour(h) {
 
 function topToTime(top) {
   const totalMinutes = Math.round((top / SLOT_HEIGHT) * 60 / 15) * 15;
-  const hour = Math.floor(totalMinutes / 60) + 6;
+  const hour = Math.floor(totalMinutes / 60) + 1;
   const min = totalMinutes % 60;
   return `${String(Math.min(hour, 23)).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
 }
 
 function timeToTop(timeStr) {
   const [h, m] = timeStr.split(":").map(Number);
-  return ((h - 6) + m / 60) * SLOT_HEIGHT;
+  return ((h - 1) + m / 60) * SLOT_HEIGHT;
 }
 
 function topToMinutes(top) {
@@ -85,7 +85,7 @@ function computeLayout(timedTasks, localData) {
   const items = timedTasks.map(task => {
     const ld = localData[task.id];
     const timeStr = ld?.time || task.scheduled_time;
-    const top = timeToTop(timeStr);
+    const top = Math.max(0, timeToTop(timeStr));
     const height = minutesToTop(ld?.durationMin ?? 60);
     return { task, top, height, bottom: top + Math.max(MIN_HEIGHT, height) };
   });
@@ -172,6 +172,13 @@ export default function WeekView({ date, tasks, completions, onToggle, onDropTas
   const [dragOver, setDragOver] = useState(null);
   const [localData, setLocalData] = useState({});
   const [completing, setCompleting] = useState({}); // { taskId: true }
+
+  // Auto-scroll to 6am whenever the viewed week changes
+  useEffect(() => {
+    if (!scrollContainerRef.current) return;
+    const sixAmTop = (6 - 1) * SLOT_HEIGHT; // 6am offset from 1am start
+    scrollContainerRef.current.scrollTop = sixAmTop;
+  }, [date]);
 
   // Active drag state — lifted here so ghost can render across columns
   const [activeDrag, setActiveDrag] = useState(null);
@@ -421,8 +428,8 @@ export default function WeekView({ date, tasks, completions, onToggle, onDropTas
           });
 
           const isDragTarget = dragOver?.dayStr === dateStr;
-          const nowTop = isToday && nowHour >= 6 && nowHour < 24
-            ? ((nowHour - 6) + nowMin / 60) * SLOT_HEIGHT : -1;
+          const nowTop = isToday && nowHour >= 1 && nowHour < 24
+            ? ((nowHour - 1) + nowMin / 60) * SLOT_HEIGHT : -1;
 
           const layout = computeLayout(timedTasks, localData);
 

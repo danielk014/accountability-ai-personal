@@ -93,8 +93,13 @@
     @apply border-border outline-ring/50;
   }
 
+  html {
+    overflow-x: hidden;
+  }
+
   body {
     @apply bg-background text-foreground;
+    overflow-x: hidden;
   }
 
   /* Prevent iOS auto-zoom on input focus — inputs must be at least 16px */
