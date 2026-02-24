@@ -412,6 +412,19 @@ function ItemRow({ item, onDelete, onUpdate, dayLabel = "Due" }) {
   const [name, setName] = useState(item.name);
   const [amount, setAmount] = useState(item.amount);
   const [day, setDay] = useState(item.day || "");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const confirmTimerRef = React.useRef(null);
+
+  const handleDeleteClick = () => {
+    if (confirmingDelete) {
+      clearTimeout(confirmTimerRef.current);
+      setConfirmingDelete(false);
+      onDelete(item.id);
+    } else {
+      setConfirmingDelete(true);
+      confirmTimerRef.current = setTimeout(() => setConfirmingDelete(false), 3000);
+    }
+  };
 
   const save = () => {
     if (!name.trim() || !amount) return;
@@ -443,19 +456,25 @@ function ItemRow({ item, onDelete, onUpdate, dayLabel = "Due" }) {
 
   return (
     <div className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0 group">
-      <div className="flex items-center gap-2.5 min-w-0">
+      <div className="flex items-center gap-2.5 min-w-0 flex-1">
         <span className="text-sm text-slate-700 truncate">{item.name}</span>
         {item.day && (
-          <span className="flex-shrink-0 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium">
+          <span className="flex-shrink-0 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium hidden sm:inline">
             {dayLabel} {ordinal(item.day)}
           </span>
         )}
       </div>
-      <div className="flex items-center gap-3 flex-shrink-0 ml-3">
-        <span className="text-sm font-semibold text-slate-800">${fmt(item.amount)}<span className="text-slate-400 font-normal text-xs">/mo</span></span>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+        <span className="text-sm font-semibold text-slate-800 whitespace-nowrap">${fmt(item.amount)}<span className="text-slate-400 font-normal text-xs">/mo</span></span>
+        <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           <button onClick={() => setEditing(true)} className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"><Pencil className="w-3.5 h-3.5" /></button>
-          <button onClick={() => onDelete(item.id)} className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-400 transition"><Trash2 className="w-3.5 h-3.5" /></button>
+          {confirmingDelete ? (
+            <button onClick={handleDeleteClick} className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-100 text-red-500 text-xs font-medium transition">
+              Sure?
+            </button>
+          ) : (
+            <button onClick={handleDeleteClick} className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-400 transition"><Trash2 className="w-3.5 h-3.5" /></button>
+          )}
         </div>
       </div>
     </div>
@@ -620,16 +639,16 @@ function OverviewTab({ fin }) {
         </div>
         <div className="space-y-3">
           <div className="flex justify-between items-center py-2.5 border-b border-slate-100">
-            <span className="text-sm text-slate-500 flex items-center gap-2"><TrendingUp className="w-4 h-4 text-emerald-500" />Total Income</span>
-            <span className="text-sm font-bold text-emerald-600">+${fmt(income)}</span>
+            <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingUp className="w-4 h-4 text-emerald-500" />Total Income</span>
+            <span className="text-sm font-bold text-emerald-600 whitespace-nowrap ml-2">+${fmt(income)}</span>
           </div>
           <div className="flex justify-between items-center py-2.5 border-b border-slate-100">
-            <span className="text-sm text-slate-500 flex items-center gap-2"><TrendingDown className="w-4 h-4 text-rose-500" />Fixed Expenses</span>
-            <span className="text-sm font-bold text-rose-500">-${fmt(recurring)}</span>
+            <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingDown className="w-4 h-4 text-rose-500" />Fixed Expenses</span>
+            <span className="text-sm font-bold text-rose-500 whitespace-nowrap ml-2">-${fmt(recurring)}</span>
           </div>
           <div className="flex justify-between items-center py-2.5 border-b border-slate-100">
-            <span className="text-sm text-slate-500 flex items-center gap-2"><TrendingDown className="w-4 h-4 text-violet-500" />Optional Spending</span>
-            <span className="text-sm font-bold text-violet-500">-${fmt(wishlist)}</span>
+            <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingDown className="w-4 h-4 text-violet-500" />Optional Spending</span>
+            <span className="text-sm font-bold text-violet-500 whitespace-nowrap ml-2">-${fmt(wishlist)}</span>
           </div>
           <div className={cn("flex justify-between items-center rounded-xl p-4 mt-2", savings >= 0 ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200")}>
             <div>
@@ -663,11 +682,11 @@ function OverviewTab({ fin }) {
           <h3 className="font-semibold text-slate-800 mb-4">Income Sources</h3>
           {fin.income_sources.map(s => (
             <div key={s.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0 text-sm">
-              <div className="flex items-center gap-2">
-                <span className="text-slate-600">{s.name}</span>
-                {s.day && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 font-medium">Received {ordinal(s.day)}</span>}
+              <div className="flex items-center gap-2 min-w-0 flex-1 mr-3">
+                <span className="text-slate-600 truncate">{s.name}</span>
+                {s.day && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 font-medium flex-shrink-0 hidden sm:inline">Received {ordinal(s.day)}</span>}
               </div>
-              <span className="font-semibold text-slate-800">${fmt(s.amount)}/mo</span>
+              <span className="font-semibold text-slate-800 whitespace-nowrap flex-shrink-0">${fmt(s.amount)}/mo</span>
             </div>
           ))}
         </div>
