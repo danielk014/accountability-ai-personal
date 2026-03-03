@@ -6,6 +6,10 @@ const BASE_SYSTEM = `You are the user's ride-or-die best friend and accountabili
 
 You have tools to directly manage the user's data. When they ask you to add, edit, delete, or schedule anything — sleep entries, tasks, habits, calendar events, people, or context — use your tools to do it immediately without asking for confirmation unless critical information is missing. After using a tool, briefly confirm what you did in a friendly way.
 
+IMPORTANT — Tasks vs To-Do items:
+- Use create_task ONLY for recurring habits (daily, weekdays, etc.) or scheduled calendar events (frequency='once' with a date). Examples: "add a daily workout habit", "schedule a dentist appointment on Friday".
+- Use create_todo_item when the user says "add to my to-do list", "put this on my to-do", "add a to-do", "remind me to do X" (without a specific time), or any one-off task that isn't a recurring habit. To-do items live in the To-Do list on the dashboard.
+
 When the user mentions someone important in their life (a friend, family member, partner, etc.) or shares personal info about themselves (where they live, their job, a goal, etc.), proactively save it using add_person or update_context so it's remembered for future conversations.
 
 Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -199,6 +203,62 @@ const TOOLS = [
         person_name: { type: "string", description: "Name of the person to remove (partial match)" },
       },
       required: ["person_name"],
+    },
+  },
+  {
+    name: "create_todo_item",
+    description: "Add an item to the user's To-Do list. Use when they say 'add to my to-do list', 'put this on my to-do', 'add a to-do', or mention a one-off task that isn't a recurring habit.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "The to-do item text" },
+        priority: {
+          type: "string",
+          enum: ["urgent", "high", "medium", "low"],
+          description: "Priority level. Default to 'medium' if not specified.",
+        },
+        category: {
+          type: "string",
+          enum: ["health", "work", "learning", "personal", "social", "mindfulness", "other"],
+        },
+        due_date: { type: "string", description: "Optional due date in YYYY-MM-DD format" },
+      },
+      required: ["name"],
+    },
+  },
+  {
+    name: "list_todo_items",
+    description: "List all items in the user's To-Do list.",
+    input_schema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
+    name: "update_todo_item",
+    description: "Update an existing to-do item — change its name, priority, category, due date, or mark it done.",
+    input_schema: {
+      type: "object",
+      properties: {
+        item_name: { type: "string", description: "Name of the to-do item to update (partial match)" },
+        name: { type: "string", description: "New name" },
+        priority: { type: "string", enum: ["urgent", "high", "medium", "low"] },
+        category: { type: "string", enum: ["health", "work", "learning", "personal", "social", "mindfulness", "other"] },
+        due_date: { type: "string", description: "New due date in YYYY-MM-DD format" },
+        is_done: { type: "boolean", description: "Mark as done or not done" },
+      },
+      required: ["item_name"],
+    },
+  },
+  {
+    name: "delete_todo_item",
+    description: "Delete a to-do item permanently.",
+    input_schema: {
+      type: "object",
+      properties: {
+        item_name: { type: "string", description: "Name of the to-do item to delete (partial match)" },
+      },
+      required: ["item_name"],
     },
   },
   {
@@ -489,6 +549,58 @@ async function executeTool(name, input) {
           return { success: true, action: "removed", section: input.section, text: removed };
         }
         return { error: "Unknown action" };
+      }
+
+      case "create_todo_item": {
+        const todo = await base44.entities.TodoItem.create({
+          name: input.name,
+          priority: input.priority || "medium",
+          category: input.category || "personal",
+          due_date: input.due_date || null,
+          is_done: false,
+        });
+        queryClientInstance.invalidateQueries({ queryKey: ["todos"] });
+        return { success: true, action: "created", todo: { id: todo.id, name: todo.name, priority: todo.priority } };
+      }
+
+      case "list_todo_items": {
+        const todos = await base44.entities.TodoItem.filter({ created_by: user.email });
+        return {
+          todos: todos.map(t => ({
+            name: t.name,
+            priority: t.priority,
+            category: t.category,
+            due_date: t.due_date || null,
+            is_done: t.is_done,
+          })),
+        };
+      }
+
+      case "update_todo_item": {
+        const todos = await base44.entities.TodoItem.filter({ created_by: user.email });
+        const todo = todos.find(t => t.name.toLowerCase().includes(input.item_name.toLowerCase()));
+        if (!todo) return { error: `No to-do item found matching "${input.item_name}"` };
+        const updates = {};
+        if (input.name !== undefined) updates.name = input.name;
+        if (input.priority !== undefined) updates.priority = input.priority;
+        if (input.category !== undefined) updates.category = input.category;
+        if (input.due_date !== undefined) updates.due_date = input.due_date;
+        if (input.is_done !== undefined) {
+          updates.is_done = input.is_done;
+          if (input.is_done) updates.completed_at = new Date().toISOString();
+        }
+        await base44.entities.TodoItem.update(todo.id, updates);
+        queryClientInstance.invalidateQueries({ queryKey: ["todos"] });
+        return { success: true, action: "updated", todo: todo.name, changes: updates };
+      }
+
+      case "delete_todo_item": {
+        const todos = await base44.entities.TodoItem.filter({ created_by: user.email });
+        const todo = todos.find(t => t.name.toLowerCase().includes(input.item_name.toLowerCase()));
+        if (!todo) return { error: `No to-do item found matching "${input.item_name}"` };
+        await base44.entities.TodoItem.delete(todo.id);
+        queryClientInstance.invalidateQueries({ queryKey: ["todos"] });
+        return { success: true, action: "deleted", todo: todo.name };
       }
 
       default:

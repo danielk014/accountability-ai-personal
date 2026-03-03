@@ -30,6 +30,7 @@ export default function ChatInput({ onSend, isLoading, onCoachingClick, compact 
   const [loadingCoaching, setLoadingCoaching] = useState(false);
   const [loadingSleep, setLoadingSleep] = useState(false);
   const fileInputRef = useRef(null);
+  const textareaRef = useRef(null);
 
   const { data: user } = useQuery({
     queryKey: ["me"],
@@ -265,6 +266,7 @@ Keep it short, punchy, and data-driven.`;
     onSend(message.trim(), attachments);
     setMessage("");
     setAttachments([]);
+    if (textareaRef.current) textareaRef.current.style.height = "44px";
   };
 
   const anythingLoading = isLoading || loadingCoaching || loadingSleep;
@@ -373,6 +375,7 @@ Keep it short, punchy, and data-driven.`;
 
           {/* Text area */}
           <textarea
+            ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => {
