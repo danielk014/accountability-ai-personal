@@ -378,6 +378,7 @@ function WorkoutTab({ day, weightUnit, onUpdate }) {
   const [newName, setNewName] = useState("");
   const [dragIndex, setDragIndex]         = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
+  const touchListRef = useRef(null);
 
   function getBestWeight(sets) {
     if (!sets || sets.length === 0) return null;
@@ -448,6 +449,27 @@ function WorkoutTab({ day, weightUnit, onUpdate }) {
     setDragOverIndex(null);
   }
 
+  function handleTouchHandleStart(idx, e) {
+    e.preventDefault();
+    setDragIndex(idx);
+    setDragOverIndex(idx);
+  }
+
+  function handleTouchMove(e) {
+    if (dragIndex === null) return;
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    const cardEl = el?.closest('[data-ex-idx]');
+    if (cardEl) {
+      const overIdx = parseInt(cardEl.getAttribute('data-ex-idx'), 10);
+      if (!isNaN(overIdx)) setDragOverIndex(overIdx);
+    }
+  }
+
+  function handleTouchEnd() {
+    if (dragIndex !== null) handleReorder(dragIndex, dragOverIndex);
+  }
+
   return (
     <div>
       {exercises.length === 0 && !addingExercise && (
@@ -457,6 +479,7 @@ function WorkoutTab({ day, weightUnit, onUpdate }) {
           <p className="text-xs mt-1">Add your first exercise for {day.name}</p>
         </div>
       )}
+      <div ref={touchListRef} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
       {exercises.map((ex, idx) => {
         const isCardDragging = dragIndex === idx;
         const isCardDragOver = dragOverIndex === idx && dragIndex !== idx;
@@ -467,6 +490,7 @@ function WorkoutTab({ day, weightUnit, onUpdate }) {
               <div className="h-0.5 rounded-full bg-indigo-500 mx-1 mb-1 transition-all" />
             )}
             <div
+              data-ex-idx={idx}
               draggable
               onDragStart={() => setDragIndex(idx)}
               onDragOver={(e) => { e.preventDefault(); setDragOverIndex(idx); }}
@@ -478,11 +502,15 @@ function WorkoutTab({ day, weightUnit, onUpdate }) {
                 onDelete={handleDeleteExercise} onAddSet={handleAddSet}
                 onDeleteSet={handleDeleteSet} onEditSet={handleEditSet} onEditName={handleEditName}
                 isDragOver={isCardDragOver}
-                dragHandleProps={{}} />
+                dragHandleProps={{
+                  onTouchStart: (e) => handleTouchHandleStart(idx, e),
+                  style: { touchAction: 'none' },
+                }} />
             </div>
           </React.Fragment>
         );
       })}
+      </div>
       {addingExercise ? (
         <form onSubmit={handleAddExercise} className="flex items-center gap-2 mt-2">
           <input autoFocus value={newName} onChange={e => setNewName(e.target.value)}

@@ -511,6 +511,21 @@ export default function Dashboard() {
   };
 
   const toggleCompletionMutation = useMutation({
+    onMutate: async (task) => {
+      await queryClient.cancelQueries({ queryKey: ["completions", user?.email] });
+      const prev = queryClient.getQueryData(["completions", user?.email]) || [];
+      if (completedTaskIds.has(task.id)) {
+        queryClient.setQueryData(["completions", user?.email],
+          prev.filter(c => !(c.task_id === task.id && c.completed_date === today))
+        );
+      } else {
+        queryClient.setQueryData(["completions", user?.email], [
+          ...prev,
+          { id: `tmp_${Date.now()}`, task_id: task.id, task_name: task.name, completed_date: today, completed_at: format(new Date(), "HH:mm"), created_by: user?.email },
+        ]);
+      }
+      return { prev };
+    },
     mutationFn: async (task) => {
       if (completedTaskIds.has(task.id)) {
         const completion = todayCompletions.find(c => c.task_id === task.id);
@@ -536,7 +551,10 @@ export default function Dashboard() {
         });
       }
     },
-    onSuccess: () => {
+    onError: (_err, _task, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(["completions", user?.email], ctx.prev);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["completions"] });
     },
@@ -545,6 +563,13 @@ export default function Dashboard() {
   const sortedTasks = [...todaysTasks]
     .filter(t => !completedTaskIds.has(t.id))
     .sort((a, b) => (a.scheduled_time || "99:99").localeCompare(b.scheduled_time || "99:99"));
+
+  // Overdue: once-tasks scheduled before today that were never completed
+  const overdueTasks = activeTasks.filter(t => {
+    if (t.frequency !== "once") return false;
+    if (!t.scheduled_date || t.scheduled_date >= today) return false;
+    return !completions.some(c => c.task_id === t.id);
+  });
 
   const tomorrowDayOfWeek = format(new Date(Date.now() + 86400000), "EEEE").toLowerCase();
   const isTomorrowWeekday = !["saturday", "sunday"].includes(tomorrowDayOfWeek);
@@ -658,6 +683,28 @@ export default function Dashboard() {
         </Button>
       </div>
 
+      {/* Overdue tasks */}
+      {overdueTasks.length > 0 && (
+        <div className="mb-4">
+          <p className="text-xs font-semibold text-red-500 uppercase tracking-wide mb-2 flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
+            Overdue
+          </p>
+          <div className="space-y-2">
+            {overdueTasks.map(task => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                isCompleted={completedTaskIds.has(task.id)}
+                onToggle={(t) => toggleCompletionMutation.mutate(t)}
+                onDelete={deleteTaskWithConfirm}
+                isUpcoming={false}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-2 mb-10">
         <AnimatePresence>
           {sortedTasks.map(task => (
@@ -671,7 +718,56 @@ export default function Dashboard() {
             />
           ))}
         </AnimatePresence>
-        {sortedTasks.length === 0 && (
+
+        {/* To-do items inline */}
+        {pendingTodos.length > 0 && (
+          <>
+            {sortedTasks.length > 0 && <div className="border-t border-slate-100 my-2" />}
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide px-1 mb-1">To-Do</p>
+            <AnimatePresence>
+              {pendingTodos.map(item => {
+                const pc = priorityConfig[item.priority] || priorityConfig.medium;
+                return (
+                  <motion.div
+                    key={item.id}
+                    layout
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-2xl hover:shadow-sm transition-all group"
+                  >
+                    <button
+                      onClick={() => updateTodoMutation.mutate({ id: item.id, data: { is_done: true, completed_at: new Date().toISOString() } })}
+                      className="w-5 h-5 rounded-full border-2 border-slate-300 hover:border-indigo-500 hover:bg-indigo-50 flex items-center justify-center transition-colors flex-shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-800">{item.name}</p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className={cn("text-xs px-1.5 py-0.5 rounded-full border", pc.bg)}>
+                          {pc.label}
+                        </span>
+                        {item.due_date && item.due_date < today && (
+                          <span className="text-xs text-red-400 font-medium">Overdue</span>
+                        )}
+                        {item.due_date && item.due_date === today && (
+                          <span className="text-xs text-amber-500 font-medium">Due today</span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => { setEditingTodo(item); setShowTodoForm(true); }}
+                      className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </>
+        )}
+
+        {sortedTasks.length === 0 && pendingTodos.length === 0 && (
           <div className="text-center py-10 text-slate-400">
             <p className="text-base font-medium">No habits yet</p>
             <p className="text-sm mt-1">Add your first habit to get started!</p>
