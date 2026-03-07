@@ -391,7 +391,7 @@ Keep it short, punchy, and data-driven.`;
               "focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300",
               "placeholder:text-slate-400 transition-all"
             )}
-            style={{ maxHeight: "120px", minHeight: "44px" }}
+            style={{ height: "44px", maxHeight: "120px", minHeight: "44px" }}
             onInput={(e) => {
               e.target.style.height = "44px";
               e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
