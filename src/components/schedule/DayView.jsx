@@ -212,7 +212,7 @@ function EventCard({ card, onToggle, onRemove, onMoveEnd, onResizeEnd, allCards 
     e.stopPropagation();
     if (completing) return;
     setCompleting(true);
-    setTimeout(() => onToggle(card.task), 750);
+    onToggle(card.task);
   };
 
   return (

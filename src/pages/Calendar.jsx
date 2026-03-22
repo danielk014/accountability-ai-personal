@@ -52,6 +52,25 @@ export default function Calendar() {
   const [showForm, setShowForm] = useState(false);
 
   const toggleCompletionMutation = useMutation({
+    onMutate: async ({ task, date }) => {
+      const dateStr = format(date, "yyyy-MM-dd");
+      await queryClient.cancelQueries({ queryKey: ["completions"] });
+      const prev = queryClient.getQueryData(["completions", user?.email]);
+      const existing = (prev || []).find(
+        (c) => c.task_id === task.id && c.completed_date === dateStr
+      );
+      if (existing) {
+        queryClient.setQueryData(["completions", user?.email],
+          (old = []) => old.filter(c => c.id !== existing.id)
+        );
+      } else {
+        const optimistic = { id: `opt-${Date.now()}`, task_id: task.id, task_name: task.name, completed_date: dateStr, completed_at: format(new Date(), "HH:mm") };
+        queryClient.setQueryData(["completions", user?.email],
+          (old = []) => [...old, optimistic]
+        );
+      }
+      return { prev };
+    },
     mutationFn: async ({ task, date }) => {
       const dateStr = format(date, "yyyy-MM-dd");
       const existing = completions.find(
@@ -59,10 +78,12 @@ export default function Calendar() {
       );
       if (existing) {
         await base44.entities.TaskCompletion.delete(existing.id);
-        await base44.entities.Task.update(task.id, {
+        const updates = {
           streak: Math.max(0, (task.streak || 0) - 1),
           total_completions: Math.max(0, (task.total_completions || 0) - 1),
-        });
+        };
+        if (task.frequency === "once") updates.is_active = true;
+        await base44.entities.Task.update(task.id, updates);
       } else {
         await base44.entities.TaskCompletion.create({
           task_id: task.id,
@@ -71,13 +92,18 @@ export default function Calendar() {
           completed_at: format(new Date(), "HH:mm"),
         });
         const newStreak = (task.streak || 0) + 1;
-        await base44.entities.Task.update(task.id, {
+        const updates = {
           streak: newStreak,
           best_streak: Math.max(newStreak, task.best_streak || 0),
           total_completions: (task.total_completions || 0) + 1,
-        });
+        };
+        if (task.frequency === "once") updates.is_active = false;
+        await base44.entities.Task.update(task.id, updates);
         toast.success(`✓ ${task.name}`);
       }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev !== undefined) queryClient.setQueryData(["completions", user?.email], ctx.prev);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });

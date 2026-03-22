@@ -59,7 +59,7 @@ export default function Layout({ children, currentPageName }) {
 
           <nav
             className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide min-w-0 overscroll-x-contain"
-            style={{ WebkitOverflowScrolling: 'touch' }}
+            style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
           >
             {navItems.map(item => {
               const isActive = currentPageName === item.page;
@@ -68,8 +68,9 @@ export default function Layout({ children, currentPageName }) {
                 <Link
                   key={item.page}
                   to={createPageUrl(item.page)}
+                  style={{ touchAction: 'manipulation' }}
                   className={cn(
-                    "relative flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2 rounded-xl text-sm font-medium transition-all flex-shrink-0 min-w-[44px] sm:min-w-0",
+                    "relative flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2 rounded-xl text-sm font-medium transition-colors flex-shrink-0 min-w-[44px] sm:min-w-0",
                     isActive
                       ? "bg-indigo-50 text-indigo-700"
                       : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
@@ -87,7 +88,8 @@ export default function Layout({ children, currentPageName }) {
             })}
             <Link
               to={createPageUrl("Settings")}
-              className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-all flex-shrink-0 min-w-[44px] sm:min-w-0"
+              style={{ touchAction: 'manipulation' }}
+              className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors flex-shrink-0 min-w-[44px] sm:min-w-0"
             >
               <span className="text-[9px] sm:text-sm">Settings</span>
             </Link>

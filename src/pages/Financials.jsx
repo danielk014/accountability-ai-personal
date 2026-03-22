@@ -49,6 +49,7 @@ function uid() { return Math.random().toString(36).slice(2) + Date.now().toStrin
 
 // ── Number / date helpers ──────────────────────────────────────────────────────
 const fmt = (n) => (parseFloat(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtWhole = (n) => (parseFloat(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const sum = (arr) => arr.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
 function ordinal(n) {
   const s = ["th","st","nd","rd"], v = n % 100;
@@ -913,8 +914,8 @@ function SummaryCards({ fin }) {
   const rate      = income > 0 ? ((savings / income) * 100).toFixed(0) : 0;
 
   const cards = [
-    { label: "Monthly Income",  value: `$${fmt(income)}`,    color: "text-emerald-600", icon: TrendingUp,   iconColor: "text-emerald-400" },
-    { label: "Total Expenses",  value: `$${fmt(totalExp)}`,  color: "text-rose-500",    icon: TrendingDown, iconColor: "text-rose-400" },
+    { label: "Monthly Income",  value: `$${fmtWhole(income)}`,    color: "text-emerald-600", icon: TrendingUp,   iconColor: "text-emerald-400" },
+    { label: "Total Expenses",  value: `$${fmtWhole(totalExp)}`,  color: "text-rose-500",    icon: TrendingDown, iconColor: "text-rose-400" },
     { label: "Savings Rate",    value: `${Math.max(0, rate)}%`, color: "text-slate-700", icon: Wallet, iconColor: "text-slate-400" },
   ];
 
