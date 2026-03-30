@@ -531,10 +531,12 @@ export default function Dashboard() {
         const completion = todayCompletions.find(c => c.task_id === task.id);
         if (completion) {
           await base44.entities.TaskCompletion.delete(completion.id);
-          await base44.entities.Task.update(task.id, {
+          const updates = {
             streak: Math.max(0, (task.streak || 0) - 1),
             total_completions: Math.max(0, (task.total_completions || 0) - 1),
-          });
+          };
+          if (task.frequency === "once") updates.is_active = true;
+          await base44.entities.Task.update(task.id, updates);
         }
       } else {
         await base44.entities.TaskCompletion.create({
@@ -544,11 +546,13 @@ export default function Dashboard() {
           completed_at: format(new Date(), "HH:mm"),
         });
         const newStreak = (task.streak || 0) + 1;
-        await base44.entities.Task.update(task.id, {
+        const updates = {
           streak: newStreak,
           best_streak: Math.max(newStreak, task.best_streak || 0),
           total_completions: (task.total_completions || 0) + 1,
-        });
+        };
+        if (task.frequency === "once") updates.is_active = false;
+        await base44.entities.Task.update(task.id, updates);
       }
     },
     onError: (_err, _task, ctx) => {
