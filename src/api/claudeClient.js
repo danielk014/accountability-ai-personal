@@ -846,7 +846,14 @@ export async function sendOneOffPrompt(prompt) {
 // ─── Shared agentic loop (used by both chat variants) ────────────────────────
 
 async function _agenticLoop(history, systemPrompt) {
-  let messages = history.map(m => ({ role: m.role, content: m.content }));
+  let messages = history
+    .map(m => ({ role: m.role, content: m.content }))
+    .filter(m => {
+      const c = m.content;
+      if (typeof c === 'string') return c.trim().length > 0;
+      if (Array.isArray(c)) return c.length > 0;
+      return c != null;
+    });
 
   const hasPdf = messages.some(m =>
     Array.isArray(m.content) && m.content.some(b => b.type === 'document')
