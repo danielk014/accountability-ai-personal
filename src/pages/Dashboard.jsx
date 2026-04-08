@@ -545,14 +545,16 @@ export default function Dashboard() {
           completed_date: today,
           completed_at: format(new Date(), "HH:mm"),
         });
-        const newStreak = (task.streak || 0) + 1;
-        const updates = {
-          streak: newStreak,
-          best_streak: Math.max(newStreak, task.best_streak || 0),
-          total_completions: (task.total_completions || 0) + 1,
-        };
-        if (task.frequency === "once") updates.is_active = false;
-        await base44.entities.Task.update(task.id, updates);
+        if (task.frequency === "once") {
+          await base44.entities.Task.delete(task.id);
+        } else {
+          const newStreak = (task.streak || 0) + 1;
+          await base44.entities.Task.update(task.id, {
+            streak: newStreak,
+            best_streak: Math.max(newStreak, task.best_streak || 0),
+            total_completions: (task.total_completions || 0) + 1,
+          });
+        }
       }
     },
     onError: (_err, _task, ctx) => {
