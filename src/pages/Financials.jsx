@@ -16,22 +16,35 @@ import { supabaseStorage } from "@/api/supabaseStorage";
 const getStorageKey = () => `${getUserPrefix()}accountable_financials_v2`;
 const getChatKey    = () => `${getUserPrefix()}accountable_financials_chat`;
 
+const EMPTY_FIN = () => ({ income_sources: [], recurring_expenses: [], wishlist_expenses: [], one_time_expenses: [] });
+
 function loadFin() {
-  const empty = { income_sources: [], recurring_expenses: [], wishlist_expenses: [] };
+  const empty = EMPTY_FIN();
   try {
-    // Try supabaseStorage first (synced to Supabase)
     const raw = supabaseStorage.getItem(getStorageKey());
-    if (raw) return JSON.parse(raw) || empty;
-    // Migrate from legacy localStorage if present
-    const legacy = localStorage.getItem(getStorageKey());
-    if (legacy) {
-      supabaseStorage.setItem(getStorageKey(), legacy);
-      return JSON.parse(legacy) || empty;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed) return { ...empty, ...parsed };
+    }
+  } catch {}
+  try {
+    // Fallback: localStorage backup (written by saveFin)
+    const local = localStorage.getItem(getStorageKey());
+    if (local) {
+      const parsed = JSON.parse(local);
+      if (parsed) {
+        supabaseStorage.setItem(getStorageKey(), local);
+        return { ...empty, ...parsed };
+      }
     }
   } catch {}
   return empty;
 }
-function saveFin(d) { supabaseStorage.setItem(getStorageKey(), JSON.stringify(d)); }
+function saveFin(d) {
+  const json = JSON.stringify(d);
+  supabaseStorage.setItem(getStorageKey(), json);
+  try { localStorage.setItem(getStorageKey(), json); } catch {}
+}
 function loadChat() {
   try {
     const raw = supabaseStorage.getItem(getChatKey());
@@ -168,7 +181,10 @@ function buildFinancialSystemPrompt(fin) {
   const income = sum(fin.income_sources);
   const recurring = sum(fin.recurring_expenses);
   const wishlist = sum(fin.wishlist_expenses);
-  const totalExpenses = recurring + wishlist;
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const oneTimeItems = (fin.one_time_expenses || []).filter(e => e.month === currentMonth);
+  const oneTime = oneTimeItems.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+  const totalExpenses = recurring + wishlist + oneTime;
   const savings = income - totalExpenses;
   const rate = income > 0 ? ((savings / income) * 100).toFixed(1) : 0;
   const fmtItem = (i) => `${i.name}: $${fmt(i.amount)}${i.day ? ` (due ${ordinal(i.day)})` : ""}`;
@@ -179,6 +195,7 @@ function buildFinancialSystemPrompt(fin) {
 Monthly Income: $${fmt(income)} (${fin.income_sources.map(fmtItem).join(", ") || "none"})
 Recurring Expenses: $${fmt(recurring)}/mo — ${fin.recurring_expenses.map(fmtItem).join(", ") || "none"}
 Wishlist/Optional: $${fmt(wishlist)}/mo — ${fin.wishlist_expenses.map(fmtItem).join(", ") || "none"}
+One-time This Month: $${fmt(oneTime)} — ${oneTimeItems.map(fmtItem).join(", ") || "none"}
 Monthly Savings: $${fmt(savings)} (${rate}% savings rate) | Annual Savings: $${fmt(savings * 12)}
 
 Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
@@ -201,13 +218,13 @@ const FINANCIAL_TOOLS = [
   },
   {
     name: "add_expense",
-    description: "Add a new expense. Use category 'recurring' for essential monthly costs, 'wishlist' for optional/nice-to-have.",
+    description: "Add a new expense. Use category 'recurring' for essential monthly costs, 'wishlist' for optional/nice-to-have, 'one_time' for a one-off payment this month.",
     input_schema: {
       type: "object",
       properties: {
         name:     { type: "string", description: "Name of the expense (e.g. 'Dinner', 'Netflix')" },
-        amount:   { type: "number", description: "Monthly amount in dollars" },
-        category: { type: "string", enum: ["recurring", "wishlist"], description: "recurring = essential, wishlist = optional" },
+        amount:   { type: "number", description: "Amount in dollars" },
+        category: { type: "string", enum: ["recurring", "wishlist", "one_time"], description: "recurring = essential monthly, wishlist = optional monthly, one_time = single payment this month" },
         day:      { type: "number", description: "Day of month when due (1-31), optional" },
       },
       required: ["name", "amount", "category"],
@@ -266,8 +283,13 @@ function executeFinancialTool(name, input, update) {
     }
     case "add_expense": {
       const item = { id: uid(), name: input.name, amount: parseFloat(input.amount), day: input.day || null };
-      const key = input.category === "wishlist" ? "wishlist_expenses" : "recurring_expenses";
-      update({ [key]: [...fin[key], item] });
+      if (input.category === "one_time") {
+        const month = new Date().toISOString().slice(0, 7);
+        update({ one_time_expenses: [...(fin.one_time_expenses || []), { ...item, month }] });
+      } else {
+        const key = input.category === "wishlist" ? "wishlist_expenses" : "recurring_expenses";
+        update({ [key]: [...fin[key], item] });
+      }
       return { success: true, added: { name: item.name, amount: item.amount, category: input.category } };
     }
     case "delete_income_source": {
@@ -277,11 +299,12 @@ function executeFinancialTool(name, input, update) {
       return { success: true, deleted: match.name };
     }
     case "delete_expense": {
-      const match = [...fin.recurring_expenses, ...fin.wishlist_expenses].find(e => e.name.toLowerCase().includes(input.name.toLowerCase()));
+      const match = [...fin.recurring_expenses, ...fin.wishlist_expenses, ...(fin.one_time_expenses || [])].find(e => e.name.toLowerCase().includes(input.name.toLowerCase()));
       if (!match) return { error: `No expense found matching "${input.name}"` };
       update({
         recurring_expenses: fin.recurring_expenses.filter(e => e.id !== match.id),
         wishlist_expenses:  fin.wishlist_expenses.filter(e => e.id !== match.id),
+        one_time_expenses:  (fin.one_time_expenses || []).filter(e => e.id !== match.id),
       });
       return { success: true, deleted: match.name };
     }
@@ -309,10 +332,15 @@ function executeFinancialTool(name, input, update) {
         update({ wishlist_expenses: fin.wishlist_expenses.map(e => e.id === matched.id ? applyUpdate(e) : e) });
         return { success: true, updated: matched.name };
       }
+      matched = (fin.one_time_expenses || []).find(e => e.name.toLowerCase().includes(needle));
+      if (matched) {
+        update({ one_time_expenses: (fin.one_time_expenses || []).map(e => e.id === matched.id ? applyUpdate(e) : e) });
+        return { success: true, updated: matched.name };
+      }
       return { error: `No income or expense found matching "${input.name}"` };
     }
     case "list_financials":
-      return { income_sources: fin.income_sources, recurring_expenses: fin.recurring_expenses, wishlist_expenses: fin.wishlist_expenses };
+      return { income_sources: fin.income_sources, recurring_expenses: fin.recurring_expenses, wishlist_expenses: fin.wishlist_expenses, one_time_expenses: fin.one_time_expenses || [] };
     default:
       return { error: `Unknown tool: ${name}` };
   }
@@ -404,7 +432,7 @@ function AddRow({ placeholder, onAdd, dayLabel = "Day" }) {
 }
 
 // ── Editable item row ──────────────────────────────────────────────────────────
-function ItemRow({ item, onDelete, onUpdate, dayLabel = "Due" }) {
+function ItemRow({ item, onDelete, onUpdate, dayLabel = "Due", showPerMonth = true }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(item.name);
   const [amount, setAmount] = useState(item.amount);
@@ -462,7 +490,7 @@ function ItemRow({ item, onDelete, onUpdate, dayLabel = "Due" }) {
         )}
       </div>
       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-        <span className="text-sm font-semibold text-slate-800 whitespace-nowrap">${fmt(item.amount)}<span className="text-slate-400 font-normal text-xs">/mo</span></span>
+        <span className="text-sm font-semibold text-slate-800 whitespace-nowrap">${fmt(item.amount)}{showPerMonth && <span className="text-slate-400 font-normal text-xs">/mo</span>}</span>
         <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           <button onClick={() => setEditing(true)} className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"><Pencil className="w-3.5 h-3.5" /></button>
           {confirmingDelete ? (
@@ -501,8 +529,8 @@ function IncomeTab({ fin, update }) {
                   key={item.id}
                   item={item}
                   dayLabel="Received"
-                  onDelete={id => update({ income_sources: fin.income_sources.filter(s => s.id !== id) })}
-                  onUpdate={updated => update({ income_sources: fin.income_sources.map(s => s.id === updated.id ? updated : s) })}
+                  onDelete={id => update(prev => ({ income_sources: prev.income_sources.filter(s => s.id !== id) }))}
+                  onUpdate={updated => update(prev => ({ income_sources: prev.income_sources.map(s => s.id === updated.id ? updated : s) }))}
                 />
               ))}
               <div className="flex items-center justify-between py-3 font-semibold text-sm">
@@ -514,7 +542,7 @@ function IncomeTab({ fin, update }) {
           <AddRow
             placeholder="e.g. Salary, Freelance, Side hustle..."
             dayLabel="Received"
-            onAdd={item => update({ income_sources: [...fin.income_sources, item] })}
+            onAdd={item => update(prev => ({ income_sources: [...prev.income_sources, item] }))}
           />
           <div className="pb-4" />
         </div>
@@ -525,8 +553,13 @@ function IncomeTab({ fin, update }) {
 
 // ── EXPENSES TAB ──────────────────────────────────────────────────────────────
 function ExpensesTab({ fin, update }) {
+  const currentMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  const currentMonthLabel = new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
+
   const recurringTotal = sum(fin.recurring_expenses);
   const wishlistTotal  = sum(fin.wishlist_expenses);
+  const oneTimeItems   = (fin.one_time_expenses || []).filter(e => e.month === currentMonth);
+  const oneTimeTotal   = oneTimeItems.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -545,8 +578,8 @@ function ExpensesTab({ fin, update }) {
                 <ItemRow
                   key={item.id}
                   item={item}
-                  onDelete={id => update({ recurring_expenses: fin.recurring_expenses.filter(e => e.id !== id) })}
-                  onUpdate={u => update({ recurring_expenses: fin.recurring_expenses.map(e => e.id === u.id ? u : e) })}
+                  onDelete={id => update(prev => ({ recurring_expenses: prev.recurring_expenses.filter(e => e.id !== id) }))}
+                  onUpdate={u => update(prev => ({ recurring_expenses: prev.recurring_expenses.map(e => e.id === u.id ? u : e) }))}
                 />
               ))}
               <div className="flex items-center justify-between py-3 font-semibold text-sm border-t border-slate-100">
@@ -557,7 +590,46 @@ function ExpensesTab({ fin, update }) {
           )}
           <AddRow
             placeholder="e.g. Rent, Netflix, Gym membership..."
-            onAdd={item => update({ recurring_expenses: [...fin.recurring_expenses, item] })}
+            onAdd={item => update(prev => ({ recurring_expenses: [...prev.recurring_expenses, item] }))}
+          />
+          <div className="pb-4" />
+        </div>
+      </div>
+
+      {/* One-time payments this month */}
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <div className="px-6 py-5 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-slate-800 text-base">One-time Payments</h3>
+            <span className="text-xs px-2 py-0.5 bg-sky-100 text-sky-600 rounded-full font-medium">{currentMonthLabel}</span>
+          </div>
+          <p className="text-xs text-slate-400 mt-0.5">Single purchases or payments this month — doctor visits, car repair, clothing…</p>
+        </div>
+        <div className="px-6 pb-2">
+          {oneTimeItems.length === 0 ? (
+            <div className="py-8 text-center text-slate-400 text-sm">No one-time payments for {currentMonthLabel}</div>
+          ) : (
+            <div>
+              {oneTimeItems.map(item => (
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  showPerMonth={false}
+                  dayLabel="On"
+                  onDelete={id => update(prev => ({ one_time_expenses: (prev.one_time_expenses || []).filter(e => e.id !== id) }))}
+                  onUpdate={u => update(prev => ({ one_time_expenses: (prev.one_time_expenses || []).map(e => e.id === u.id ? { ...u, month: currentMonth } : e) }))}
+                />
+              ))}
+              <div className="flex items-center justify-between py-3 font-semibold text-sm border-t border-slate-100">
+                <span className="text-slate-600">Total One-time</span>
+                <span className="text-sky-600 text-base">${fmt(oneTimeTotal)}</span>
+              </div>
+            </div>
+          )}
+          <AddRow
+            placeholder="e.g. Doctor visit, Car repair, Clothing..."
+            dayLabel="Day"
+            onAdd={item => update(prev => ({ one_time_expenses: [...(prev.one_time_expenses || []), { ...item, month: currentMonth }] }))}
           />
           <div className="pb-4" />
         </div>
@@ -581,8 +653,8 @@ function ExpensesTab({ fin, update }) {
                 <ItemRow
                   key={item.id}
                   item={item}
-                  onDelete={id => update({ wishlist_expenses: fin.wishlist_expenses.filter(e => e.id !== id) })}
-                  onUpdate={u => update({ wishlist_expenses: fin.wishlist_expenses.map(e => e.id === u.id ? u : e) })}
+                  onDelete={id => update(prev => ({ wishlist_expenses: prev.wishlist_expenses.filter(e => e.id !== id) }))}
+                  onUpdate={u => update(prev => ({ wishlist_expenses: prev.wishlist_expenses.map(e => e.id === u.id ? u : e) }))}
                 />
               ))}
               <div className="flex items-center justify-between py-3 font-semibold text-sm border-t border-slate-100">
@@ -593,7 +665,7 @@ function ExpensesTab({ fin, update }) {
           )}
           <AddRow
             placeholder="e.g. Dining out, Spotify, Weekend trips..."
-            onAdd={item => update({ wishlist_expenses: [...fin.wishlist_expenses, item] })}
+            onAdd={item => update(prev => ({ wishlist_expenses: [...prev.wishlist_expenses, item] }))}
           />
           <div className="pb-4" />
         </div>
@@ -941,17 +1013,44 @@ export default function Financials() {
   const [fin, setFin] = useState(loadFin);
   const [activeTab, setActiveTab] = useState("Income");
 
-  // Reload from supabaseStorage once it finishes hydrating from Supabase
+  // Merge-reload from supabaseStorage once it finishes hydrating from Supabase.
+  // We MERGE (union by id) rather than overwrite so that items added locally
+  // before Supabase finishes syncing are never lost.
   useEffect(() => {
-    if (isStorageReady()) { setFin(loadFin()); return; }
-    const handler = () => setFin(loadFin());
-    window.addEventListener('supabase-storage-ready', handler);
-    return () => window.removeEventListener('supabase-storage-ready', handler);
+    const mergeAndSet = () => {
+      const loaded = loadFin();
+      setFin(prev => {
+        const mergeArr = (a, b) => {
+          const map = new Map();
+          // b (remote) first so a (local, more recent) wins on id collision
+          [...(b || []), ...(a || [])].forEach(item => map.set(item.id, item));
+          return [...map.values()];
+        };
+        return {
+          income_sources:    mergeArr(prev.income_sources,             loaded.income_sources),
+          recurring_expenses:mergeArr(prev.recurring_expenses,         loaded.recurring_expenses),
+          wishlist_expenses: mergeArr(prev.wishlist_expenses,          loaded.wishlist_expenses),
+          one_time_expenses: mergeArr(prev.one_time_expenses || [],    loaded.one_time_expenses || []),
+        };
+      });
+    };
+    if (isStorageReady()) { mergeAndSet(); return; }
+    window.addEventListener('supabase-storage-ready', mergeAndSet);
+    return () => window.removeEventListener('supabase-storage-ready', mergeAndSet);
   }, []);
 
-  const update = (patch) => {
+  // update() accepts either a plain patch object OR a function (prev => patch)
+  // so callers can avoid stale-closure bugs on rapid successive updates.
+  const update = (patchOrFn) => {
     setFin(prev => {
-      const next = { ...prev, ...patch };
+      const patch = typeof patchOrFn === 'function' ? patchOrFn(prev) : patchOrFn;
+      const next = {
+        income_sources:    prev.income_sources,
+        recurring_expenses:prev.recurring_expenses,
+        wishlist_expenses: prev.wishlist_expenses,
+        one_time_expenses: prev.one_time_expenses || [],
+        ...patch,
+      };
       saveFin(next);
       return next;
     });
