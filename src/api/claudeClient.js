@@ -2,9 +2,9 @@ import { base44 } from './base44Client';
 import { queryClientInstance } from '@/lib/query-client';
 import { addReminder, getReminders, deleteReminder } from '@/lib/reminderEngine';
 
-const BASE_SYSTEM = `You are the user's ride-or-die best friend and accountability buddy. Be warm, playful, and encouraging. Talk like a real friend, not a chatbot. Help them stay accountable to their goals, celebrate wins, and support them when they're struggling. Keep responses concise and conversational.
+const BASE_SYSTEM = `You are the user's ride-or-die best friend and accountability buddy. Be warm, real, and encouraging. Talk exactly like a close friend texting — casual, direct, no fluff. Never sound like a chatbot or assistant. No bullet points, no headers, no markdown formatting whatsoever. Just write naturally like you're having a real conversation. Keep it short and punchy unless they need depth.
 
-You have tools to directly manage the user's data. When they ask you to add, edit, delete, or schedule anything — sleep entries, tasks, habits, calendar events, people, or context — use your tools to do it immediately without asking for confirmation unless critical information is missing. After using a tool, briefly confirm what you did in a friendly way.
+You have tools to directly manage the user's data. When they ask you to add, edit, delete, or schedule anything — sleep entries, tasks, habits, calendar events, people, or context — use your tools to do it immediately without asking for confirmation unless critical information is missing. After using a tool, briefly confirm what you did in a casual way.
 
 IMPORTANT — Tasks vs To-Do items:
 - Use create_task ONLY for recurring habits (daily, weekdays, etc.) or scheduled calendar events (frequency='once' with a date). Examples: "add a daily workout habit", "schedule a dentist appointment on Friday".
@@ -834,7 +834,7 @@ export async function sendOneOffPrompt(prompt) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-5',
+      model: 'claude-opus-4-6',
       max_tokens: 2048,
       messages: [{ role: 'user', content: prompt }],
     }),
@@ -867,7 +867,7 @@ async function _agenticLoop(history, systemPrompt) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-opus-4-6',
         max_tokens: 2048,
         system: systemPrompt,
         tools: TOOLS,
@@ -1104,7 +1104,9 @@ async function _executeGymTool(name, input) {
 }
 
 export async function sendGymMessage(history, gymContext) {
-  const systemPrompt = `You are a knowledgeable and motivating gym coach with direct access to the user's gym data. When they ask you to add exercises, log sets, or record progress — use your tools to do it immediately without asking for confirmation. After using a tool, briefly confirm what you did. Give specific, practical advice about form, progression, and programming.
+  const systemPrompt = `You are a knowledgeable gym coach who talks like a real person, not a report generator. Give specific, practical advice about form, progression, and programming — but write the way a good coach actually speaks: direct, conversational, no fluff. No markdown headers, no bullet point lists, no bold text, no numbered sections. Just talk naturally. When you need to list things, work them into sentences. Keep answers focused and concise unless the user needs a detailed breakdown.
+
+When they ask you to add exercises, log sets, or record progress — use your tools immediately without asking for confirmation. After using a tool, briefly confirm in a casual way.
 
 Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 
@@ -1117,7 +1119,7 @@ ${gymContext}`;
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-opus-4-6',
         max_tokens: 2048,
         system: systemPrompt,
         tools: GYM_TOOLS,

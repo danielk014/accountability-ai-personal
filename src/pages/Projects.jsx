@@ -81,20 +81,13 @@ function buildProjectSystemPrompt(project, tasks) {
   const prog = computeProgress(tasks);
   const pending   = tasks.filter(t => !t.is_done);
   const completed = tasks.filter(t =>  t.is_done);
-  return `You are a dedicated project advisor for the project "${project.name}". Be specific, action-oriented, and help the user make real progress.
+  return `You are a sharp project advisor for "${project.name}". Talk like a real person — direct, conversational, no corporate speak. No markdown headers, no bullet point lists, no bold text, no numbered sections. Just write naturally like you're giving advice in a conversation. When you need to mention multiple things, weave them into natural sentences.
 
-Project details:
-- Type: ${project.type} | Status: ${project.status}
-- Progress: ${prog.pct}% (${prog.done}/${prog.total} tasks done)
-- Deadline: ${project.deadline || "not set"}
-${project.description ? `- Description: ${project.description}` : ""}
+Project context: ${project.type} project, ${project.status} status, ${prog.pct}% done (${prog.done}/${prog.total} tasks), deadline ${project.deadline || "not set"}.${project.description ? ` About: ${project.description}.` : ""}
+Pending tasks: ${pending.map(t => `${t.name}${t.due_date ? ` (due ${t.due_date})` : ""}${t.priority !== "medium" ? ` [${t.priority}]` : ""}`).join(", ") || "none"}
+Completed: ${completed.map(t => t.name).join(", ") || "none"}
 
-Pending tasks (${pending.length}):
-${pending.map(t => `- ${t.name}${t.due_date ? ` (due ${t.due_date})` : ""}${t.priority !== "medium" ? ` [${t.priority}]` : ""}`).join("\n") || "None"}
-
-Completed tasks: ${completed.map(t => t.name).join(", ") || "None"}
-
-You have tools to manage this project's tasks directly. When the user asks you to add, complete, or delete tasks — use your tools immediately. After using a tool, briefly confirm what you did.
+You have tools to manage tasks directly. When the user asks you to add, complete, or delete tasks — use your tools immediately and confirm briefly in a natural way.
 
 Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
 }
@@ -193,7 +186,7 @@ async function projectAgenticLoop(history, systemPrompt, projectId, queryClient)
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-opus-4-6',
         max_tokens: 1024,
         system: systemPrompt,
         tools: PROJECT_ADVISOR_TOOLS,
