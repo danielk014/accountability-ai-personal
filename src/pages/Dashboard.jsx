@@ -725,55 +725,7 @@ export default function Dashboard() {
           ))}
         </AnimatePresence>
 
-        {/* To-do items inline */}
-        {pendingTodos.length > 0 && (
-          <>
-            {sortedTasks.length > 0 && <div className="border-t border-slate-100 my-2" />}
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide px-1 mb-1">To-Do</p>
-            <AnimatePresence>
-              {pendingTodos.map(item => {
-                const pc = priorityConfig[item.priority] || priorityConfig.medium;
-                return (
-                  <motion.div
-                    key={item.id}
-                    layout
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-2xl hover:shadow-sm transition-all group"
-                  >
-                    <button
-                      onClick={() => updateTodoMutation.mutate({ id: item.id, data: { is_done: true, completed_at: new Date().toISOString() } })}
-                      className="w-5 h-5 rounded-full border-2 border-slate-300 hover:border-indigo-500 hover:bg-indigo-50 flex items-center justify-center transition-colors flex-shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800">{item.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span className={cn("text-xs px-1.5 py-0.5 rounded-full border", pc.bg)}>
-                          {pc.label}
-                        </span>
-                        {item.due_date && item.due_date < today && (
-                          <span className="text-xs text-red-400 font-medium">Overdue</span>
-                        )}
-                        {item.due_date && item.due_date === today && (
-                          <span className="text-xs text-amber-500 font-medium">Due today</span>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => { setEditingTodo(item); setShowTodoForm(true); }}
-                      className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 transition"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-          </>
-        )}
-
-        {sortedTasks.length === 0 && pendingTodos.length === 0 && (
+        {sortedTasks.length === 0 && (
           <div className="text-center py-10 text-slate-400">
             <p className="text-base font-medium">No habits yet</p>
             <p className="text-sm mt-1">Add your first habit to get started!</p>
