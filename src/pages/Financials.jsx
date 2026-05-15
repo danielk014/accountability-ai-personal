@@ -83,7 +83,13 @@ function ordinal(n) {
 }
 
 // ── Month navigation helpers ──────────────────────────────────────────────────
-function toYYYYMM(date) { return date.toISOString().slice(0, 7); }
+// Use LOCAL date parts — never toISOString() which converts to UTC and can
+// roll back a month in negative-offset timezones.
+function toYYYYMM(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
 function monthLabel(yyyymm) {
   const [y, m] = yyyymm.split('-').map(Number);
   return new Date(y, m - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
@@ -723,15 +729,22 @@ function ExpensesTab({ fin, update, selectedMonth }) {
 function OverviewTab({ fin, selectedMonth }) {
   const [yearly, setYearly] = useState(false);
   const byMonth = arr => (arr || []).filter(e => e.month === selectedMonth);
+  const currentYear = selectedMonth.slice(0, 4);
+  const byYear  = arr => (arr || []).filter(e => e.month && e.month.startsWith(currentYear));
 
-  const incomeItems   = byMonth(fin.income_sources);
-  const income    = sum(incomeItems) * (yearly ? 12 : 1);
-  const recurring = sum(byMonth(fin.recurring_expenses)) * (yearly ? 12 : 1);
-  const wishlist  = sum(byMonth(fin.wishlist_expenses)) * (yearly ? 12 : 1);
-  const oneTime   = yearly ? 0 : sum(byMonth(fin.one_time_expenses));
-  const totalExp  = recurring + wishlist + oneTime;
-  const savings   = income - totalExp;
-  const baseIncome = sum(incomeItems);
+  // Monthly view: selected month only
+  // Yearly view:
+  //   - Income: sum of all income actually entered across every month of this year (no ×12)
+  //   - Recurring: selected month's recurring ×12 (they repeat, so this is the annual projection)
+  //   - Wishlist/One-time: summed across all months of this year (variable, don't project)
+  const incomeItems  = byMonth(fin.income_sources);
+  const income       = yearly ? sum(byYear(fin.income_sources))    : sum(incomeItems);
+  const recurring    = yearly ? sum(byMonth(fin.recurring_expenses)) * 12 : sum(byMonth(fin.recurring_expenses));
+  const wishlist     = yearly ? sum(byYear(fin.wishlist_expenses))  : sum(byMonth(fin.wishlist_expenses));
+  const oneTime      = yearly ? sum(byYear(fin.one_time_expenses || [])) : sum(byMonth(fin.one_time_expenses));
+  const totalExp     = recurring + wishlist + oneTime;
+  const savings      = income - totalExp;
+  const baseIncome   = sum(incomeItems);
   const rate = baseIncome > 0
     ? (((baseIncome - sum(byMonth(fin.recurring_expenses)) - sum(byMonth(fin.wishlist_expenses)) - sum(byMonth(fin.one_time_expenses))) / baseIncome) * 100).toFixed(1)
     : 0;
@@ -755,15 +768,15 @@ function OverviewTab({ fin, selectedMonth }) {
         </div>
         <div className="space-y-3">
           <div className="flex justify-between items-center py-2.5 border-b border-slate-100">
-            <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingUp className="w-4 h-4 text-emerald-500" />Total Income</span>
+            <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingUp className="w-4 h-4 text-emerald-500" />{yearly ? `Income (${currentYear})` : "Total Income"}</span>
             <span className="text-sm font-bold text-emerald-600 whitespace-nowrap ml-2">+${fmt(income)}</span>
           </div>
           <div className="flex justify-between items-center py-2.5 border-b border-slate-100">
-            <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingDown className="w-4 h-4 text-rose-500" />Fixed Expenses</span>
+            <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingDown className="w-4 h-4 text-rose-500" />{yearly ? "Recurring (×12)" : "Fixed Expenses"}</span>
             <span className="text-sm font-bold text-rose-500 whitespace-nowrap ml-2">-${fmt(recurring)}</span>
           </div>
           <div className="flex justify-between items-center py-2.5 border-b border-slate-100">
-            <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingDown className="w-4 h-4 text-violet-500" />Optional Spending</span>
+            <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingDown className="w-4 h-4 text-violet-500" />{yearly ? `Optional (${currentYear})` : "Optional Spending"}</span>
             <span className="text-sm font-bold text-violet-500 whitespace-nowrap ml-2">-${fmt(wishlist)}</span>
           </div>
           <div className={cn("flex justify-between items-center rounded-xl p-4 mt-2", savings >= 0 ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200")}>
