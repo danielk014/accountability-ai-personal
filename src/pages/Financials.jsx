@@ -650,7 +650,7 @@ function ExpensesTab({ fin, update, selectedMonth }) {
         <div className="px-6 py-5 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-slate-800 text-base">One-time Payments</h3>
-            <span className="text-xs px-2 py-0.5 bg-sky-100 text-sky-600 rounded-full font-medium">{currentMonthLabel}</span>
+            <span className="text-xs px-2 py-0.5 bg-sky-100 text-sky-600 rounded-full font-medium">{monthLabel(selectedMonth)}</span>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">Single purchases or payments this month — doctor visits, car repair, clothing…</p>
         </div>
