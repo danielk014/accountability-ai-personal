@@ -94,7 +94,6 @@ function shiftMonth(yyyymm, delta) {
 }
 
 function MonthNavigator({ value, onChange }) {
-  const isCurrentMonth = value === toYYYYMM(new Date());
   return (
     <div className="flex items-center gap-1">
       <button
@@ -108,8 +107,7 @@ function MonthNavigator({ value, onChange }) {
       </span>
       <button
         onClick={() => onChange(shiftMonth(value, 1))}
-        disabled={isCurrentMonth}
-        className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition disabled:opacity-30 disabled:cursor-not-allowed"
+        className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition"
       >
         <ChevronRight className="w-4 h-4" />
       </button>
