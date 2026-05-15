@@ -18,13 +18,26 @@ const getChatKey    = () => `${getUserPrefix()}accountable_financials_chat`;
 
 const EMPTY_FIN = () => ({ income_sources: [], recurring_expenses: [], wishlist_expenses: [], one_time_expenses: [] });
 
+// Tag any items that predate the month-aware system with the current month
+function _migrateItems(fin) {
+  const now = new Date().toISOString().slice(0, 7);
+  const tag = items => (items || []).map(item => item.month ? item : { ...item, month: now });
+  return {
+    ...fin,
+    income_sources:     tag(fin.income_sources),
+    recurring_expenses: tag(fin.recurring_expenses),
+    wishlist_expenses:  tag(fin.wishlist_expenses),
+    one_time_expenses:  tag(fin.one_time_expenses),
+  };
+}
+
 function loadFin() {
   const empty = EMPTY_FIN();
   try {
     const raw = supabaseStorage.getItem(getStorageKey());
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed) return { ...empty, ...parsed };
+      if (parsed) return _migrateItems({ ...empty, ...parsed });
     }
   } catch {}
   try {
@@ -34,7 +47,7 @@ function loadFin() {
       const parsed = JSON.parse(local);
       if (parsed) {
         supabaseStorage.setItem(getStorageKey(), local);
-        return { ...empty, ...parsed };
+        return _migrateItems({ ...empty, ...parsed });
       }
     }
   } catch {}
@@ -67,6 +80,41 @@ const sum = (arr) => arr.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
 function ordinal(n) {
   const s = ["th","st","nd","rd"], v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+// ── Month navigation helpers ──────────────────────────────────────────────────
+function toYYYYMM(date) { return date.toISOString().slice(0, 7); }
+function monthLabel(yyyymm) {
+  const [y, m] = yyyymm.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+}
+function shiftMonth(yyyymm, delta) {
+  const [y, m] = yyyymm.split('-').map(Number);
+  return toYYYYMM(new Date(y, m - 1 + delta, 1));
+}
+
+function MonthNavigator({ value, onChange }) {
+  const isCurrentMonth = value === toYYYYMM(new Date());
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={() => onChange(shiftMonth(value, -1))}
+        className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition"
+      >
+        <ChevronLeft className="w-4 h-4" />
+      </button>
+      <span className="text-sm font-semibold text-slate-700 min-w-[130px] text-center select-none">
+        {monthLabel(value)}
+      </span>
+      <button
+        onClick={() => onChange(shiftMonth(value, 1))}
+        disabled={isCurrentMonth}
+        className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition disabled:opacity-30 disabled:cursor-not-allowed"
+      >
+        <ChevronRight className="w-4 h-4" />
+      </button>
+    </div>
+  );
 }
 
 // ── Calendar day-of-month picker — portal-based so overflow-hidden can't clip it
@@ -177,13 +225,14 @@ function DayPicker({ value, onChange, label = "Set date" }) {
 }
 
 // ── Build financial system prompt for AI ──────────────────────────────────────
-function buildFinancialSystemPrompt(fin) {
-  const income = sum(fin.income_sources);
-  const recurring = sum(fin.recurring_expenses);
-  const wishlist = sum(fin.wishlist_expenses);
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const oneTimeItems = (fin.one_time_expenses || []).filter(e => e.month === currentMonth);
-  const oneTime = oneTimeItems.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+function buildFinancialSystemPrompt(fin, selectedMonth) {
+  const m = selectedMonth || toYYYYMM(new Date());
+  const byMonth = arr => (arr || []).filter(e => e.month === m);
+  const income    = sum(byMonth(fin.income_sources));
+  const recurring = sum(byMonth(fin.recurring_expenses));
+  const wishlist  = sum(byMonth(fin.wishlist_expenses));
+  const oneTimeItems = byMonth(fin.one_time_expenses);
+  const oneTime   = sum(oneTimeItems);
   const totalExpenses = recurring + wishlist + oneTime;
   const savings = income - totalExpenses;
   const rate = income > 0 ? ((savings / income) * 100).toFixed(1) : 0;
@@ -191,7 +240,7 @@ function buildFinancialSystemPrompt(fin) {
 
   return `You are a sharp financial advisor who blends the wisdom of Warren Buffett, Charlie Munger, and Dave Ramsey. From Buffett and Munger: long-term thinking, compounding, only buy what you understand, patience over speculation, moats, and rational decision-making. From Ramsey: zero debt, baby steps, gazelle intensity on paying off debt, emergency fund first, live below your means, and no debt is good debt except maybe a mortgage. When the user has debt, channel Ramsey's urgency. When talking about investing and wealth building, bring in Buffett and Munger's principles. Be direct and specific — use the user's real numbers when you respond. Talk like a smart, no-nonsense person, not a report. No markdown headers, no bullet lists, no bold text. Just straight talk in natural sentences. Use the tools immediately when asked to change financial data.
 
-User's finances: income $${fmt(income)}/mo (${fin.income_sources.map(fmtItem).join(", ") || "none"}), recurring expenses $${fmt(recurring)}/mo (${fin.recurring_expenses.map(fmtItem).join(", ") || "none"}), optional spending $${fmt(wishlist)}/mo (${fin.wishlist_expenses.map(fmtItem).join(", ") || "none"}), one-time this month $${fmt(oneTime)} (${oneTimeItems.map(fmtItem).join(", ") || "none"}), monthly savings $${fmt(savings)} (${rate}% savings rate), annual savings $${fmt(savings * 12)}.
+Viewing month: ${monthLabel(m)}. User's finances for this month: income $${fmt(income)} (${byMonth(fin.income_sources).map(fmtItem).join(", ") || "none"}), recurring expenses $${fmt(recurring)} (${byMonth(fin.recurring_expenses).map(fmtItem).join(", ") || "none"}), optional spending $${fmt(wishlist)} (${byMonth(fin.wishlist_expenses).map(fmtItem).join(", ") || "none"}), one-time payments $${fmt(oneTime)} (${oneTimeItems.map(fmtItem).join(", ") || "none"}), savings $${fmt(savings)} (${rate}% savings rate).
 
 Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
 }
@@ -268,19 +317,19 @@ const FINANCIAL_TOOLS = [
   },
 ];
 
-function executeFinancialTool(name, input, update) {
+function executeFinancialTool(name, input, update, selectedMonth) {
   const fin = loadFin();
+  const month = selectedMonth || toYYYYMM(new Date());
   switch (name) {
     case "add_income_source": {
-      const item = { id: uid(), name: input.name, amount: parseFloat(input.amount), day: input.day || null };
+      const item = { id: uid(), name: input.name, amount: parseFloat(input.amount), day: input.day || null, month };
       update({ income_sources: [...fin.income_sources, item] });
       return { success: true, added: { name: item.name, amount: item.amount } };
     }
     case "add_expense": {
-      const item = { id: uid(), name: input.name, amount: parseFloat(input.amount), day: input.day || null };
+      const item = { id: uid(), name: input.name, amount: parseFloat(input.amount), day: input.day || null, month };
       if (input.category === "one_time") {
-        const month = new Date().toISOString().slice(0, 7);
-        update({ one_time_expenses: [...(fin.one_time_expenses || []), { ...item, month }] });
+        update({ one_time_expenses: [...(fin.one_time_expenses || []), item] });
       } else {
         const key = input.category === "wishlist" ? "wishlist_expenses" : "recurring_expenses";
         update({ [key]: [...fin[key], item] });
@@ -341,9 +390,8 @@ function executeFinancialTool(name, input, update) {
   }
 }
 
-async function financialAgenticLoop(history, fin, update) {
-  // Financial Advisor only sees financial data — not gym, projects, sleep, etc.
-  const systemPrompt = buildFinancialSystemPrompt(fin);
+async function financialAgenticLoop(history, fin, update, selectedMonth) {
+  const systemPrompt = buildFinancialSystemPrompt(fin, selectedMonth);
 
   let messages = history.map(m => ({ role: m.role, content: m.content }));
   for (let turn = 0; turn < 8; turn++) {
@@ -367,7 +415,7 @@ async function financialAgenticLoop(history, fin, update) {
     const toolResults = [];
     for (const block of data.content) {
       if (block.type === 'tool_use') {
-        const result = executeFinancialTool(block.name, block.input, update);
+        const result = executeFinancialTool(block.name, block.input, update, selectedMonth);
         toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) });
       }
     }
@@ -377,14 +425,14 @@ async function financialAgenticLoop(history, fin, update) {
 }
 
 // ── Inline add row ─────────────────────────────────────────────────────────────
-function AddRow({ placeholder, onAdd, dayLabel = "Day" }) {
+function AddRow({ placeholder, onAdd, dayLabel = "Day", month }) {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [day, setDay] = useState(null);
 
   const submit = () => {
     if (!name.trim() || !amount) return;
-    onAdd({ id: uid(), name: name.trim(), amount: parseFloat(amount), day: day || null });
+    onAdd({ id: uid(), name: name.trim(), amount: parseFloat(amount), day: day || null, month: month || toYYYYMM(new Date()) });
     setName(""); setAmount(""); setDay(null);
   };
 
@@ -502,24 +550,25 @@ function ItemRow({ item, onDelete, onUpdate, dayLabel = "Due", showPerMonth = tr
 }
 
 // ── INCOME TAB ────────────────────────────────────────────────────────────────
-function IncomeTab({ fin, update }) {
+function IncomeTab({ fin, update, selectedMonth }) {
+  const items = fin.income_sources.filter(s => s.month === selectedMonth);
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-6 py-5 border-b border-slate-100">
           <h3 className="font-semibold text-slate-800 text-base">Income Sources</h3>
-          <p className="text-xs text-slate-400 mt-0.5">Add all sources of monthly income</p>
+          <p className="text-xs text-slate-400 mt-0.5">Add all sources of income for {monthLabel(selectedMonth)}</p>
         </div>
 
         <div className="px-6 pb-2">
-          {fin.income_sources.length === 0 ? (
+          {items.length === 0 ? (
             <div className="py-10 text-center text-slate-400">
-              <p className="text-sm">No income sources added yet</p>
+              <p className="text-sm">No income recorded for {monthLabel(selectedMonth)}</p>
               <p className="text-xs mt-1">Add your salary, freelance income, side hustle, etc.</p>
             </div>
           ) : (
             <div>
-              {fin.income_sources.map(item => (
+              {items.map(item => (
                 <ItemRow
                   key={item.id}
                   item={item}
@@ -529,14 +578,15 @@ function IncomeTab({ fin, update }) {
                 />
               ))}
               <div className="flex items-center justify-between py-3 font-semibold text-sm">
-                <span className="text-slate-600">Total Monthly Income</span>
-                <span className="text-emerald-600 text-base">${fmt(sum(fin.income_sources))}</span>
+                <span className="text-slate-600">Total Income</span>
+                <span className="text-emerald-600 text-base">${fmt(sum(items))}</span>
               </div>
             </div>
           )}
           <AddRow
             placeholder="e.g. Salary, Freelance, Side hustle..."
             dayLabel="Received"
+            month={selectedMonth}
             onAdd={item => update(prev => ({ income_sources: [...prev.income_sources, item] }))}
           />
           <div className="pb-4" />
@@ -547,14 +597,13 @@ function IncomeTab({ fin, update }) {
 }
 
 // ── EXPENSES TAB ──────────────────────────────────────────────────────────────
-function ExpensesTab({ fin, update }) {
-  const currentMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
-  const currentMonthLabel = new Date().toLocaleString("en-US", { month: "long", year: "numeric" });
-
-  const recurringTotal = sum(fin.recurring_expenses);
-  const wishlistTotal  = sum(fin.wishlist_expenses);
-  const oneTimeItems   = (fin.one_time_expenses || []).filter(e => e.month === currentMonth);
-  const oneTimeTotal   = oneTimeItems.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
+function ExpensesTab({ fin, update, selectedMonth }) {
+  const recurringItems = fin.recurring_expenses.filter(e => e.month === selectedMonth);
+  const wishlistItems  = fin.wishlist_expenses.filter(e => e.month === selectedMonth);
+  const oneTimeItems   = (fin.one_time_expenses || []).filter(e => e.month === selectedMonth);
+  const recurringTotal = sum(recurringItems);
+  const wishlistTotal  = sum(wishlistItems);
+  const oneTimeTotal   = sum(oneTimeItems);
 
   return (
     <div className="space-y-6">
@@ -565,11 +614,11 @@ function ExpensesTab({ fin, update }) {
           <p className="text-xs text-slate-400 mt-0.5">Fixed monthly bills — rent, subscriptions, insurance, loan payments…</p>
         </div>
         <div className="px-6 pb-2">
-          {fin.recurring_expenses.length === 0 ? (
-            <div className="py-8 text-center text-slate-400 text-sm">No recurring expenses added yet</div>
+          {recurringItems.length === 0 ? (
+            <div className="py-8 text-center text-slate-400 text-sm">No recurring expenses for {monthLabel(selectedMonth)}</div>
           ) : (
             <div>
-              {fin.recurring_expenses.map(item => (
+              {recurringItems.map(item => (
                 <ItemRow
                   key={item.id}
                   item={item}
@@ -579,12 +628,13 @@ function ExpensesTab({ fin, update }) {
               ))}
               <div className="flex items-center justify-between py-3 font-semibold text-sm border-t border-slate-100">
                 <span className="text-slate-600">Total Recurring</span>
-                <span className="text-rose-500 text-base">${fmt(recurringTotal)}/mo</span>
+                <span className="text-rose-500 text-base">${fmt(recurringTotal)}</span>
               </div>
             </div>
           )}
           <AddRow
             placeholder="e.g. Rent, Netflix, Gym membership..."
+            month={selectedMonth}
             onAdd={item => update(prev => ({ recurring_expenses: [...prev.recurring_expenses, item] }))}
           />
           <div className="pb-4" />
@@ -602,7 +652,7 @@ function ExpensesTab({ fin, update }) {
         </div>
         <div className="px-6 pb-2">
           {oneTimeItems.length === 0 ? (
-            <div className="py-8 text-center text-slate-400 text-sm">No one-time payments for {currentMonthLabel}</div>
+            <div className="py-8 text-center text-slate-400 text-sm">No one-time payments for {monthLabel(selectedMonth)}</div>
           ) : (
             <div>
               {oneTimeItems.map(item => (
@@ -612,7 +662,7 @@ function ExpensesTab({ fin, update }) {
                   showPerMonth={false}
                   dayLabel="On"
                   onDelete={id => update(prev => ({ one_time_expenses: (prev.one_time_expenses || []).filter(e => e.id !== id) }))}
-                  onUpdate={u => update(prev => ({ one_time_expenses: (prev.one_time_expenses || []).map(e => e.id === u.id ? { ...u, month: currentMonth } : e) }))}
+                  onUpdate={u => update(prev => ({ one_time_expenses: (prev.one_time_expenses || []).map(e => e.id === u.id ? u : e) }))}
                 />
               ))}
               <div className="flex items-center justify-between py-3 font-semibold text-sm border-t border-slate-100">
@@ -624,7 +674,8 @@ function ExpensesTab({ fin, update }) {
           <AddRow
             placeholder="e.g. Doctor visit, Car repair, Clothing..."
             dayLabel="Day"
-            onAdd={item => update(prev => ({ one_time_expenses: [...(prev.one_time_expenses || []), { ...item, month: currentMonth }] }))}
+            month={selectedMonth}
+            onAdd={item => update(prev => ({ one_time_expenses: [...(prev.one_time_expenses || []), item] }))}
           />
           <div className="pb-4" />
         </div>
@@ -640,11 +691,11 @@ function ExpensesTab({ fin, update }) {
           <p className="text-xs text-slate-400 mt-0.5">Nice-to-haves — dining out, shopping, hobbies, travel…</p>
         </div>
         <div className="px-6 pb-2">
-          {fin.wishlist_expenses.length === 0 ? (
-            <div className="py-8 text-center text-slate-400 text-sm">No wishlist items yet</div>
+          {wishlistItems.length === 0 ? (
+            <div className="py-8 text-center text-slate-400 text-sm">No wishlist items for {monthLabel(selectedMonth)}</div>
           ) : (
             <div>
-              {fin.wishlist_expenses.map(item => (
+              {wishlistItems.map(item => (
                 <ItemRow
                   key={item.id}
                   item={item}
@@ -654,12 +705,13 @@ function ExpensesTab({ fin, update }) {
               ))}
               <div className="flex items-center justify-between py-3 font-semibold text-sm border-t border-slate-100">
                 <span className="text-slate-600">Total Optional</span>
-                <span className="text-violet-500 text-base">${fmt(wishlistTotal)}/mo</span>
+                <span className="text-violet-500 text-base">${fmt(wishlistTotal)}</span>
               </div>
             </div>
           )}
           <AddRow
             placeholder="e.g. Dining out, Spotify, Weekend trips..."
+            month={selectedMonth}
             onAdd={item => update(prev => ({ wishlist_expenses: [...prev.wishlist_expenses, item] }))}
           />
           <div className="pb-4" />
@@ -670,18 +722,20 @@ function ExpensesTab({ fin, update }) {
 }
 
 // ── OVERVIEW TAB ──────────────────────────────────────────────────────────────
-function OverviewTab({ fin }) {
+function OverviewTab({ fin, selectedMonth }) {
   const [yearly, setYearly] = useState(false);
+  const byMonth = arr => (arr || []).filter(e => e.month === selectedMonth);
 
-  // Income and optional spending show exactly what was entered (no x12).
-  // Only recurring/fixed expenses are annualised for the yearly view.
-  const income    = sum(fin.income_sources);
-  const recurring = sum(fin.recurring_expenses) * (yearly ? 12 : 1);
-  const wishlist  = sum(fin.wishlist_expenses);
-  const totalExp  = recurring + wishlist;
+  const incomeItems   = byMonth(fin.income_sources);
+  const income    = sum(incomeItems) * (yearly ? 12 : 1);
+  const recurring = sum(byMonth(fin.recurring_expenses)) * (yearly ? 12 : 1);
+  const wishlist  = sum(byMonth(fin.wishlist_expenses)) * (yearly ? 12 : 1);
+  const oneTime   = yearly ? 0 : sum(byMonth(fin.one_time_expenses));
+  const totalExp  = recurring + wishlist + oneTime;
   const savings   = income - totalExp;
-  const rate      = (sum(fin.income_sources)) > 0
-    ? (((sum(fin.income_sources) - sum(fin.recurring_expenses) - sum(fin.wishlist_expenses)) / sum(fin.income_sources)) * 100).toFixed(1)
+  const baseIncome = sum(incomeItems);
+  const rate = baseIncome > 0
+    ? (((baseIncome - sum(byMonth(fin.recurring_expenses)) - sum(byMonth(fin.wishlist_expenses)) - sum(byMonth(fin.one_time_expenses))) / baseIncome) * 100).toFixed(1)
     : 0;
 
   return (
@@ -741,16 +795,16 @@ function OverviewTab({ fin }) {
       )}
 
       {/* Income sources breakdown */}
-      {fin.income_sources.length > 0 && (
+      {incomeItems.length > 0 && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <h3 className="font-semibold text-slate-800 mb-4">Income Sources</h3>
-          {fin.income_sources.map(s => (
+          {incomeItems.map(s => (
             <div key={s.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0 text-sm">
               <div className="flex items-center gap-2 min-w-0 flex-1 mr-3">
                 <span className="text-slate-600 truncate">{s.name}</span>
                 {s.day && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 font-medium flex-shrink-0 hidden sm:inline">Received {ordinal(s.day)}</span>}
               </div>
-              <span className="font-semibold text-slate-800 whitespace-nowrap flex-shrink-0">${fmt(s.amount)}/mo</span>
+              <span className="font-semibold text-slate-800 whitespace-nowrap flex-shrink-0">${fmt(s.amount)}</span>
             </div>
           ))}
         </div>
@@ -760,7 +814,7 @@ function OverviewTab({ fin }) {
 }
 
 // ── AI ADVISOR TAB ────────────────────────────────────────────────────────────
-function AdvisorTab({ fin, update }) {
+function AdvisorTab({ fin, update, selectedMonth }) {
   const [messages, setMessages] = useState(loadChat);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -785,7 +839,7 @@ function AdvisorTab({ fin, update }) {
     setLoading(true);
 
     try {
-      const reply = await financialAgenticLoop(updated, fin, update);
+      const reply = await financialAgenticLoop(updated, fin, update, selectedMonth);
       const withReply = [...updated, { role: "assistant", content: reply }];
       setMessages(withReply);
       saveChat(withReply);
@@ -972,18 +1026,20 @@ function AdvisorTab({ fin, update }) {
 }
 
 // ── TOP SUMMARY CARDS ──────────────────────────────────────────────────────────
-function SummaryCards({ fin }) {
-  const income    = sum(fin.income_sources);
-  const recurring = sum(fin.recurring_expenses);
-  const wishlist  = sum(fin.wishlist_expenses);
-  const totalExp  = recurring + wishlist;
+function SummaryCards({ fin, selectedMonth }) {
+  const byMonth   = arr => (arr || []).filter(e => e.month === selectedMonth);
+  const income    = sum(byMonth(fin.income_sources));
+  const recurring = sum(byMonth(fin.recurring_expenses));
+  const wishlist  = sum(byMonth(fin.wishlist_expenses));
+  const oneTime   = sum(byMonth(fin.one_time_expenses));
+  const totalExp  = recurring + wishlist + oneTime;
   const savings   = income - totalExp;
   const rate      = income > 0 ? ((savings / income) * 100).toFixed(0) : 0;
 
   const cards = [
-    { label: "Monthly Income",  value: `$${fmtWhole(income)}`,    color: "text-emerald-600", icon: TrendingUp,   iconColor: "text-emerald-400" },
-    { label: "Total Expenses",  value: `$${fmtWhole(totalExp)}`,  color: "text-rose-500",    icon: TrendingDown, iconColor: "text-rose-400" },
-    { label: "Savings Rate",    value: `${Math.max(0, rate)}%`, color: "text-slate-700", icon: Wallet, iconColor: "text-slate-400" },
+    { label: "Income",        value: `$${fmtWhole(income)}`,    color: "text-emerald-600", icon: TrendingUp,   iconColor: "text-emerald-400" },
+    { label: "Expenses",      value: `$${fmtWhole(totalExp)}`,  color: "text-rose-500",    icon: TrendingDown, iconColor: "text-rose-400" },
+    { label: "Savings Rate",  value: `${Math.max(0, rate)}%`,   color: "text-slate-700",   icon: Wallet,       iconColor: "text-slate-400" },
   ];
 
   return (
@@ -1007,6 +1063,7 @@ const TABS = ["Overview", "Income", "Expenses", "AI Advisor"];
 export default function Financials() {
   const [fin, setFin] = useState(loadFin);
   const [activeTab, setActiveTab] = useState("Income");
+  const [selectedMonth, setSelectedMonth] = useState(() => toYYYYMM(new Date()));
 
   // Merge-reload from supabaseStorage once it finishes hydrating from Supabase.
   // We MERGE (union by id) rather than overwrite so that items added locally
@@ -1054,13 +1111,16 @@ export default function Financials() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Financials</h1>
-        <p className="text-slate-400 text-sm mt-1">Manage your income, track expenses, and plan your budget</p>
+      <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Financials</h1>
+          <p className="text-slate-400 text-sm mt-1">Track income and expenses by month</p>
+        </div>
+        <MonthNavigator value={selectedMonth} onChange={setSelectedMonth} />
       </div>
 
       {/* Summary cards */}
-      <SummaryCards fin={fin} />
+      <SummaryCards fin={fin} selectedMonth={selectedMonth} />
 
       {/* Tab bar */}
       <div className="flex gap-1 border-b border-slate-200 mb-6 overflow-x-auto scrollbar-hide overscroll-x-contain" style={{ touchAction: 'pan-x' }}>
@@ -1081,10 +1141,10 @@ export default function Financials() {
       </div>
 
       {/* Tab content */}
-      {activeTab === "Overview"    && <OverviewTab fin={fin} />}
-      {activeTab === "Income"      && <IncomeTab fin={fin} update={update} />}
-      {activeTab === "Expenses"    && <ExpensesTab fin={fin} update={update} />}
-      {activeTab === "AI Advisor"  && <AdvisorTab fin={fin} update={update} />}
+      {activeTab === "Overview"    && <OverviewTab fin={fin} selectedMonth={selectedMonth} />}
+      {activeTab === "Income"      && <IncomeTab fin={fin} update={update} selectedMonth={selectedMonth} />}
+      {activeTab === "Expenses"    && <ExpensesTab fin={fin} update={update} selectedMonth={selectedMonth} />}
+      {activeTab === "AI Advisor"  && <AdvisorTab fin={fin} update={update} selectedMonth={selectedMonth} />}
     </div>
   );
 }
