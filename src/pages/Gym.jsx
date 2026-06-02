@@ -1316,7 +1316,7 @@ function NutritionTab({ nutrition, onUpdate }) {
 }
 
 // ── AICoachTab ────────────────────────────────────────────────────────────────
-function AICoachTab({ gymData, onDataChange }) {
+function AICoachTab({ gymData, nutrition, bodyweight, physique, onDataChange }) {
   const [messages, setMessages]           = useState(() => loadChat());
   const [input, setInput]                 = useState("");
   const [loading, setLoading]             = useState(false);
@@ -1337,19 +1337,60 @@ function AICoachTab({ gymData, onDataChange }) {
   }, [onDataChange]);
 
   function buildContext() {
-    const lines = ["## Current Gym Data"];
+    const lines = ["## User Data"];
+
+    // ── Workouts ──
     if (gymData.weight_unit) lines.push(`Weight unit: ${gymData.weight_unit}`);
+    lines.push("\n### Workout Days");
     for (const day of (gymData.workout_days || [])) {
-      lines.push(`\n### ${day.name} Day`);
+      lines.push(`\n**${day.name} Day**`);
       if ((day.exercises || []).length === 0) {
         lines.push("No exercises added yet.");
       } else {
         day.exercises.forEach(ex => {
           const setStr = (ex.sets || []).map((s, i) => `Set ${i + 1}: ${s.weight} ${gymData.weight_unit} × ${s.reps}`).join(", ");
-          lines.push(`- ${ex.name}: ${setStr || "no sets logged"}`);
+          const lastLog = (ex.weight_log || []).slice(-1)[0];
+          const lastLogStr = lastLog ? ` | Last logged: ${lastLog.weight}${gymData.weight_unit} × ${lastLog.reps} on ${lastLog.date}` : "";
+          lines.push(`- ${ex.name}: ${setStr || "no sets"}${lastLogStr}`);
         });
       }
     }
+
+    // ── Bodyweight history ──
+    const bwLogs = [...(bodyweight?.logs || [])].filter(l => l.weight).sort((a, b) => a.date.localeCompare(b.date));
+    if (bwLogs.length > 0) {
+      lines.push("\n### Bodyweight History (most recent 10)");
+      bwLogs.slice(-10).forEach(l => lines.push(`- ${l.date}: ${l.weight} ${l.unit || "kg"}`));
+      if (bwLogs.length >= 2) {
+        const first = bwLogs[0], last = bwLogs[bwLogs.length - 1];
+        const diff = (parseFloat(last.weight) - parseFloat(first.weight)).toFixed(1);
+        lines.push(`Trend: ${diff > 0 ? "+" : ""}${diff} ${last.unit || "kg"} over ${bwLogs.length} entries`);
+      }
+    }
+
+    // ── Today's nutrition ──
+    const todayStr = new Date().toISOString().split("T")[0];
+    const todayLog = (nutrition?.logs || []).find(l => l.date === todayStr);
+    if (todayLog?.foods?.length > 0) {
+      const totals = todayLog.foods.reduce((a, f) => ({
+        cal: a.cal + (f.calories || 0), protein: a.protein + (f.protein || 0),
+        carbs: a.carbs + (f.carbs || 0), fat: a.fat + (f.fat || 0),
+      }), { cal: 0, protein: 0, carbs: 0, fat: 0 });
+      lines.push(`\n### Today's Nutrition (${todayStr})`);
+      lines.push(`Totals: ${Math.round(totals.cal)} kcal | ${totals.protein.toFixed(1)}g protein | ${totals.carbs.toFixed(1)}g carbs | ${totals.fat.toFixed(1)}g fat`);
+      lines.push("Foods logged: " + todayLog.foods.map(f => `${f.name} (${f.calories} kcal, ${f.protein}g P${f.nutritionScore != null ? `, score ${f.nutritionScore}/100` : ""})`).join("; "));
+    } else {
+      lines.push("\n### Today's Nutrition\nNo food logged today.");
+    }
+
+    // ── Physique / check-ins ──
+    const checkIns = [...(physique?.checkIns || [])].sort((a, b) => a.date.localeCompare(b.date));
+    if (checkIns.length > 0) {
+      const last = checkIns[checkIns.length - 1];
+      lines.push(`\n### Latest Physique Check-in (${last.date})`);
+      if (last.notes) lines.push(`Notes: ${last.notes}`);
+    }
+
     return lines.join("\n");
   }
 
@@ -1853,7 +1894,7 @@ export default function Gym() {
         ) : activeTab === "progress" ? (
           <ProgressTab gymData={gymData} bodyweight={bodyweight} />
         ) : activeTab === "ai" ? (
-          <AICoachTab gymData={gymData} onDataChange={() => setGymData(loadData())} />
+          <AICoachTab gymData={gymData} nutrition={nutrition} bodyweight={bodyweight} physique={physique} onDataChange={() => setGymData(loadData())} />
         ) : (
           (() => {
             const day = (gymData.workout_days || []).find(d => d.id === activeTab);

@@ -1104,9 +1104,13 @@ async function _executeGymTool(name, input) {
 }
 
 export async function sendGymMessage(history, gymContext) {
-  const systemPrompt = `You are a knowledgeable gym coach who talks like a real person, not a report generator. Give specific, practical advice about form, progression, and programming — but write the way a good coach actually speaks: direct, conversational, no fluff. No markdown headers, no bullet point lists, no bold text, no numbered sections. Just talk naturally. When you need to list things, work them into sentences. Keep answers focused and concise unless the user needs a detailed breakdown.
+  const systemPrompt = `You are a personal gym coach. The user's goal is maximizing muscle gain through a calorie surplus — more food and protein is good, being calorie-dense is not a problem.
 
-When they ask you to add exercises, log sets, or record progress — use your tools immediately without asking for confirmation. After using a tool, briefly confirm in a casual way.
+Reply like a real coach texting: short, direct, no fluff. 1-3 sentences for simple questions. Only go longer if they ask for a full plan. Never use markdown headers, bullet lists, bold text, or numbered sections — just talk naturally. If you need to list things, work them into a sentence.
+
+You have full access to the user's workout data, bodyweight history, and today's nutrition log below — reference it when relevant.
+
+When asked to add exercises, log sets, or record progress, use your tools immediately and just briefly confirm after.
 
 Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 
@@ -1158,9 +1162,9 @@ export async function analyzeFoodWithAI(imageBase64, mediaType, description) {
   if (imageBase64) {
     content.push({ type: "image", source: { type: "base64", media_type: mediaType || "image/jpeg", data: imageBase64 } });
   }
-  const prompt = `Analyze this food${description ? `: "${description}"` : ""}. The user's goal is to gain muscle while staying lean and avoiding unhealthy fat gain. Estimate nutritional values for a typical serving. Return ONLY valid JSON in this exact format with no other text:
-{"name":"food name","serving":"serving description","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"saturated_fat_g":0,"sugar_g":0,"fiber_g":0,"nutrition_score":0,"health_note":"one sentence on whether this food helps or hurts muscle gain and staying lean"}
-nutrition_score is 0-100: 85-100=excellent for muscle gain/lean bulk, 65-84=good, 45-64=okay in moderation, 0-44=poor (high in unhealthy fats/sugar, low protein).`;
+  const prompt = `Analyze this food${description ? `: "${description}"` : ""}. The user's goal is to be in a calorie surplus to maximize muscle growth — more calories and protein is generally better, and calorie-dense whole foods are a positive. Score down for highly processed foods, excessive sugar, or trans fats, not for being calorie-dense. Estimate nutritional values for a typical serving. Return ONLY valid JSON in this exact format with no other text:
+{"name":"food name","serving":"serving description","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"saturated_fat_g":0,"sugar_g":0,"fiber_g":0,"nutrition_score":0,"health_note":"one sentence on whether this food supports muscle-building calorie surplus or not"}
+nutrition_score is 0-100 for muscle gain via calorie surplus: 85-100=excellent (high protein, quality calories), 65-84=good, 45-64=moderate (low protein or processed), 0-44=poor (high sugar, trans fats, or highly processed with little protein).`;
   content.push({ type: "text", text: prompt });
 
   const response = await fetch('/api/claude', {
