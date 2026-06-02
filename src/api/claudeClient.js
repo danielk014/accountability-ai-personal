@@ -1151,3 +1151,35 @@ ${gymContext}`;
 
   return "I ran into an issue completing that. Can you try again?";
 }
+
+// ── Food / nutrition AI analysis ──────────────────────────────────────────────
+export async function analyzeFoodWithAI(imageBase64, mediaType, description) {
+  const content = [];
+  if (imageBase64) {
+    content.push({ type: "image", source: { type: "base64", media_type: mediaType || "image/jpeg", data: imageBase64 } });
+  }
+  const prompt = `Analyze this food${description ? `: "${description}"` : ""}. Estimate nutritional values for a typical serving. Return ONLY valid JSON in this exact format with no other text:
+{"name":"food name","serving":"serving description","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"fiber_g":0}`;
+  content.push({ type: "text", text: prompt });
+
+  const response = await fetch('/api/claude', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 256, messages: [{ role: 'user', content }] }),
+  });
+  if (!response.ok) throw new Error(`AI error ${response.status}`);
+  const data = await response.json();
+  const text = data.content?.find(b => b.type === 'text')?.text ?? '';
+  const match = text.match(/\{[\s\S]*?\}/);
+  if (!match) throw new Error('Invalid AI response');
+  const p = JSON.parse(match[0]);
+  return {
+    name:     p.name    || description || "Food",
+    serving:  p.serving || "1 serving",
+    calories: Math.round(p.calories  || 0),
+    protein:  Math.round((p.protein_g || 0) * 10) / 10,
+    carbs:    Math.round((p.carbs_g   || 0) * 10) / 10,
+    fat:      Math.round((p.fat_g     || 0) * 10) / 10,
+    fiber:    Math.round((p.fiber_g   || 0) * 10) / 10,
+  };
+}

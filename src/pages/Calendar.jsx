@@ -226,10 +226,12 @@ export default function Calendar() {
     setCurrentDate(d);
   };
 
-  const onDropTask = async (taskId, time, height) => {
+  const onDropTask = async (taskId, time, durationMin) => {
     const task = tasks.find(t => t.id === taskId);
     if (task) {
-      await base44.entities.Task.update(taskId, { scheduled_time: time });
+      const updates = { scheduled_time: time };
+      if (durationMin !== undefined) updates.duration_minutes = durationMin;
+      await base44.entities.Task.update(taskId, updates);
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
     }
   };

@@ -316,7 +316,7 @@ export default function DayView({ date, tasks, completions, onToggle, onDropTask
       const ld = localData[t.id];
       const time = (ld?.time && isValidTime(ld.time)) ? ld.time : t.scheduled_time;
       const top = isValidTime(time) ? Math.max(0, timeToTop(time)) : 0;
-      const durationMin = ld?.durationMin ?? 60;
+      const durationMin = ld?.durationMin ?? (t.duration_minutes || 60);
       const height = Math.max(MIN_HEIGHT, minutesToTop(durationMin));
       return { id: t.id, task: t, top, height };
     });
@@ -341,7 +341,7 @@ export default function DayView({ date, tasks, completions, onToggle, onDropTask
     const newTime = topToTime(finalTop);
     const durationMin = Math.round(topToMinutes(finalHeight) / 15) * 15;
     setLocalData(prev => ({ ...prev, [taskId]: { time: newTime, durationMin } }));
-    onDropTask?.(taskId, newTime);
+    onDropTask?.(taskId, newTime, durationMin);
   }, [onDropTask]);
 
   // Handle drops from sidebar
