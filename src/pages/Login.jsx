@@ -6,19 +6,24 @@ import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { supabase } from "@/api/supabaseClient";
 
 export default function Login() {
-  const { login, isPasswordRecovery, clearPasswordRecovery } = useAuth();
+  const { login, register, isPasswordRecovery, clearPasswordRecovery } = useAuth();
   const navigate = useNavigate();
 
-  // mode: "login" | "forgot" | "reset"
+  // mode: "login" | "register" | "forgot" | "reset"
   const [mode, setMode]         = useState("login");
+  const [name, setName]         = useState("");
   const [email, setEmail]       = useState(() => localStorage.getItem("last_login_email") || "");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [showPw, setShowPw]     = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
   const [showNewPw, setShowNewPw] = useState(false);
   const [error, setError]       = useState("");
   const [info, setInfo]         = useState("");
   const [loading, setLoading]   = useState(false);
+
+  const switchMode = (m) => { setMode(m); setError(""); setInfo(""); };
 
   // When Supabase fires PASSWORD_RECOVERY event, switch to reset mode
   useEffect(() => {
@@ -60,6 +65,27 @@ export default function Login() {
         const { error: err } = await supabase.auth.updateUser({ password: newPassword.trim() });
         if (err) throw new Error(err.message);
         clearPasswordRecovery();
+        navigate(createPageUrl("Dashboard"));
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // ── Register ──────────────────────────────────────────────────────────
+    if (mode === "register") {
+      const trimName  = name.trim();
+      const trimEmail = email.trim().toLowerCase();
+      const trimPw    = password.trim();
+      if (!trimName)  { setError("Please enter your name."); return; }
+      if (!trimEmail) { setError("Please enter your email."); return; }
+      if (trimPw.length < 6) { setError("Password must be at least 6 characters."); return; }
+      if (trimPw !== confirmPassword.trim()) { setError("Passwords do not match."); return; }
+      setLoading(true);
+      try {
+        await register(trimEmail, trimPw, trimName);
         navigate(createPageUrl("Dashboard"));
       } catch (err) {
         setError(err.message);
@@ -182,6 +208,84 @@ export default function Login() {
             </form>
           )}
 
+          {/* ── Register mode ──────────────────────────────────────────────── */}
+          {mode === "register" && (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="mb-2">
+                <h2 className="text-lg font-bold text-slate-800">Create your account</h2>
+                <p className="text-sm text-slate-500 mt-1">Start your accountability journey.</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Full name</label>
+                <input type="text" value={name} onChange={e => setName(e.target.value)}
+                  placeholder="Your name" autoComplete="name" autoFocus
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Email address</label>
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                  placeholder="you@example.com" autoComplete="email"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition" />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Password</label>
+                <div className="relative">
+                  <input
+                    type={showPw ? "text" : "password"}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="Min. 6 characters"
+                    autoComplete="new-password"
+                    className="w-full px-4 py-3 pr-11 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition"
+                  />
+                  <button type="button" onClick={() => setShowPw(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition">
+                    {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Confirm password</label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPw ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                    className="w-full px-4 py-3 pr-11 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition"
+                  />
+                  <button type="button" onClick={() => setShowConfirmPw(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition">
+                    {showConfirmPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <div className="px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-600 font-medium">{error}</div>
+              )}
+
+              <button type="submit" disabled={loading}
+                className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2">
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                Create account
+              </button>
+
+              <p className="text-center text-xs text-slate-500 pt-1">
+                Already have an account?{" "}
+                <button type="button" onClick={() => switchMode("login")}
+                  className="text-indigo-600 font-semibold hover:underline">
+                  Sign in
+                </button>
+              </p>
+            </form>
+          )}
+
           {/* ── Login mode ─────────────────────────────────────────────────── */}
           {mode === "login" && (
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -211,7 +315,7 @@ export default function Login() {
               </div>
 
               <div className="text-right -mt-1">
-                <button type="button" onClick={() => { setMode("forgot"); setError(""); }}
+                <button type="button" onClick={() => switchMode("forgot")}
                   className="text-xs text-indigo-600 hover:underline font-medium">
                   Forgot password?
                 </button>
@@ -226,6 +330,14 @@ export default function Login() {
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 Sign in
               </button>
+
+              <p className="text-center text-xs text-slate-500 pt-1">
+                Don't have an account?{" "}
+                <button type="button" onClick={() => switchMode("register")}
+                  className="text-indigo-600 font-semibold hover:underline">
+                  Create one
+                </button>
+              </p>
             </form>
           )}
         </div>
