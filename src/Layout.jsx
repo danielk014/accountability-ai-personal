@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "./utils";
-import { LayoutDashboard, MessageCircle, BarChart3, CalendarDays, User, DollarSign, FolderKanban, Dumbbell } from "lucide-react";
+import { LayoutDashboard, MessageCircle, BarChart3, CalendarDays, User, DollarSign, FolderKanban, Dumbbell, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FloatingChatBubble from "@/components/chat/FloatingChatBubble";
 import { useAuth } from "@/lib/AuthContext";
@@ -59,7 +59,7 @@ export default function Layout({ children, currentPageName }) {
 
           <nav
             className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide min-w-0 overscroll-x-contain"
-            style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {navItems.map(item => {
               const isActive = currentPageName === item.page;
@@ -68,16 +68,16 @@ export default function Layout({ children, currentPageName }) {
                 <Link
                   key={item.page}
                   to={createPageUrl(item.page)}
-                  style={{ touchAction: 'manipulation' }}
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                   className={cn(
-                    "relative flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1.5 px-2.5 sm:px-3 py-2 sm:py-2 rounded-xl text-sm font-medium transition-colors flex-shrink-0 min-w-[44px] sm:min-w-0",
+                    "relative flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-sm font-medium transition-colors flex-shrink-0 min-w-[48px] sm:min-w-0",
                     isActive
                       ? "bg-indigo-50 text-indigo-700"
                       : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
                   )}
                 >
                   <item.icon className="w-5 h-5 sm:w-4 sm:h-4" />
-                  <span className="text-[9px] sm:text-sm sm:inline leading-none">{item.name}</span>
+                  <span className="text-[9px] sm:text-sm leading-none">{item.name}</span>
                   {showBadge && (
                     <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-violet-500 text-white text-[10px] font-bold flex items-center justify-center px-1 shadow-sm">
                       {unread > 99 ? '99+' : unread}
@@ -88,17 +88,24 @@ export default function Layout({ children, currentPageName }) {
             })}
             <Link
               to={createPageUrl("Settings")}
-              style={{ touchAction: 'manipulation' }}
-              className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-sm font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors flex-shrink-0 min-w-[44px] sm:min-w-0"
+              style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
+              className={cn(
+                "flex flex-col sm:flex-row items-center gap-0.5 sm:gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-sm font-medium transition-colors flex-shrink-0 min-w-[48px] sm:min-w-0",
+                currentPageName === "Settings"
+                  ? "bg-indigo-50 text-indigo-700"
+                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+              )}
             >
-              <span className="text-[9px] sm:text-sm">Settings</span>
+              <Settings className="w-5 h-5 sm:w-4 sm:h-4" />
+              <span className="text-[9px] sm:text-sm leading-none">Settings</span>
             </Link>
 
             {user && (
               <Link
                 to={createPageUrl("Settings")}
+                style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                 className="ml-1 pl-2 border-l border-slate-200 flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition-all flex-shrink-0"
-                title="Settings"
+                title={user.full_name || user.email}
               >
                 {user.picture ? (
                   <img src={user.picture} alt="" className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover flex-shrink-0" />

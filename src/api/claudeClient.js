@@ -1158,14 +1158,15 @@ export async function analyzeFoodWithAI(imageBase64, mediaType, description) {
   if (imageBase64) {
     content.push({ type: "image", source: { type: "base64", media_type: mediaType || "image/jpeg", data: imageBase64 } });
   }
-  const prompt = `Analyze this food${description ? `: "${description}"` : ""}. Estimate nutritional values for a typical serving. Return ONLY valid JSON in this exact format with no other text:
-{"name":"food name","serving":"serving description","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"fiber_g":0}`;
+  const prompt = `Analyze this food${description ? `: "${description}"` : ""}. The user's goal is to gain muscle while staying lean and avoiding unhealthy fat gain. Estimate nutritional values for a typical serving. Return ONLY valid JSON in this exact format with no other text:
+{"name":"food name","serving":"serving description","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"saturated_fat_g":0,"sugar_g":0,"fiber_g":0,"nutrition_score":0,"health_note":"one sentence on whether this food helps or hurts muscle gain and staying lean"}
+nutrition_score is 0-100: 85-100=excellent for muscle gain/lean bulk, 65-84=good, 45-64=okay in moderation, 0-44=poor (high in unhealthy fats/sugar, low protein).`;
   content.push({ type: "text", text: prompt });
 
   const response = await fetch('/api/claude', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 256, messages: [{ role: 'user', content }] }),
+    body: JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 400, messages: [{ role: 'user', content }] }),
   });
   if (!response.ok) throw new Error(`AI error ${response.status}`);
   const data = await response.json();
@@ -1174,12 +1175,16 @@ export async function analyzeFoodWithAI(imageBase64, mediaType, description) {
   if (!match) throw new Error('Invalid AI response');
   const p = JSON.parse(match[0]);
   return {
-    name:     p.name    || description || "Food",
-    serving:  p.serving || "1 serving",
-    calories: Math.round(p.calories  || 0),
-    protein:  Math.round((p.protein_g || 0) * 10) / 10,
-    carbs:    Math.round((p.carbs_g   || 0) * 10) / 10,
-    fat:      Math.round((p.fat_g     || 0) * 10) / 10,
-    fiber:    Math.round((p.fiber_g   || 0) * 10) / 10,
+    name:          p.name    || description || "Food",
+    serving:       p.serving || "1 serving",
+    calories:      Math.round(p.calories       || 0),
+    protein:       Math.round((p.protein_g      || 0) * 10) / 10,
+    carbs:         Math.round((p.carbs_g        || 0) * 10) / 10,
+    fat:           Math.round((p.fat_g          || 0) * 10) / 10,
+    saturatedFat:  Math.round((p.saturated_fat_g|| 0) * 10) / 10,
+    sugar:         Math.round((p.sugar_g        || 0) * 10) / 10,
+    fiber:         Math.round((p.fiber_g        || 0) * 10) / 10,
+    nutritionScore: Math.min(100, Math.max(0, Math.round(p.nutrition_score || 0))),
+    healthNote:    p.health_note || "",
   };
 }

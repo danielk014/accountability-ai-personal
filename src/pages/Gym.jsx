@@ -963,7 +963,7 @@ function ProgressTab({ gymData, bodyweight }) {
 function NutritionTab({ nutrition, onUpdate }) {
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const [selectedDate, setSelectedDate] = useState(todayStr);
-  const [addMode, setAddMode] = useState("manual");
+  const [addMode, setAddMode] = useState("ai");
   const emptyForm = { name: "", serving: "", calories: "", protein: "", carbs: "", fat: "", fiber: "" };
   const [form, setForm] = useState(emptyForm);
   const [aiText, setAiText] = useState("");
@@ -1006,11 +1006,14 @@ function NutritionTab({ nutrition, onUpdate }) {
       id: generateId(),
       name: foodData.name,
       serving: foodData.serving || "",
-      calories: parseFloat(foodData.calories) || 0,
-      protein:  parseFloat(foodData.protein)  || 0,
-      carbs:    parseFloat(foodData.carbs)    || 0,
-      fat:      parseFloat(foodData.fat)      || 0,
-      fiber:    parseFloat(foodData.fiber)    || 0,
+      calories:      parseFloat(foodData.calories)     || 0,
+      protein:       parseFloat(foodData.protein)      || 0,
+      carbs:         parseFloat(foodData.carbs)        || 0,
+      fat:           parseFloat(foodData.fat)          || 0,
+      saturatedFat:  parseFloat(foodData.saturatedFat) || 0,
+      sugar:         parseFloat(foodData.sugar)        || 0,
+      fiber:         parseFloat(foodData.fiber)        || 0,
+      nutritionScore: foodData.nutritionScore ?? null,
       time: format(new Date(), "HH:mm"),
     };
     saveDay([...foods, entry]);
@@ -1118,14 +1121,24 @@ function NutritionTab({ nutrition, onUpdate }) {
             {foods.map(f => (
               <div key={f.id} className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 truncate">{f.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-slate-800 truncate">{f.name}</p>
+                    {f.nutritionScore != null && (() => {
+                      const s = f.nutritionScore;
+                      const dot = s >= 85 ? "bg-green-500" : s >= 65 ? "bg-yellow-400" : s >= 45 ? "bg-orange-400" : "bg-red-500";
+                      const txt = s >= 85 ? "text-green-700" : s >= 65 ? "text-yellow-700" : s >= 45 ? "text-orange-700" : "text-red-700";
+                      return <span className={cn("text-[10px] font-bold flex items-center gap-0.5", txt)}><span className={cn("w-1.5 h-1.5 rounded-full inline-block", dot)} />{s}</span>;
+                    })()}
+                  </div>
                   <p className="text-xs text-slate-500 mt-0.5 flex flex-wrap gap-x-2">
                     {f.serving && <span>{f.serving}</span>}
                     <span className="font-medium text-orange-600">{f.calories} kcal</span>
-                    {f.protein > 0 && <span className="text-blue-600">{f.protein}g P</span>}
-                    {f.carbs   > 0 && <span className="text-amber-600">{f.carbs}g C</span>}
-                    {f.fat     > 0 && <span className="text-emerald-600">{f.fat}g F</span>}
-                    {f.fiber   > 0 && <span className="text-violet-600">{f.fiber}g fiber</span>}
+                    {f.protein      > 0 && <span className="text-blue-600">{f.protein}g P</span>}
+                    {f.carbs        > 0 && <span className="text-amber-600">{f.carbs}g C</span>}
+                    {f.fat          > 0 && <span className="text-emerald-600">{f.fat}g fat</span>}
+                    {f.saturatedFat > 0 && <span className="text-red-500">{f.saturatedFat}g sat</span>}
+                    {f.sugar        > 0 && <span className="text-pink-600">{f.sugar}g sugar</span>}
+                    {f.fiber        > 0 && <span className="text-violet-600">{f.fiber}g fiber</span>}
                   </p>
                 </div>
                 <button onClick={() => saveDay(foods.filter(x => x.id !== f.id))}
@@ -1199,17 +1212,17 @@ function NutritionTab({ nutrition, onUpdate }) {
         {/* ── AI analyze ── */}
         {addMode === "ai" && (
           <div className="space-y-3">
+            <input
+              value={aiText} onChange={e => setAiText(e.target.value)}
+              placeholder="Describe your food (e.g. 2 scrambled eggs with toast)"
+              className="w-full text-sm rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAnalyze(); } }}
+            />
             <div className="flex gap-2">
-              <input
-                value={aiText} onChange={e => setAiText(e.target.value)}
-                placeholder="Describe your food (e.g. 2 scrambled eggs with toast)"
-                className="flex-1 text-sm rounded-xl border border-slate-200 bg-white px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-200"
-                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleAnalyze(); } }}
-              />
               <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handleImageSelect} />
               <button type="button" onClick={() => fileInputRef.current?.click()}
                 className={cn(
-                  "px-3 py-2.5 rounded-xl border text-sm transition",
+                  "px-3 py-2.5 rounded-xl border text-sm transition flex-shrink-0",
                   aiImage
                     ? "border-indigo-300 bg-indigo-50 text-indigo-600"
                     : "border-slate-200 bg-white text-slate-500 hover:border-indigo-300 hover:text-indigo-500"
@@ -1218,7 +1231,7 @@ function NutritionTab({ nutrition, onUpdate }) {
                 <Camera className="w-4 h-4" />
               </button>
               <button onClick={handleAnalyze} disabled={analyzing || (!aiText.trim() && !aiImage)}
-                className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium disabled:opacity-30 transition flex items-center gap-1.5">
+                className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium disabled:opacity-30 transition flex items-center justify-center gap-1.5">
                 {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bot className="w-4 h-4" />}
                 {analyzing ? "Analyzing…" : "Analyze"}
               </button>
@@ -1236,35 +1249,64 @@ function NutritionTab({ nutrition, onUpdate }) {
             )}
 
             {/* AI result card */}
-            {aiResult && (
-              <div className="bg-white rounded-2xl border border-indigo-200 p-4 shadow-sm">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <p className="font-semibold text-slate-800">{aiResult.name}</p>
-                    {aiResult.serving && <p className="text-xs text-slate-500 mt-0.5">{aiResult.serving}</p>}
+            {aiResult && (() => {
+              const score = aiResult.nutritionScore ?? 0;
+              const scoreColor = score >= 85 ? "bg-green-500" : score >= 65 ? "bg-yellow-400" : score >= 45 ? "bg-orange-400" : "bg-red-500";
+              const scoreLabel = score >= 85 ? "Excellent" : score >= 65 ? "Good" : score >= 45 ? "Moderate" : "Poor";
+              const scoreTextColor = score >= 85 ? "text-green-700" : score >= 65 ? "text-yellow-700" : score >= 45 ? "text-orange-700" : "text-red-700";
+              const scoreBg = score >= 85 ? "bg-green-50 border-green-200" : score >= 65 ? "bg-yellow-50 border-yellow-200" : score >= 45 ? "bg-orange-50 border-orange-200" : "bg-red-50 border-red-200";
+              return (
+                <div className="bg-white rounded-2xl border border-indigo-200 p-4 shadow-sm">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0 mr-2">
+                      <p className="font-semibold text-slate-800">{aiResult.name}</p>
+                      {aiResult.serving && <p className="text-xs text-slate-500 mt-0.5">{aiResult.serving}</p>}
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* Nutrition Score badge */}
+                      <div className={cn("flex flex-col items-center px-3 py-1.5 rounded-xl border text-center", scoreBg)}>
+                        <div className="flex items-center gap-1">
+                          <div className={cn("w-2 h-2 rounded-full", scoreColor)} />
+                          <span className={cn("text-xs font-bold", scoreTextColor)}>{score}/100</span>
+                        </div>
+                        <span className={cn("text-[10px] font-medium leading-tight", scoreTextColor)}>{scoreLabel}</span>
+                      </div>
+                      <button onClick={() => setAiResult(null)}
+                        className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 transition">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <button onClick={() => setAiResult(null)}
-                    className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 transition">
-                    <X className="w-3.5 h-3.5" />
+
+                  {/* Macros */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {[
+                      { label: `${aiResult.calories} kcal`,    color: "bg-orange-100 text-orange-700" },
+                      { label: `${aiResult.protein}g protein`, color: "bg-blue-100 text-blue-700"    },
+                      { label: `${aiResult.carbs}g carbs`,     color: "bg-amber-100 text-amber-700"  },
+                      { label: `${aiResult.fat}g total fat`,   color: "bg-emerald-100 text-emerald-700" },
+                      ...(aiResult.saturatedFat > 0 ? [{ label: `${aiResult.saturatedFat}g sat. fat`, color: "bg-red-100 text-red-700" }] : []),
+                      ...(aiResult.sugar > 0 ? [{ label: `${aiResult.sugar}g sugar`, color: "bg-pink-100 text-pink-700" }] : []),
+                      ...(aiResult.fiber > 0 ? [{ label: `${aiResult.fiber}g fiber`, color: "bg-violet-100 text-violet-700" }] : []),
+                    ].map(({ label, color }) => (
+                      <span key={label} className={cn("text-xs px-2.5 py-1 rounded-full font-medium", color)}>{label}</span>
+                    ))}
+                  </div>
+
+                  {/* Health note */}
+                  {aiResult.healthNote && (
+                    <p className={cn("text-xs rounded-xl px-3 py-2 mb-3 border", scoreBg, scoreTextColor)}>
+                      {aiResult.healthNote}
+                    </p>
+                  )}
+
+                  <button onClick={() => addFoodToLog(aiResult)}
+                    className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition">
+                    Add to log
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {[
-                    { label: `${aiResult.calories} kcal`,    color: "bg-orange-100 text-orange-700" },
-                    { label: `${aiResult.protein}g protein`, color: "bg-blue-100 text-blue-700"    },
-                    { label: `${aiResult.carbs}g carbs`,     color: "bg-amber-100 text-amber-700"  },
-                    { label: `${aiResult.fat}g fat`,         color: "bg-emerald-100 text-emerald-700" },
-                    ...(aiResult.fiber > 0 ? [{ label: `${aiResult.fiber}g fiber`, color: "bg-violet-100 text-violet-700" }] : []),
-                  ].map(({ label, color }) => (
-                    <span key={label} className={cn("text-xs px-2.5 py-1 rounded-full font-medium", color)}>{label}</span>
-                  ))}
-                </div>
-                <button onClick={() => addFoodToLog(aiResult)}
-                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition">
-                  Add to log
-                </button>
-              </div>
-            )}
+              );
+            })()}
           </div>
         )}
       </div>
@@ -1658,7 +1700,6 @@ export default function Gym() {
                 : "bg-white border-slate-200 text-slate-600 hover:border-orange-300 hover:text-orange-600"
             )}
           >
-            <Camera className="w-4 h-4" />
             Nutrition
           </button>
         </div>
