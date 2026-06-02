@@ -73,6 +73,26 @@ function loadChat() {
 function saveChat(m) { supabaseStorage.setItem(getChatKey(), JSON.stringify(m.slice(-60))); }
 function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
+// ── Auto-populate recurring expenses into a new month ─────────────────────────
+// Finds the most recent prior month with recurring data and clones those items
+// into `month` with fresh IDs. Returns the same object unchanged if no copy needed.
+function autoPopulateRecurring(fin, month) {
+  const hasData = fin.recurring_expenses.some(e => e.month === month);
+  if (hasData) return fin;
+
+  const priorMonths = [...new Set(
+    fin.recurring_expenses.map(e => e.month).filter(m => m && m < month)
+  )].sort();
+  if (priorMonths.length === 0) return fin;
+
+  const sourceMonth = priorMonths[priorMonths.length - 1];
+  const newItems = fin.recurring_expenses
+    .filter(e => e.month === sourceMonth)
+    .map(item => ({ ...item, id: uid(), month }));
+
+  return { ...fin, recurring_expenses: [...fin.recurring_expenses, ...newItems] };
+}
+
 // ── Number / date helpers ──────────────────────────────────────────────────────
 const fmt = (n) => (parseFloat(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtWhole = (n) => (parseFloat(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -1076,6 +1096,11 @@ export default function Financials() {
   const [activeTab, setActiveTab] = useState("Income");
   const [selectedMonth, setSelectedMonth] = useState(() => toYYYYMM(new Date()));
 
+  // Keep a ref so the Supabase-ready callback (which has an empty dep array) can
+  // always read the current selectedMonth without a stale closure.
+  const selectedMonthRef = useRef(selectedMonth);
+  useEffect(() => { selectedMonthRef.current = selectedMonth; }, [selectedMonth]);
+
   // Merge-reload from supabaseStorage once it finishes hydrating from Supabase.
   // We MERGE (union by id) rather than overwrite so that items added locally
   // before Supabase finishes syncing are never lost.
@@ -1089,18 +1114,34 @@ export default function Financials() {
           [...(b || []), ...(a || [])].forEach(item => map.set(item.id, item));
           return [...map.values()];
         };
-        return {
+        const merged = {
           income_sources:    mergeArr(prev.income_sources,             loaded.income_sources),
           recurring_expenses:mergeArr(prev.recurring_expenses,         loaded.recurring_expenses),
           wishlist_expenses: mergeArr(prev.wishlist_expenses,          loaded.wishlist_expenses),
           one_time_expenses: mergeArr(prev.one_time_expenses || [],    loaded.one_time_expenses || []),
         };
+        // After remote data arrives, auto-populate recurring expenses for the
+        // currently-viewed month if it still has none.
+        const populated = autoPopulateRecurring(merged, selectedMonthRef.current);
+        if (populated !== merged) saveFin(populated);
+        return populated;
       });
     };
     if (isStorageReady()) { mergeAndSet(); return; }
     window.addEventListener('supabase-storage-ready', mergeAndSet);
     return () => window.removeEventListener('supabase-storage-ready', mergeAndSet);
   }, []);
+
+  // Auto-populate recurring expenses whenever the user navigates to a month
+  // that has no recurring data yet — clones the most recent prior month's items.
+  useEffect(() => {
+    setFin(prev => {
+      const populated = autoPopulateRecurring(prev, selectedMonth);
+      if (populated === prev) return prev;
+      saveFin(populated);
+      return populated;
+    });
+  }, [selectedMonth]);
 
   // update() accepts either a plain patch object OR a function (prev => patch)
   // so callers can avoid stale-closure bugs on rapid successive updates.
