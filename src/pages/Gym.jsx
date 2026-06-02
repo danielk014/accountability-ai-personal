@@ -960,7 +960,7 @@ function ProgressTab({ gymData, bodyweight }) {
 }
 
 // ── NutritionTab ──────────────────────────────────────────────────────────────
-function NutritionTab({ nutrition, onUpdate }) {
+function NutritionTab({ nutrition, bodyweight, onUpdate }) {
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const [addMode, setAddMode] = useState("ai");
@@ -1108,43 +1108,54 @@ function NutritionTab({ nutrition, onUpdate }) {
 
       {/* ── Daily Assessment ── */}
       {foods.length > 0 && (() => {
-        const score = (val, tiers) => {
-          for (const [thresh, s] of tiers) if (val >= thresh) return s;
-          return tiers[tiers.length - 1][1];
-        };
-        const label = s => s >= 85 ? "Excellent" : s >= 65 ? "Good" : s >= 45 ? "Moderate" : "Poor";
-        const barColor = s => s >= 85 ? "bg-green-500" : s >= 65 ? "bg-yellow-400" : s >= 45 ? "bg-orange-400" : "bg-red-500";
+        // Most recent bodyweight entry (kg)
+        const latestBw = [...(bodyweight?.logs || [])].filter(l => l.weight).sort((a, b) => b.date.localeCompare(a.date))[0];
+        const bwKg = latestBw ? parseFloat(latestBw.weight) : null;
+
+        // Bodyweight-scaled targets (fall back to sensible defaults if no bw logged)
+        const proteinTarget   = bwKg ? Math.round(bwKg * 1.8) : 150;   // 1.8g/kg for max muscle
+        const healthyFatTarget= bwKg ? Math.round(bwKg * 0.5) : 40;    // ~0.5g/kg unsaturated
+        const satFatLimit     = bwKg ? Math.round(bwKg * 0.15) : 20;   // ~0.15g/kg max sat fat
+        const sugarLimit      = 40;                                       // flat — not bw-dependent
+
+        const scoreLinear = (val, excellent, good, moderate) =>
+          val >= excellent ? 92 : val >= good ? 74 : val >= moderate ? 50 : 25;
+        const scoreLower  = (val, excellent, good, moderate) =>
+          val <= excellent ? 92 : val <= good ? 74 : val <= moderate ? 50 : 25;
+
+        const label     = s => s >= 85 ? "Excellent" : s >= 65 ? "Good" : s >= 45 ? "Moderate" : "Poor";
+        const barColor  = s => s >= 85 ? "bg-green-500" : s >= 65 ? "bg-yellow-400" : s >= 45 ? "bg-orange-400" : "bg-red-500";
         const textColor = s => s >= 85 ? "text-green-700" : s >= 65 ? "text-yellow-700" : s >= 45 ? "text-orange-700" : "text-red-700";
-        const bgColor = s => s >= 85 ? "bg-green-50 border-green-200" : s >= 65 ? "bg-yellow-50 border-yellow-200" : s >= 45 ? "bg-orange-50 border-orange-200" : "bg-red-50 border-red-200";
+        const bgColor   = s => s >= 85 ? "bg-green-50 border-green-200" : s >= 65 ? "bg-yellow-50 border-yellow-200" : s >= 45 ? "bg-orange-50 border-orange-200" : "bg-red-50 border-red-200";
 
         const hasAiData = foods.some(f => f.saturatedFat > 0 || f.sugar > 0);
 
         const metrics = [
           {
             key: "protein", label: "Protein", value: Math.round(totals.protein * 10) / 10, unit: "g",
-            note: "Aim for 150g+ for max muscle growth",
-            score: score(totals.protein, [[150,92],[120,78],[80,58],[0,30]]),
+            note: bwKg ? `Aim for ${proteinTarget}g+ (1.8g × ${bwKg}kg) for max muscle growth` : "Aim for 150g+ for max muscle growth",
+            score: scoreLinear(totals.protein, proteinTarget, proteinTarget * 0.8, proteinTarget * 0.55),
           },
           {
             key: "healthyFat", label: "Healthy Fats", value: Math.round(healthyFat * 10) / 10, unit: "g",
-            note: "Unsaturated fats — good for hormones & muscle",
-            score: score(healthyFat, [[40,90],[25,72],[10,52],[0,28]]),
+            note: bwKg ? `Aim for ${healthyFatTarget}g+ unsaturated (0.5g × ${bwKg}kg) — hormones & muscle` : "Unsaturated fats — good for hormones & muscle",
+            score: scoreLinear(healthyFat, healthyFatTarget, healthyFatTarget * 0.65, healthyFatTarget * 0.3),
           },
           {
             key: "fiber", label: "Fiber", value: Math.round(totals.fiber * 10) / 10, unit: "g",
-            note: "Aim for 25–35g/day for gut health",
-            score: score(totals.fiber, [[30,92],[20,74],[10,52],[0,28]]),
+            note: "Aim for 25–35g/day for gut health & nutrient absorption",
+            score: scoreLinear(totals.fiber, 30, 20, 10),
           },
           ...(hasAiData ? [
             {
               key: "satFat", label: "Saturated Fat", value: Math.round(totals.saturatedFat * 10) / 10, unit: "g",
-              note: "Keep under 20g — lower is better",
-              score: totals.saturatedFat < 10 ? 92 : totals.saturatedFat < 20 ? 72 : totals.saturatedFat < 30 ? 48 : 22,
+              note: bwKg ? `Keep under ${satFatLimit}g (0.15g × ${bwKg}kg) — lower is better` : "Keep under 20g — lower is better",
+              score: scoreLower(totals.saturatedFat, satFatLimit * 0.5, satFatLimit, satFatLimit * 1.5),
             },
             {
               key: "sugar", label: "Sugar", value: Math.round(totals.sugar * 10) / 10, unit: "g",
-              note: "Keep under 40g/day — lower is better",
-              score: totals.sugar < 25 ? 92 : totals.sugar < 40 ? 74 : totals.sugar < 60 ? 50 : 25,
+              note: `Keep under ${sugarLimit}g/day — lower is better`,
+              score: scoreLower(totals.sugar, sugarLimit * 0.6, sugarLimit, sugarLimit * 1.5),
             },
           ] : []),
         ];
@@ -1831,7 +1842,7 @@ export default function Gym() {
       {/* Nutrition panel — shown instead of the workout tabs when toggled */}
       {showNutrition && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
-          <NutritionTab nutrition={nutrition} onUpdate={handleNutritionUpdate} />
+          <NutritionTab nutrition={nutrition} bodyweight={bodyweight} onUpdate={handleNutritionUpdate} />
         </div>
       )}
 
