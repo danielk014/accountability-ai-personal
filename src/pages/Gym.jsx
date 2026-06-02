@@ -1625,12 +1625,13 @@ export default function Gym() {
 
   const totalExercises = (gymData.workout_days || []).reduce((sum, d) => sum + (d.exercises?.length || 0), 0);
 
-  // Tabs: [...workout days], physique, bodyweight, progress, nutrition, ai
+  const [showNutrition, setShowNutrition] = useState(false);
+
+  // Tabs: [...workout days], physique, bodyweight, progress, ai
   const staticTabs = [
     { key: "physique",    label: "Physique"   },
     { key: "bodyweight",  label: "Bodyweight" },
     { key: "progress",    label: "Progress"   },
-    { key: "nutrition",   label: "Nutrition"  },
     { key: "ai",          label: "AI Coach"   },
   ];
 
@@ -1638,19 +1639,40 @@ export default function Gym() {
     <div className="max-w-2xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-sm">
-            <Dumbbell className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-sm">
+              <Dumbbell className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">Gym Tracker</h1>
+              <p className="text-sm text-slate-500">Track workouts, weight & progress</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">Gym Tracker</h1>
-            <p className="text-sm text-slate-500">Track workouts, weight & progress</p>
-          </div>
+          <button
+            onClick={() => setShowNutrition(v => !v)}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition",
+              showNutrition
+                ? "bg-orange-500 border-orange-500 text-white shadow-sm"
+                : "bg-white border-slate-200 text-slate-600 hover:border-orange-300 hover:text-orange-600"
+            )}
+          >
+            <Camera className="w-4 h-4" />
+            Nutrition
+          </button>
         </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-4 mb-8">
+      {/* Nutrition panel — shown instead of the workout tabs when toggled */}
+      {showNutrition && (
+        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <NutritionTab nutrition={nutrition} onUpdate={handleNutritionUpdate} />
+        </div>
+      )}
+
+      {/* Summary cards + workout tabs — hidden while Nutrition is open */}
+      {!showNutrition && <><div className="grid grid-cols-2 gap-4 mb-8">
         {/* Current Weight — read-only, sourced from Bodyweight tab */}
         <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4">
           <div className="flex items-start justify-between">
@@ -1788,8 +1810,6 @@ export default function Gym() {
           <BodyweightTab bodyweight={bodyweight} onUpdate={handleBodyweightUpdate} />
         ) : activeTab === "progress" ? (
           <ProgressTab gymData={gymData} bodyweight={bodyweight} />
-        ) : activeTab === "nutrition" ? (
-          <NutritionTab nutrition={nutrition} onUpdate={handleNutritionUpdate} />
         ) : activeTab === "ai" ? (
           <AICoachTab gymData={gymData} onDataChange={() => setGymData(loadData())} />
         ) : (
@@ -1807,6 +1827,7 @@ export default function Gym() {
           })()
         )}
       </div>
+      </>}
 
       {/* Delete day confirmation modal */}
       {confirmDeleteId && (() => {
