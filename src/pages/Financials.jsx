@@ -73,24 +73,25 @@ function loadChat() {
 function saveChat(m) { supabaseStorage.setItem(getChatKey(), JSON.stringify(m.slice(-60))); }
 function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
-// ── Auto-populate recurring expenses into a new month ─────────────────────────
-// Finds the most recent prior month with recurring data and clones those items
-// into `month` with fresh IDs. Returns the same object unchanged if no copy needed.
-function autoPopulateRecurring(fin, month) {
-  const hasData = fin.recurring_expenses.some(e => e.month === month);
-  if (hasData) return fin;
-
-  const priorMonths = [...new Set(
-    fin.recurring_expenses.map(e => e.month).filter(m => m && m < month)
-  )].sort();
-  if (priorMonths.length === 0) return fin;
-
+// ── Auto-populate monthly items into a new month ──────────────────────────────
+// Clones the most recent prior month's items for a given category array.
+// Returns the same array reference if no copy is needed.
+function autoPopulateCategory(items, month) {
+  if (items.some(e => e.month === month)) return items;
+  const priorMonths = [...new Set(items.map(e => e.month).filter(m => m && m < month))].sort();
+  if (priorMonths.length === 0) return items;
   const sourceMonth = priorMonths[priorMonths.length - 1];
-  const newItems = fin.recurring_expenses
-    .filter(e => e.month === sourceMonth)
-    .map(item => ({ ...item, id: uid(), month }));
+  const newItems = items.filter(e => e.month === sourceMonth).map(item => ({ ...item, id: uid(), month }));
+  return [...items, ...newItems];
+}
 
-  return { ...fin, recurring_expenses: [...fin.recurring_expenses, ...newItems] };
+// Runs autoPopulateCategory for recurring and wishlist expenses.
+// Returns the same fin object if nothing changed.
+function autoPopulateMonthly(fin, month) {
+  const recurring = autoPopulateCategory(fin.recurring_expenses, month);
+  const wishlist  = autoPopulateCategory(fin.wishlist_expenses, month);
+  if (recurring === fin.recurring_expenses && wishlist === fin.wishlist_expenses) return fin;
+  return { ...fin, recurring_expenses: recurring, wishlist_expenses: wishlist };
 }
 
 // ── Number / date helpers ──────────────────────────────────────────────────────
@@ -1061,9 +1062,8 @@ function SummaryCards({ fin, selectedMonth }) {
   const byMonth   = arr => (arr || []).filter(e => e.month === selectedMonth);
   const income    = sum(byMonth(fin.income_sources));
   const recurring = sum(byMonth(fin.recurring_expenses));
-  const wishlist  = sum(byMonth(fin.wishlist_expenses));
   const oneTime   = sum(byMonth(fin.one_time_expenses));
-  const totalExp  = recurring + wishlist + oneTime;
+  const totalExp  = recurring + oneTime;
   const savings   = income - totalExp;
   const rate      = income > 0 ? ((savings / income) * 100).toFixed(0) : 0;
 
@@ -1122,7 +1122,7 @@ export default function Financials() {
         };
         // After remote data arrives, auto-populate recurring expenses for the
         // currently-viewed month if it still has none.
-        const populated = autoPopulateRecurring(merged, selectedMonthRef.current);
+        const populated = autoPopulateMonthly(merged, selectedMonthRef.current);
         if (populated !== merged) saveFin(populated);
         return populated;
       });
@@ -1136,7 +1136,7 @@ export default function Financials() {
   // that has no recurring data yet — clones the most recent prior month's items.
   useEffect(() => {
     setFin(prev => {
-      const populated = autoPopulateRecurring(prev, selectedMonth);
+      const populated = autoPopulateMonthly(prev, selectedMonth);
       if (populated === prev) return prev;
       saveFin(populated);
       return populated;
