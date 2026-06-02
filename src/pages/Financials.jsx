@@ -85,13 +85,14 @@ function autoPopulateCategory(items, month) {
   return [...items, ...newItems];
 }
 
-// Runs autoPopulateCategory for recurring and wishlist expenses.
+// Runs autoPopulateCategory for income, recurring, and wishlist.
 // Returns the same fin object if nothing changed.
 function autoPopulateMonthly(fin, month) {
+  const income    = autoPopulateCategory(fin.income_sources, month);
   const recurring = autoPopulateCategory(fin.recurring_expenses, month);
   const wishlist  = autoPopulateCategory(fin.wishlist_expenses, month);
-  if (recurring === fin.recurring_expenses && wishlist === fin.wishlist_expenses) return fin;
-  return { ...fin, recurring_expenses: recurring, wishlist_expenses: wishlist };
+  if (income === fin.income_sources && recurring === fin.recurring_expenses && wishlist === fin.wishlist_expenses) return fin;
+  return { ...fin, income_sources: income, recurring_expenses: recurring, wishlist_expenses: wishlist };
 }
 
 // ── Number / date helpers ──────────────────────────────────────────────────────
