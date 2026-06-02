@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { supabase } from "@/api/supabaseClient";
+import { Eye, EyeOff, Loader2, AlertTriangle } from "lucide-react";
+import { supabase, supabaseMisconfigured } from "@/api/supabaseClient";
 
 export default function Login() {
   const { login, register, isPasswordRecovery, clearPasswordRecovery } = useAuth();
@@ -114,6 +114,20 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
+
+        {/* Config error banner */}
+        {supabaseMisconfigured && (
+          <div className="mb-6 flex gap-3 items-start bg-red-50 border border-red-300 rounded-2xl px-4 py-3">
+            <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-700">App not configured</p>
+              <p className="text-xs text-red-600 mt-0.5">
+                <code className="font-mono">VITE_SUPABASE_URL</code> and <code className="font-mono">VITE_SUPABASE_ANON_KEY</code> are missing.
+                Add them to <code className="font-mono">.env.local</code> or your deployment platform's environment settings.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Logo */}
         <div className="text-center mb-8">
