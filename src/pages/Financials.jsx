@@ -5,7 +5,7 @@ import {
   TrendingUp, TrendingDown, Wallet,
   Plus, Trash2, Send, Loader2, Sparkles,
   AlertCircle, Pencil, Check, X, CheckSquare, Square,
-  ChevronLeft, ChevronRight, Calendar,
+  ChevronLeft, ChevronRight, Calendar, Repeat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -85,10 +85,23 @@ function autoPopulateCategory(items, month) {
   return [...items, ...newItems];
 }
 
-// Runs autoPopulateCategory for income, recurring, and wishlist.
+// Runs autoPopulateCategory for recurring expenses and wishlist.
+// For income, only items explicitly marked recurring: true are carried forward.
 // Returns the same fin object if nothing changed.
 function autoPopulateMonthly(fin, month) {
-  const income    = autoPopulateCategory(fin.income_sources, month);
+  // Income: only copy items the user flagged as recurring
+  let income = fin.income_sources;
+  if (!income.some(e => e.month === month)) {
+    const recurringIncome = income.filter(e => e.recurring);
+    if (recurringIncome.length > 0) {
+      const priorMonths = [...new Set(recurringIncome.map(e => e.month).filter(m => m && m < month))].sort();
+      if (priorMonths.length > 0) {
+        const src = priorMonths[priorMonths.length - 1];
+        const newItems = recurringIncome.filter(e => e.month === src).map(item => ({ ...item, id: uid(), month }));
+        income = [...income, ...newItems];
+      }
+    }
+  }
   const recurring = autoPopulateCategory(fin.recurring_expenses, month);
   const wishlist  = autoPopulateCategory(fin.wishlist_expenses, month);
   if (income === fin.income_sources && recurring === fin.recurring_expenses && wishlist === fin.wishlist_expenses) return fin;
@@ -451,15 +464,18 @@ async function financialAgenticLoop(history, fin, update, selectedMonth) {
 }
 
 // ── Inline add row ─────────────────────────────────────────────────────────────
-function AddRow({ placeholder, onAdd, dayLabel = "Day", month }) {
+function AddRow({ placeholder, onAdd, dayLabel = "Day", month, showRecurring = false }) {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [day, setDay] = useState(null);
+  const [recurring, setRecurring] = useState(false);
 
   const submit = () => {
     if (!name.trim() || !amount) return;
-    onAdd({ id: uid(), name: name.trim(), amount: parseFloat(amount), day: day || null, month: month || toYYYYMM(new Date()) });
-    setName(""); setAmount(""); setDay(null);
+    const item = { id: uid(), name: name.trim(), amount: parseFloat(amount), day: day || null, month: month || toYYYYMM(new Date()) };
+    if (showRecurring) item.recurring = recurring;
+    onAdd(item);
+    setName(""); setAmount(""); setDay(null); setRecurring(false);
   };
 
   return (
@@ -489,6 +505,21 @@ function AddRow({ placeholder, onAdd, dayLabel = "Day", month }) {
         onChange={v => setDay(v)}
         label={`${dayLabel} (optional)`}
       />
+      {showRecurring && (
+        <button
+          type="button"
+          onClick={() => setRecurring(r => !r)}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-sm transition whitespace-nowrap",
+            recurring
+              ? "border-emerald-300 bg-emerald-50 text-emerald-700 font-medium"
+              : "border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600"
+          )}
+        >
+          <Repeat className="w-3.5 h-3.5" />
+          {recurring ? "Recurring" : "One-time"}
+        </button>
+      )}
       <button
         onClick={submit}
         disabled={!name.trim() || !amount}
@@ -552,6 +583,11 @@ function ItemRow({ item, onDelete, onUpdate, dayLabel = "Due", showPerMonth = tr
     <div className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0 group">
       <div className="flex items-center gap-2.5 min-w-0 flex-1">
         <span className="text-sm text-slate-700 truncate">{item.name}</span>
+        {item.recurring && (
+          <span className="flex-shrink-0 text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 font-medium hidden sm:inline flex items-center gap-1">
+            <Repeat className="w-2.5 h-2.5 inline" /> recurring
+          </span>
+        )}
         {item.day && (
           <span className="flex-shrink-0 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium hidden sm:inline">
             {dayLabel} {ordinal(item.day)}
@@ -613,6 +649,7 @@ function IncomeTab({ fin, update, selectedMonth }) {
             placeholder="e.g. Salary, Freelance, Side hustle..."
             dayLabel="Received"
             month={selectedMonth}
+            showRecurring={true}
             onAdd={item => update(prev => ({ income_sources: [...prev.income_sources, item] }))}
           />
           <div className="pb-4" />
