@@ -1127,7 +1127,8 @@ function NutritionTab({ nutrition, onUpdate }) {
                       const s = f.nutritionScore;
                       const dot = s >= 85 ? "bg-green-500" : s >= 65 ? "bg-yellow-400" : s >= 45 ? "bg-orange-400" : "bg-red-500";
                       const txt = s >= 85 ? "text-green-700" : s >= 65 ? "text-yellow-700" : s >= 45 ? "text-orange-700" : "text-red-700";
-                      return <span className={cn("text-[10px] font-bold flex items-center gap-0.5", txt)}><span className={cn("w-1.5 h-1.5 rounded-full inline-block", dot)} />{s}</span>;
+                      const bg = s >= 85 ? "bg-green-50 border-green-200" : s >= 65 ? "bg-yellow-50 border-yellow-200" : s >= 45 ? "bg-orange-50 border-orange-200" : "bg-red-50 border-red-200";
+                      return <span className={cn("text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border flex-shrink-0", txt, bg)}><span className={cn("w-1.5 h-1.5 rounded-full inline-block flex-shrink-0", dot)} />{s}/100</span>;
                     })()}
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5 flex flex-wrap gap-x-2">
