@@ -978,14 +978,17 @@ function NutritionTab({ nutrition, onUpdate }) {
 
   const totals = foods.reduce(
     (acc, f) => ({
-      calories: acc.calories + (parseFloat(f.calories) || 0),
-      protein:  acc.protein  + (parseFloat(f.protein)  || 0),
-      carbs:    acc.carbs    + (parseFloat(f.carbs)    || 0),
-      fat:      acc.fat      + (parseFloat(f.fat)      || 0),
-      fiber:    acc.fiber    + (parseFloat(f.fiber)    || 0),
+      calories:     acc.calories     + (parseFloat(f.calories)     || 0),
+      protein:      acc.protein      + (parseFloat(f.protein)      || 0),
+      carbs:        acc.carbs        + (parseFloat(f.carbs)        || 0),
+      fat:          acc.fat          + (parseFloat(f.fat)          || 0),
+      fiber:        acc.fiber        + (parseFloat(f.fiber)        || 0),
+      saturatedFat: acc.saturatedFat + (parseFloat(f.saturatedFat) || 0),
+      sugar:        acc.sugar        + (parseFloat(f.sugar)        || 0),
     }),
-    { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 }
+    { calories: 0, protein: 0, carbs: 0, fat: 0, fiber: 0, saturatedFat: 0, sugar: 0 }
   );
+  const healthyFat = Math.max(0, totals.fat - totals.saturatedFat);
 
   const navigateDay = (dir) => {
     const d = new Date(selectedDate + "T12:00:00");
@@ -1102,6 +1105,84 @@ function NutritionTab({ nutrition, onUpdate }) {
           </div>
         ))}
       </div>
+
+      {/* ── Daily Assessment ── */}
+      {foods.length > 0 && (() => {
+        const score = (val, tiers) => {
+          for (const [thresh, s] of tiers) if (val >= thresh) return s;
+          return tiers[tiers.length - 1][1];
+        };
+        const label = s => s >= 85 ? "Excellent" : s >= 65 ? "Good" : s >= 45 ? "Moderate" : "Poor";
+        const barColor = s => s >= 85 ? "bg-green-500" : s >= 65 ? "bg-yellow-400" : s >= 45 ? "bg-orange-400" : "bg-red-500";
+        const textColor = s => s >= 85 ? "text-green-700" : s >= 65 ? "text-yellow-700" : s >= 45 ? "text-orange-700" : "text-red-700";
+        const bgColor = s => s >= 85 ? "bg-green-50 border-green-200" : s >= 65 ? "bg-yellow-50 border-yellow-200" : s >= 45 ? "bg-orange-50 border-orange-200" : "bg-red-50 border-red-200";
+
+        const hasAiData = foods.some(f => f.saturatedFat > 0 || f.sugar > 0);
+
+        const metrics = [
+          {
+            key: "protein", label: "Protein", value: Math.round(totals.protein * 10) / 10, unit: "g",
+            note: "Aim for 150g+ for max muscle growth",
+            score: score(totals.protein, [[150,92],[120,78],[80,58],[0,30]]),
+          },
+          {
+            key: "healthyFat", label: "Healthy Fats", value: Math.round(healthyFat * 10) / 10, unit: "g",
+            note: "Unsaturated fats — good for hormones & muscle",
+            score: score(healthyFat, [[40,90],[25,72],[10,52],[0,28]]),
+          },
+          {
+            key: "fiber", label: "Fiber", value: Math.round(totals.fiber * 10) / 10, unit: "g",
+            note: "Aim for 25–35g/day for gut health",
+            score: score(totals.fiber, [[30,92],[20,74],[10,52],[0,28]]),
+          },
+          ...(hasAiData ? [
+            {
+              key: "satFat", label: "Saturated Fat", value: Math.round(totals.saturatedFat * 10) / 10, unit: "g",
+              note: "Keep under 20g — lower is better",
+              score: totals.saturatedFat < 10 ? 92 : totals.saturatedFat < 20 ? 72 : totals.saturatedFat < 30 ? 48 : 22,
+            },
+            {
+              key: "sugar", label: "Sugar", value: Math.round(totals.sugar * 10) / 10, unit: "g",
+              note: "Keep under 40g/day — lower is better",
+              score: totals.sugar < 25 ? 92 : totals.sugar < 40 ? 74 : totals.sugar < 60 ? 50 : 25,
+            },
+          ] : []),
+        ];
+
+        const overallScore = Math.round(metrics.reduce((s, m) => s + m.score, 0) / metrics.length);
+
+        return (
+          <div className="bg-white rounded-2xl border border-slate-200 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-slate-700">Daily Assessment</h3>
+              <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-xs font-bold", bgColor(overallScore), textColor(overallScore))}>
+                <span className={cn("w-2 h-2 rounded-full", barColor(overallScore))} />
+                {overallScore}/100 {label(overallScore)}
+              </div>
+            </div>
+            <div className="space-y-2.5">
+              {metrics.map(m => (
+                <div key={m.key}>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-slate-700">{m.label}</span>
+                      <span className="text-xs text-slate-400">{m.value}{m.unit}</span>
+                    </div>
+                    <span className={cn("text-[11px] font-bold", textColor(m.score))}>{m.score}/100 · {label(m.score)}</span>
+                  </div>
+                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div className={cn("h-full rounded-full transition-all", barColor(m.score))} style={{ width: `${m.score}%` }} />
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{m.note}</p>
+                </div>
+              ))}
+            </div>
+            {!hasAiData && foods.length > 0 && (
+              <p className="text-[10px] text-slate-400 mt-3 pt-3 border-t border-slate-100">Use AI Analyze to unlock saturated fat & sugar tracking</p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── Food log ── */}
       <div>
@@ -1742,7 +1823,7 @@ export default function Gym() {
                 : "bg-white border-slate-200 text-slate-600 hover:border-orange-300 hover:text-orange-600"
             )}
           >
-            Nutrition
+            {showNutrition ? "Gym" : "Nutrition"}
           </button>
         </div>
       </div>
