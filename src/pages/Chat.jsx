@@ -1,18 +1,23 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Trash2, CheckSquare, Square } from "lucide-react";
+import { Trash2, CheckSquare, Square, History } from "lucide-react";
 
 import MessageBubble from "../components/chat/MessageBubble";
 import ChatInput from "../components/chat/ChatInput";
 import ContextSidebar from "../components/chat/ContextSidebar";
+import ChatHistoryPanel from "../components/ChatHistoryPanel";
 import { sendMessageToClaude, loadHistory, saveHistory, clearHistory } from "@/api/claudeClient";
 import { clearUnread } from "@/lib/reminderEngine";
 import { isStorageReady } from "@/api/supabaseStorage";
+import { loadConversations, saveConversation, deleteConversation, newConversation, migrateFlat } from "@/lib/chatHistory";
 
 export default function Chat() {
   const [messages, setMessages] = useState(() => loadHistory());
   const [isLoading, setIsLoading] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [showHistory, setShowHistory] = useState(false);
+  const [currentConvId, setCurrentConvId] = useState(null);
+  const [conversations, setConversations] = useState([]);
   const messagesEndRef = useRef(null);
 
   // Clear unread count when Chat page mounts
@@ -22,11 +27,28 @@ export default function Chat() {
 
   // Load chat history once supabaseStorage finishes hydrating
   useEffect(() => {
-    if (isStorageReady()) { setMessages(loadHistory()); return; }
-    const handler = () => setMessages(loadHistory());
+    if (isStorageReady()) { initFromStorage(); return; }
+    const handler = () => initFromStorage();
     window.addEventListener('supabase-storage-ready', handler);
     return () => window.removeEventListener('supabase-storage-ready', handler);
   }, []);
+
+  function initFromStorage() {
+    const oldMessages = loadHistory();
+    // Migrate flat history to conversations on first load
+    const migrated = migrateFlat('main', oldMessages);
+    const convs = loadConversations('main');
+    setConversations(convs);
+    if (migrated) {
+      setCurrentConvId(migrated.id);
+      setMessages(migrated.messages);
+    } else if (convs.length > 0 && !currentConvId) {
+      setCurrentConvId(convs[0].id);
+      setMessages(convs[0].messages);
+    } else {
+      setMessages(oldMessages);
+    }
+  }
 
   // Sync messages when a reminder fires from outside this page
   useEffect(() => {
@@ -48,7 +70,7 @@ export default function Chat() {
       { role: "assistant", content: coachingResponse },
     ];
     setMessages(withCoaching);
-    saveHistory(withCoaching);
+    saveCurrentConv(withCoaching);
   };
 
   const handleSend = async (text, attachments = []) => {
@@ -100,12 +122,12 @@ export default function Chat() {
       const reply = await sendMessageToClaude(apiHistory);
       const withReply = [...updatedDisplay, { role: "assistant", content: reply }];
       setMessages(withReply);
-      saveHistory(withReply);
+      saveCurrentConv(withReply);
     } catch (err) {
       const errMsg = { role: "assistant", content: `Sorry, something went wrong: ${err.message}` };
       const withErr = [...updatedDisplay, errMsg];
       setMessages(withErr);
-      saveHistory(withErr);
+      saveCurrentConv(withErr);
     } finally {
       setIsLoading(false);
     }
@@ -131,7 +153,7 @@ export default function Chat() {
   const handleDeleteSelected = () => {
     const newMessages = messages.filter((_, i) => !selectedIds.has(i));
     setMessages(newMessages);
-    saveHistory(newMessages);
+    saveCurrentConv(newMessages);
     setSelectedIds(new Set());
     setIsSelectionMode(false);
   };
@@ -143,12 +165,71 @@ export default function Chat() {
     setIsSelectionMode(false);
   };
 
+  // Save current messages to conversations system
+  function saveCurrentConv(msgs) {
+    saveHistory(msgs);
+    if (!currentConvId) return;
+    const conv = { id: currentConvId, title: '', createdAt: Date.now(), updatedAt: Date.now(), messages: msgs };
+    saveConversation('main', conv);
+    setConversations(loadConversations('main'));
+  }
+
+  function handleNewChat() {
+    const conv = newConversation();
+    setCurrentConvId(conv.id);
+    setMessages([]);
+    saveConversation('main', conv);
+    setConversations(loadConversations('main'));
+    setShowHistory(false);
+  }
+
+  function handleSelectConv(conv) {
+    setCurrentConvId(conv.id);
+    setMessages(conv.messages);
+    saveHistory(conv.messages);
+    setShowHistory(false);
+  }
+
+  function handleDeleteConv(id) {
+    deleteConversation('main', id);
+    setConversations(loadConversations('main'));
+    if (id === currentConvId) {
+      const remaining = loadConversations('main');
+      if (remaining.length > 0) {
+        setCurrentConvId(remaining[0].id);
+        setMessages(remaining[0].messages);
+      } else {
+        handleNewChat();
+      }
+    }
+  }
+
   const displayMessages = messages.filter(m => m.role !== "system");
 
   return (
     <div className="flex h-[calc(100vh-64px)]">
+      {/* Chat History Panel */}
+      <ChatHistoryPanel
+        open={showHistory}
+        onClose={() => setShowHistory(false)}
+        conversations={conversations}
+        onSelect={handleSelectConv}
+        onDelete={handleDeleteConv}
+        onNewChat={handleNewChat}
+      />
+
       {/* Main chat area */}
       <div className="flex flex-col flex-1 min-w-0">
+        {/* History button */}
+        <div className="px-4 py-2 border-b border-slate-100 flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => setShowHistory(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition font-medium"
+          >
+            <History className="w-4 h-4" /> Chat History
+          </button>
+        </div>
+
         {/* Selection toolbar */}
         {isSelectionMode && (
           <div className="px-4 py-3 bg-indigo-50 border-b border-indigo-200 flex items-center justify-between flex-shrink-0">

@@ -5,12 +5,14 @@ import {
   TrendingUp, TrendingDown, Wallet,
   Plus, Trash2, Send, Loader2, Sparkles,
   AlertCircle, Pencil, Check, X, CheckSquare, Square,
-  ChevronLeft, ChevronRight, Calendar, Repeat,
+  ChevronLeft, ChevronRight, Calendar, Repeat, History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getUserPrefix } from "@/lib/userStore";
 import { supabaseStorage } from "@/api/supabaseStorage";
+import ChatHistoryPanel from "@/components/ChatHistoryPanel";
+import { loadConversations, saveConversation, deleteConversation, newConversation, migrateFlat } from "@/lib/chatHistory";
 
 // ── Storage ────────────────────────────────────────────────────────────────────
 const getStorageKey = () => `${getUserPrefix()}accountable_financials_v2`;
@@ -890,8 +892,66 @@ function AdvisorTab({ fin, update, selectedMonth }) {
   const [loading, setLoading] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [showHistory, setShowHistory] = useState(false);
+  const [currentConvId, setCurrentConvId] = useState(null);
+  const [conversations, setConversations] = useState([]);
   const bottomRef = useRef(null);
   const textareaRef = useRef(null);
+
+  useEffect(() => {
+    const oldMsgs = loadChat();
+    const migrated = migrateFlat('financials', oldMsgs);
+    const convs = loadConversations('financials');
+    setConversations(convs);
+    if (migrated) {
+      setCurrentConvId(migrated.id);
+      setMessages(migrated.messages);
+    } else if (convs.length > 0) {
+      setCurrentConvId(convs[0].id);
+      setMessages(convs[0].messages);
+    } else {
+      const conv = newConversation();
+      setCurrentConvId(conv.id);
+    }
+  }, []);
+
+  function saveCurrentConv(msgs) {
+    saveChat(msgs);
+    if (!currentConvId) return;
+    const conv = { id: currentConvId, title: '', createdAt: Date.now(), updatedAt: Date.now(), messages: msgs };
+    saveConversation('financials', conv);
+    setConversations(loadConversations('financials'));
+  }
+
+  function handleNewChat() {
+    const conv = newConversation();
+    setCurrentConvId(conv.id);
+    setMessages([]);
+    saveConversation('financials', conv);
+    setConversations(loadConversations('financials'));
+    setShowHistory(false);
+  }
+
+  function handleSelectConv(conv) {
+    setCurrentConvId(conv.id);
+    setMessages(conv.messages);
+    saveChat(conv.messages);
+    setShowHistory(false);
+  }
+
+  function handleDeleteConv(id) {
+    deleteConversation('financials', id);
+    setConversations(loadConversations('financials'));
+    if (id === currentConvId) {
+      const remaining = loadConversations('financials');
+      if (remaining.length > 0) {
+        setCurrentConvId(remaining[0].id);
+        setMessages(remaining[0].messages);
+      } else {
+        handleNewChat();
+      }
+    }
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -905,19 +965,19 @@ function AdvisorTab({ fin, update, selectedMonth }) {
     const userMsg = { role: "user", content: text.trim() };
     const updated = [...messages, userMsg];
     setMessages(updated);
-    saveChat(updated);
+    saveCurrentConv(updated);
     setLoading(true);
 
     try {
       const reply = await financialAgenticLoop(updated, fin, update, selectedMonth);
       const withReply = [...updated, { role: "assistant", content: reply }];
       setMessages(withReply);
-      saveChat(withReply);
+      saveCurrentConv(withReply);
     } catch (err) {
       const errMsg = { role: "assistant", content: `Something went wrong: ${err.message}` };
       const withErr = [...updated, errMsg];
       setMessages(withErr);
-      saveChat(withErr);
+      saveCurrentConv(withErr);
     } finally {
       setLoading(false);
     }
@@ -934,7 +994,7 @@ function AdvisorTab({ fin, update, selectedMonth }) {
   const handleDeleteSelected = () => {
     const next = messages.filter((_, i) => !selectedIds.has(i));
     setMessages(next);
-    saveChat(next);
+    saveCurrentConv(next);
     setSelectedIds(new Set());
     setIsSelectionMode(false);
   };
@@ -948,15 +1008,30 @@ function AdvisorTab({ fin, update, selectedMonth }) {
 
   return (
     <div className="flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden" style={{ height: "calc(100vh - 340px)", minHeight: 480 }}>
+      <ChatHistoryPanel
+        open={showHistory}
+        onClose={() => setShowHistory(false)}
+        conversations={conversations}
+        onSelect={handleSelectConv}
+        onDelete={handleDeleteConv}
+        onNewChat={handleNewChat}
+      />
+
       {/* Header */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 flex-shrink-0">
         <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center">
           <Sparkles className="w-5 h-5 text-amber-600" />
         </div>
-        <div>
+        <div className="flex-1">
           <p className="font-semibold text-slate-800">Financial Advisor</p>
           <p className="text-xs text-slate-400">Powered by Buffett & Munger principles · Has full access to your financial data</p>
         </div>
+        <button
+          onClick={() => setShowHistory(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition font-medium"
+        >
+          <History className="w-4 h-4" /> History
+        </button>
       </div>
 
       {/* Selection toolbar */}

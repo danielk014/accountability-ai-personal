@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import {
   Plus, Trash2, Pencil, Check, X, Dumbbell, Send, Loader2, Bot,
   Scale, Paperclip, Camera, ArrowLeft, CheckSquare, Square, ChevronLeft, ChevronRight,
-  GripVertical,
+  GripVertical, History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getUserPrefix } from "@/lib/userStore";
@@ -13,6 +13,8 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, differenceInDays, parseISO } from "date-fns";
+import ChatHistoryPanel from "@/components/ChatHistoryPanel";
+import { loadConversations, saveConversation, deleteConversation, newConversation, migrateFlat } from "@/lib/chatHistory";
 
 // ── Storage helpers ──────────────────────────────────────────────────────────
 const getStorageKey    = () => `${getUserPrefix()}gym_tracker_v1`;
@@ -1415,8 +1417,67 @@ function AICoachTab({ gymData, nutrition, bodyweight, physique, onDataChange }) 
   const [attachments, setAttachments]     = useState([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds]     = useState(new Set());
+  const [showHistory, setShowHistory]     = useState(false);
+  const [currentConvId, setCurrentConvId] = useState(null);
+  const [conversations, setConversations] = useState([]);
   const fileInputRef = useRef(null);
   const bottomRef    = useRef(null);
+
+  useEffect(() => {
+    // Migrate flat chat to conversation system
+    const oldMsgs = loadChat();
+    const migrated = migrateFlat('gym', oldMsgs);
+    const convs = loadConversations('gym');
+    setConversations(convs);
+    if (migrated) {
+      setCurrentConvId(migrated.id);
+      setMessages(migrated.messages);
+    } else if (convs.length > 0) {
+      setCurrentConvId(convs[0].id);
+      setMessages(convs[0].messages);
+    } else {
+      const conv = newConversation();
+      setCurrentConvId(conv.id);
+    }
+  }, []);
+
+  function saveCurrentConv(msgs) {
+    saveChat(msgs);
+    if (!currentConvId) return;
+    const conv = { id: currentConvId, title: '', createdAt: Date.now(), updatedAt: Date.now(), messages: msgs };
+    saveConversation('gym', conv);
+    setConversations(loadConversations('gym'));
+  }
+
+  function handleNewChat() {
+    const conv = newConversation();
+    setCurrentConvId(conv.id);
+    setMessages([]);
+    saveConversation('gym', conv);
+    setConversations(loadConversations('gym'));
+    setShowHistory(false);
+  }
+
+  function handleSelectConv(conv) {
+    setCurrentConvId(conv.id);
+    setMessages(conv.messages);
+    saveChat(conv.messages);
+    setShowHistory(false);
+  }
+
+  function handleDeleteConv(id) {
+    deleteConversation('gym', id);
+    setConversations(loadConversations('gym'));
+    if (id === currentConvId) {
+      const remaining = loadConversations('gym');
+      if (remaining.length > 0) {
+        setCurrentConvId(remaining[0].id);
+        setMessages(remaining[0].messages);
+      } else {
+        handleNewChat();
+      }
+    }
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1522,7 +1583,7 @@ function AICoachTab({ gymData, nutrition, bodyweight, physique, onDataChange }) 
 
     const updatedDisplay = [...messages, displayMsg];
     setMessages(updatedDisplay);
-    saveChat(updatedDisplay);
+    saveCurrentConv(updatedDisplay);
     setInput("");
     setAttachments([]);
     setLoading(true);
@@ -1538,7 +1599,7 @@ function AICoachTab({ gymData, nutrition, bodyweight, physique, onDataChange }) 
       onDataChange?.();
       const withReply = [...updatedDisplay, { role: "assistant", content: reply }];
       setMessages(withReply);
-      saveChat(withReply);
+      saveCurrentConv(withReply);
     } catch {
       toast.error("Couldn't reach AI coach. Check your connection.");
     } finally {
@@ -1562,7 +1623,7 @@ function AICoachTab({ gymData, nutrition, bodyweight, physique, onDataChange }) 
   function handleDeleteSelected() {
     const newMsgs = messages.filter((_, i) => !selectedIds.has(i));
     setMessages(newMsgs);
-    saveChat(newMsgs);
+    saveCurrentConv(newMsgs);
     setSelectedIds(new Set());
     setIsSelectionMode(false);
   }
@@ -1575,6 +1636,25 @@ function AICoachTab({ gymData, nutrition, bodyweight, physique, onDataChange }) 
 
   return (
     <div className="flex flex-col" style={{ minHeight: 420 }}>
+      <ChatHistoryPanel
+        open={showHistory}
+        onClose={() => setShowHistory(false)}
+        conversations={conversations}
+        onSelect={handleSelectConv}
+        onDelete={handleDeleteConv}
+        onNewChat={handleNewChat}
+      />
+
+      {/* History button */}
+      <div className="mb-3 flex items-center">
+        <button
+          onClick={() => setShowHistory(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition font-medium"
+        >
+          <History className="w-4 h-4" /> Chat History
+        </button>
+      </div>
+
       {/* Selection toolbar */}
       {isSelectionMode && (
         <div className="px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-xl mb-3 flex items-center justify-between flex-shrink-0">
@@ -1689,7 +1769,7 @@ function AICoachTab({ gymData, nutrition, bodyweight, physique, onDataChange }) 
         </button>
       </form>
       {messages.length > 0 && !isSelectionMode && (
-        <button onClick={() => { setMessages([]); saveChat([]); }}
+        <button onClick={() => { setMessages([]); saveCurrentConv([]); }}
           className="text-xs text-slate-400 hover:text-slate-600 mt-2 text-center w-full transition">
           Clear chat
         </button>

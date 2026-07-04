@@ -1,16 +1,71 @@
 import { useState, useRef, useEffect } from 'react';
+import { History } from 'lucide-react';
 import { loadLogs, loadGoals, loadLongTermGoals, loadAllDailyTasks, loadAllBlocks } from './storage';
+import ChatHistoryPanel from '@/components/ChatHistoryPanel';
+import { loadConversations, saveConversation, deleteConversation, newConversation } from '@/lib/chatHistory';
 
 function CoachView() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [currentConvId, setCurrentConvId] = useState(null);
+  const [conversations, setConversations] = useState([]);
   const bottomRef = useRef(null);
+
+  // Initialize from stored conversations
+  useEffect(() => {
+    const convs = loadConversations('coach');
+    setConversations(convs);
+    if (convs.length > 0) {
+      setCurrentConvId(convs[0].id);
+      setMessages(convs[0].messages);
+    } else {
+      const conv = newConversation();
+      setCurrentConvId(conv.id);
+    }
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  function saveCurrentConv(msgs) {
+    if (!currentConvId) return;
+    const conv = { id: currentConvId, title: '', createdAt: Date.now(), updatedAt: Date.now(), messages: msgs };
+    saveConversation('coach', conv);
+    setConversations(loadConversations('coach'));
+  }
+
+  function handleNewChat() {
+    const conv = newConversation();
+    setCurrentConvId(conv.id);
+    setMessages([]);
+    saveConversation('coach', conv);
+    setConversations(loadConversations('coach'));
+    setShowHistory(false);
+  }
+
+  function handleSelectConv(conv) {
+    setCurrentConvId(conv.id);
+    setMessages(conv.messages);
+    setShowHistory(false);
+  }
+
+  function handleDeleteConv(id) {
+    deleteConversation('coach', id);
+    setConversations(loadConversations('coach'));
+    if (id === currentConvId) {
+      const remaining = loadConversations('coach');
+      if (remaining.length > 0) {
+        setCurrentConvId(remaining[0].id);
+        setMessages(remaining[0].messages);
+      } else {
+        handleNewChat();
+      }
+    }
+  }
 
   async function send() {
     if (!input.trim() || loading) return;
@@ -18,7 +73,11 @@ function CoachView() {
     const userMsg = input.trim();
     setInput('');
     setError(null);
-    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    setMessages(prev => {
+      const updated = [...prev, { role: 'user', text: userMsg }];
+      saveCurrentConv(updated);
+      return updated;
+    });
     setLoading(true);
 
     try {
@@ -40,7 +99,11 @@ function CoachView() {
       }
 
       const data = await res.json();
-      setMessages(prev => [...prev, { role: 'assistant', text: data.reply }]);
+      setMessages(prev => {
+        const updated = [...prev, { role: 'assistant', text: data.reply }];
+        saveCurrentConv(updated);
+        return updated;
+      });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -57,6 +120,24 @@ function CoachView() {
 
   return (
     <div>
+      <ChatHistoryPanel
+        open={showHistory}
+        onClose={() => setShowHistory(false)}
+        conversations={conversations}
+        onSelect={handleSelectConv}
+        onDelete={handleDeleteConv}
+        onNewChat={handleNewChat}
+      />
+
+      <div style={{ marginBottom: 12 }}>
+        <button
+          onClick={() => setShowHistory(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition font-medium"
+        >
+          <History className="w-4 h-4" /> Chat History
+        </button>
+      </div>
+
       {messages.length === 0 && !loading && (
         <div className="coach-empty">
           <h3>Your AI Coach</h3>

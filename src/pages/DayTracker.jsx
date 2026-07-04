@@ -8,10 +8,9 @@ import GoalsView from '@/components/daytracker/GoalsView';
 import ProjectsView from '@/components/daytracker/ProjectsView';
 import NotesView from '@/components/daytracker/NotesView';
 import CoachView from '@/components/daytracker/CoachView';
-import BoardView from '@/components/daytracker/BoardView';
 import '@/components/daytracker/daytracker.css';
 
-const TABS = ['Today', 'Calendar', 'Goals', 'Projects', 'Notes', 'Coach', 'Board'];
+const TABS = ['Today', 'Calendar', 'Goals', 'Projects', 'Notes', 'Coach'];
 
 export default function DayTracker() {
   const { user } = useAuth();
@@ -72,7 +71,6 @@ export default function DayTracker() {
           {tab === 'Projects' && <ProjectsView />}
           {tab === 'Notes' && <NotesView />}
           {tab === 'Coach' && <CoachView />}
-          {tab === 'Board' && <BoardView />}
         </main>
       </div>
     </div>
