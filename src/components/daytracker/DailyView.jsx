@@ -7,9 +7,9 @@ import {
 } from './storage';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const TASK_COLORS = ['#1a1a1a', '#d4edda', '#cce5ff', '#fff3cd', '#f8d7da', '#e2d9f3'];
-const BLOCK_COLORS = ['#4a6cf7', '#22c55e', '#f7c948', '#ef4444', '#a855f7', '#f97316'];
-const ACTUAL_COLOR = '#374151';
+const TASK_COLORS = ['#f1f5f9', '#d4edda', '#cce5ff', '#fff3cd', '#f8d7da', '#e2d9f3'];
+const BLOCK_COLORS = ['#6366f1', '#22c55e', '#eab308', '#ef4444', '#a855f7', '#f97316'];
+const ACTUAL_COLOR = '#64748b';
 const ROW_HEIGHT = 48;
 const LONG_PRESS_MS = 300;
 
@@ -558,7 +558,7 @@ function DailyView({ overrideDate }) {
                       {task.done ? '✓' : ''}
                     </button>
                     <span className={`daily-task-text ${task.done ? 'done-text' : ''}`}
-                      style={{ color: task.color === '#1a1a1a' || task.color === TASK_COLORS[0] ? '#ccc' : '#1a1a1a' }}
+                      style={{ color: task.color === '#f1f5f9' || task.color === TASK_COLORS[0] ? '#1e293b' : '#1e293b' }}
                     >
                       {task.text}
                     </span>
