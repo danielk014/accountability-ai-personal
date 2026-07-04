@@ -15,6 +15,12 @@ function GoalList({ goals, onUpdate, onRemove, onAdd, placeholder }) {
               next[i] = e.target.value;
               onUpdate(next);
             }}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (goal.trim()) onAdd();
+              }
+            }}
             placeholder={placeholder}
           />
           <button className="goal-delete" onClick={() => onRemove(i)}>
