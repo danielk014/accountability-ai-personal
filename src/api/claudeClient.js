@@ -1163,14 +1163,16 @@ export async function analyzeFoodWithAI(imageBase64, mediaType, description) {
     content.push({ type: "image", source: { type: "base64", media_type: mediaType || "image/jpeg", data: imageBase64 } });
   }
   const prompt = `Analyze this food${description ? `: "${description}"` : ""}. The user's goal is to be in a calorie surplus to maximize muscle growth — more calories and protein is generally better, and calorie-dense whole foods are a positive. Score down for highly processed foods, excessive sugar, or trans fats, not for being calorie-dense. Estimate nutritional values for a typical serving. Return ONLY valid JSON in this exact format with no other text:
-{"name":"food name","serving":"serving description","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"saturated_fat_g":0,"sugar_g":0,"fiber_g":0,"nutrition_score":0,"health_note":"one sentence on whether this food supports muscle-building calorie surplus or not"}
-nutrition_score is 0-100 for muscle gain via calorie surplus: 85-100=excellent (high protein, quality calories), 65-84=good, 45-64=moderate (low protein or processed), 0-44=poor (high sugar, trans fats, or highly processed with little protein).`;
+{"name":"food name","serving":"serving description","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"saturated_fat_g":0,"sugar_g":0,"fiber_g":0,"nutrition_score":0,"health_score":0,"sodium_mg":0,"potassium_mg":0,"calcium_mg":0,"iron_mg":0,"vitamin_a_pct":0,"vitamin_c_pct":0,"vitamin_d_pct":0,"health_note":"one sentence on whether this food supports muscle-building calorie surplus or not"}
+nutrition_score is 0-100 for muscle gain via calorie surplus: 85-100=excellent (high protein, quality calories), 65-84=good, 45-64=moderate (low protein or processed), 0-44=poor (high sugar, trans fats, or highly processed with little protein).
+health_score is 0-100 for overall healthiness: considers nutrient density, whole food quality, vitamin/mineral content, balance. 85-100=very healthy, 65-84=healthy, 45-64=moderate, 0-44=unhealthy.
+Micronutrients: sodium_mg, potassium_mg, calcium_mg, iron_mg in milligrams. vitamin_a_pct, vitamin_c_pct, vitamin_d_pct as % daily value (0-100+).`;
   content.push({ type: "text", text: prompt });
 
   const response = await fetch('/api/claude', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 400, messages: [{ role: 'user', content }] }),
+    body: JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 600, messages: [{ role: 'user', content }] }),
   });
   if (!response.ok) throw new Error(`AI error ${response.status}`);
   const data = await response.json();
@@ -1189,6 +1191,14 @@ nutrition_score is 0-100 for muscle gain via calorie surplus: 85-100=excellent (
     sugar:         Math.round((p.sugar_g        || 0) * 10) / 10,
     fiber:         Math.round((p.fiber_g        || 0) * 10) / 10,
     nutritionScore: Math.min(100, Math.max(0, Math.round(p.nutrition_score || 0))),
+    healthScore:    Math.min(100, Math.max(0, Math.round(p.health_score || 0))),
+    sodiumMg:      Math.round(p.sodium_mg      || 0),
+    potassiumMg:   Math.round(p.potassium_mg   || 0),
+    calciumMg:     Math.round(p.calcium_mg     || 0),
+    ironMg:        Math.round((p.iron_mg       || 0) * 10) / 10,
+    vitaminAPct:   Math.round(p.vitamin_a_pct  || 0),
+    vitaminCPct:   Math.round(p.vitamin_c_pct  || 0),
+    vitaminDPct:   Math.round(p.vitamin_d_pct  || 0),
     healthNote:    p.health_note || "",
   };
 }

@@ -1019,6 +1019,7 @@ function NutritionTab({ nutrition, bodyweight, onUpdate }) {
       sugar:         parseFloat(foodData.sugar)        || 0,
       fiber:         parseFloat(foodData.fiber)        || 0,
       nutritionScore: foodData.nutritionScore ?? null,
+      healthScore:    foodData.healthScore ?? null,
       time: format(new Date(), "HH:mm"),
     };
     saveDay([...foods, entry]);
@@ -1222,7 +1223,14 @@ function NutritionTab({ nutrition, bodyweight, onUpdate }) {
                       const dot = s >= 85 ? "bg-green-500" : s >= 65 ? "bg-yellow-400" : s >= 45 ? "bg-orange-400" : "bg-red-500";
                       const txt = s >= 85 ? "text-green-700" : s >= 65 ? "text-yellow-700" : s >= 45 ? "text-orange-700" : "text-red-700";
                       const bg = s >= 85 ? "bg-green-50 border-green-200" : s >= 65 ? "bg-yellow-50 border-yellow-200" : s >= 45 ? "bg-orange-50 border-orange-200" : "bg-red-50 border-red-200";
-                      return <span className={cn("text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border flex-shrink-0", txt, bg)}><span className={cn("w-1.5 h-1.5 rounded-full inline-block flex-shrink-0", dot)} />{s}/100</span>;
+                      return <span title="Muscle gain" className={cn("text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border flex-shrink-0", txt, bg)}><span className={cn("w-1.5 h-1.5 rounded-full inline-block flex-shrink-0", dot)} />{s}</span>;
+                    })()}
+                    {f.healthScore != null && (() => {
+                      const s = f.healthScore;
+                      const dot = s >= 85 ? "bg-green-500" : s >= 65 ? "bg-yellow-400" : s >= 45 ? "bg-orange-400" : "bg-red-500";
+                      const txt = s >= 85 ? "text-green-700" : s >= 65 ? "text-yellow-700" : s >= 45 ? "text-orange-700" : "text-red-700";
+                      const bg = s >= 85 ? "bg-green-50 border-green-200" : s >= 65 ? "bg-yellow-50 border-yellow-200" : s >= 45 ? "bg-orange-50 border-orange-200" : "bg-red-50 border-red-200";
+                      return <span title="Health" className={cn("text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border flex-shrink-0", txt, bg)}>♥{s}</span>;
                     })()}
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5 flex flex-wrap gap-x-2">
@@ -1345,52 +1353,104 @@ function NutritionTab({ nutrition, bodyweight, onUpdate }) {
 
             {/* AI result card */}
             {aiResult && (() => {
-              const score = aiResult.nutritionScore ?? 0;
-              const scoreColor = score >= 85 ? "bg-green-500" : score >= 65 ? "bg-yellow-400" : score >= 45 ? "bg-orange-400" : "bg-red-500";
-              const scoreLabel = score >= 85 ? "Excellent" : score >= 65 ? "Good" : score >= 45 ? "Moderate" : "Poor";
-              const scoreTextColor = score >= 85 ? "text-green-700" : score >= 65 ? "text-yellow-700" : score >= 45 ? "text-orange-700" : "text-red-700";
-              const scoreBg = score >= 85 ? "bg-green-50 border-green-200" : score >= 65 ? "bg-yellow-50 border-yellow-200" : score >= 45 ? "bg-orange-50 border-orange-200" : "bg-red-50 border-red-200";
+              const scoreBadge = (val, label) => {
+                const s = val ?? 0;
+                const color = s >= 85 ? "bg-green-500" : s >= 65 ? "bg-yellow-400" : s >= 45 ? "bg-orange-400" : "bg-red-500";
+                const txt   = s >= 85 ? "text-green-700" : s >= 65 ? "text-yellow-700" : s >= 45 ? "text-orange-700" : "text-red-700";
+                const bg    = s >= 85 ? "bg-green-50 border-green-200" : s >= 65 ? "bg-yellow-50 border-yellow-200" : s >= 45 ? "bg-orange-50 border-orange-200" : "bg-red-50 border-red-200";
+                const word  = s >= 85 ? "Excellent" : s >= 65 ? "Good" : s >= 45 ? "Moderate" : "Poor";
+                return (
+                  <div className={cn("flex flex-col items-center px-3 py-1.5 rounded-xl border text-center flex-1", bg)}>
+                    <div className="flex items-center gap-1">
+                      <div className={cn("w-2 h-2 rounded-full", color)} />
+                      <span className={cn("text-xs font-bold", txt)}>{s}/100</span>
+                    </div>
+                    <span className={cn("text-[10px] font-medium leading-tight", txt)}>{word}</span>
+                    <span className="text-[9px] text-slate-400 mt-0.5">{label}</span>
+                  </div>
+                );
+              };
+              const noteScore = aiResult.healthScore ?? aiResult.nutritionScore ?? 0;
+              const noteTxt = noteScore >= 85 ? "text-green-700" : noteScore >= 65 ? "text-yellow-700" : noteScore >= 45 ? "text-orange-700" : "text-red-700";
+              const noteBg  = noteScore >= 85 ? "bg-green-50 border-green-200" : noteScore >= 65 ? "bg-yellow-50 border-yellow-200" : noteScore >= 45 ? "bg-orange-50 border-orange-200" : "bg-red-50 border-red-200";
+              const micronutrients = [
+                { label: "Sodium",    val: aiResult.sodiumMg,    unit: "mg" },
+                { label: "Potassium", val: aiResult.potassiumMg, unit: "mg" },
+                { label: "Calcium",   val: aiResult.calciumMg,   unit: "mg" },
+                { label: "Iron",      val: aiResult.ironMg,      unit: "mg" },
+                { label: "Vit A",     val: aiResult.vitaminAPct, unit: "%" },
+                { label: "Vit C",     val: aiResult.vitaminCPct, unit: "%" },
+                { label: "Vit D",     val: aiResult.vitaminDPct, unit: "%" },
+              ].filter(m => m.val > 0);
               return (
                 <div className="bg-white rounded-2xl border border-indigo-200 p-4 shadow-sm">
+                  {/* Header */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0 mr-2">
                       <p className="font-semibold text-slate-800">{aiResult.name}</p>
                       {aiResult.serving && <p className="text-xs text-slate-500 mt-0.5">{aiResult.serving}</p>}
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      {/* Nutrition Score badge */}
-                      <div className={cn("flex flex-col items-center px-3 py-1.5 rounded-xl border text-center", scoreBg)}>
-                        <div className="flex items-center gap-1">
-                          <div className={cn("w-2 h-2 rounded-full", scoreColor)} />
-                          <span className={cn("text-xs font-bold", scoreTextColor)}>{score}/100</span>
-                        </div>
-                        <span className={cn("text-[10px] font-medium leading-tight", scoreTextColor)}>{scoreLabel}</span>
-                      </div>
-                      <button onClick={() => setAiResult(null)}
-                        className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 transition">
-                        <X className="w-3.5 h-3.5" />
-                      </button>
+                    <button onClick={() => setAiResult(null)}
+                      className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 transition flex-shrink-0">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Score badges */}
+                  <div className="flex gap-2 mb-3">
+                    {scoreBadge(aiResult.nutritionScore, "Muscle Gain")}
+                    {scoreBadge(aiResult.healthScore, "Health")}
+                  </div>
+
+                  {/* Calories */}
+                  <div className="text-center mb-3">
+                    <span className="text-3xl font-bold text-orange-600">{aiResult.calories}</span>
+                    <span className="text-sm text-orange-500 ml-1">kcal</span>
+                  </div>
+
+                  {/* Macros grid */}
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    <div className="bg-blue-50 rounded-xl p-2 text-center">
+                      <p className="text-lg font-bold text-blue-700">{aiResult.protein}g</p>
+                      <p className="text-[10px] text-blue-500 font-medium">Protein</p>
+                    </div>
+                    <div className="bg-amber-50 rounded-xl p-2 text-center">
+                      <p className="text-lg font-bold text-amber-700">{aiResult.carbs}g</p>
+                      <p className="text-[10px] text-amber-500 font-medium">Carbs</p>
+                    </div>
+                    <div className="bg-emerald-50 rounded-xl p-2 text-center">
+                      <p className="text-lg font-bold text-emerald-700">{aiResult.fat}g</p>
+                      <p className="text-[10px] text-emerald-500 font-medium">Fat</p>
                     </div>
                   </div>
 
-                  {/* Macros */}
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {[
-                      { label: `${aiResult.calories} kcal`,    color: "bg-orange-100 text-orange-700" },
-                      { label: `${aiResult.protein}g protein`, color: "bg-blue-100 text-blue-700"    },
-                      { label: `${aiResult.carbs}g carbs`,     color: "bg-amber-100 text-amber-700"  },
-                      { label: `${aiResult.fat}g total fat`,   color: "bg-emerald-100 text-emerald-700" },
-                      ...(aiResult.saturatedFat > 0 ? [{ label: `${aiResult.saturatedFat}g sat. fat`, color: "bg-red-100 text-red-700" }] : []),
-                      ...(aiResult.sugar > 0 ? [{ label: `${aiResult.sugar}g sugar`, color: "bg-pink-100 text-pink-700" }] : []),
-                      ...(aiResult.fiber > 0 ? [{ label: `${aiResult.fiber}g fiber`, color: "bg-violet-100 text-violet-700" }] : []),
-                    ].map(({ label, color }) => (
-                      <span key={label} className={cn("text-xs px-2.5 py-1 rounded-full font-medium", color)}>{label}</span>
-                    ))}
-                  </div>
+                  {/* Details — sat fat, sugar, fiber */}
+                  {(aiResult.saturatedFat > 0 || aiResult.sugar > 0 || aiResult.fiber > 0) && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {aiResult.saturatedFat > 0 && <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-red-100 text-red-700">{aiResult.saturatedFat}g sat. fat</span>}
+                      {aiResult.sugar > 0 && <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-pink-100 text-pink-700">{aiResult.sugar}g sugar</span>}
+                      {aiResult.fiber > 0 && <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-violet-100 text-violet-700">{aiResult.fiber}g fiber</span>}
+                    </div>
+                  )}
+
+                  {/* Micronutrients */}
+                  {micronutrients.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Micronutrients</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                        {micronutrients.map(m => (
+                          <div key={m.label} className="flex justify-between text-xs">
+                            <span className="text-slate-500">{m.label}</span>
+                            <span className="font-medium text-slate-700">{m.val}{m.unit}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Health note */}
                   {aiResult.healthNote && (
-                    <p className={cn("text-xs rounded-xl px-3 py-2 mb-3 border", scoreBg, scoreTextColor)}>
+                    <p className={cn("text-xs rounded-xl px-3 py-2 mb-3 border", noteBg, noteTxt)}>
                       {aiResult.healthNote}
                     </p>
                   )}
