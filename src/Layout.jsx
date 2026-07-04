@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "./utils";
-import { LayoutDashboard, MessageCircle, BarChart3, CalendarDays, User, DollarSign, FolderKanban, Dumbbell, Settings } from "lucide-react";
+import { LayoutDashboard, MessageCircle, BarChart3, CalendarDays, User, DollarSign, FolderKanban, Dumbbell, Settings, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FloatingChatBubble from "@/components/chat/FloatingChatBubble";
 import { useAuth } from "@/lib/AuthContext";
@@ -15,6 +15,7 @@ const navItems = [
   { name: "Financials", icon: DollarSign, page: "Financials" },
   { name: "Gym", icon: Dumbbell, page: "Gym" },
   { name: "Progress", icon: BarChart3, page: "Progress" },
+  { name: "Day Tracker", icon: Clock, page: "DayTracker" },
 ];
 
 export default function Layout({ children, currentPageName }) {

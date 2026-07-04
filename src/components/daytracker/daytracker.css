@@ -1,0 +1,1815 @@
+.day-tracker-root {
+  background: #0f0f0f;
+  color: #e0e0e0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  min-height: calc(100vh - 64px);
+  padding: 0;
+}
+
+.day-tracker-root * {
+  box-sizing: border-box;
+}
+
+.day-tracker-root .dt-app {
+  max-width: 820px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tabs */
+.day-tracker-root .tabs {
+  display: flex;
+  gap: 2px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #1a1a1a;
+  position: sticky;
+  top: 56px;
+  background: #0f0f0f;
+  z-index: 10;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.day-tracker-root .tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.day-tracker-root .tab {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.day-tracker-root .tab.active {
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.day-tracker-root .tab:hover:not(.active) {
+  color: #999;
+}
+
+.day-tracker-root .content {
+  flex: 1;
+  padding: 12px 16px 80px;
+  overflow-y: auto;
+}
+
+/* Daily Split Layout */
+.day-tracker-root .daily-split {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.day-tracker-root .daily-schedule-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+.day-tracker-root .daily-tasks-panel {
+  width: 260px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 90px;
+  max-height: calc(100dvh - 140px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #333 transparent;
+}
+
+@media (max-width: 700px) {
+  .day-tracker-root .daily-split {
+    flex-direction: column-reverse;
+  }
+  .day-tracker-root .daily-tasks-panel {
+    width: 100%;
+    position: static;
+    max-height: none;
+  }
+}
+
+/* Daily Tasks */
+.day-tracker-root .daily-tasks-section {
+  background: #141414;
+  border: 1px solid #1f1f1f;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 8px;
+}
+
+.day-tracker-root .daily-tasks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.day-tracker-root .daily-tasks-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #e0e0e0;
+}
+
+.day-tracker-root .daily-tasks-icon {
+  color: #4a6cf7;
+  font-size: 16px;
+}
+
+.day-tracker-root .daily-tasks-badge {
+  background: #4a6cf7;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+}
+
+.day-tracker-root .daily-tasks-add-btn {
+  background: #4a6cf7;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.day-tracker-root .daily-tasks-add-btn:hover {
+  background: #5b7bf8;
+}
+
+.day-tracker-root .daily-task-add-form {
+  margin-bottom: 10px;
+}
+
+.day-tracker-root .daily-task-add-input {
+  width: 100%;
+  background: #0f0f0f;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #e0e0e0;
+  padding: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  margin-bottom: 8px;
+}
+
+.day-tracker-root .daily-task-add-input:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.day-tracker-root .daily-task-add-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.day-tracker-root .daily-task-color-picks {
+  display: flex;
+  gap: 5px;
+}
+
+.day-tracker-root .daily-task-color-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.day-tracker-root .daily-task-color-btn.selected {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.day-tracker-root .daily-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.day-tracker-root .daily-tasks-progress-text {
+  font-size: 11px;
+  color: #555;
+  margin-bottom: 4px;
+}
+
+.day-tracker-root .daily-task-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px;
+  border-radius: 8px;
+  transition: opacity 0.15s;
+  cursor: grab;
+}
+
+.day-tracker-root .daily-task-item:active {
+  cursor: grabbing;
+  opacity: 0.7;
+}
+
+.day-tracker-root .daily-task-item.done {
+  opacity: 0.5;
+}
+
+.day-tracker-root .daily-task-grip {
+  color: #555;
+  font-size: 12px;
+  cursor: grab;
+  user-select: none;
+  line-height: 1;
+  letter-spacing: 2px;
+}
+
+.day-tracker-root .daily-task-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 2px solid #555;
+  background: transparent;
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.day-tracker-root .daily-task-check.checked {
+  background: #4a6cf7;
+  border-color: #4a6cf7;
+}
+
+.day-tracker-root .daily-task-text {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.day-tracker-root .daily-task-text.done-text {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.day-tracker-root .daily-task-delete {
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.day-tracker-root .daily-task-item:hover .daily-task-delete {
+  opacity: 1;
+}
+
+.day-tracker-root .daily-task-delete:hover {
+  color: #ef4444;
+}
+
+.day-tracker-root .daily-task-delete.confirm {
+  opacity: 1;
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(239, 68, 68, 0.12);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.day-tracker-root .daily-tasks-empty {
+  font-size: 13px;
+  color: #444;
+  text-align: center;
+  padding: 8px 0;
+}
+
+.day-tracker-root .recurring-toggle {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #888;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.day-tracker-root .recurring-toggle.active {
+  background: rgba(74, 108, 247, 0.15);
+  border-color: #4a6cf7;
+  color: #7b9cff;
+}
+
+.day-tracker-root .recurring-badge {
+  font-size: 12px;
+  color: #4a6cf7;
+  flex-shrink: 0;
+}
+
+/* Schedule Grid */
+.day-tracker-root .schedule-grid {
+  position: relative;
+}
+
+.day-tracker-root .time-block {
+  position: absolute;
+  left: 52px;
+  right: 8px;
+  border-radius: 6px;
+  z-index: 5;
+  overflow: hidden;
+  opacity: 0.92;
+  transition: opacity 0.1s;
+  display: flex;
+  flex-direction: column;
+}
+
+.day-tracker-root .time-block:hover {
+  opacity: 1;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+
+.day-tracker-root .time-block-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2px 10px;
+  cursor: grab;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.day-tracker-root .time-block-body:active {
+  cursor: grabbing;
+}
+
+.day-tracker-root .time-block-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.day-tracker-root .time-block-range {
+  font-size: 10px;
+  color: rgba(255,255,255,0.7);
+  margin-top: 1px;
+}
+
+.day-tracker-root .time-block.actual {
+  border-left: 3px solid rgba(255,255,255,0.3);
+}
+
+.day-tracker-root .time-block-resize {
+  left: 0;
+  right: 0;
+  height: 14px;
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  touch-action: none;
+}
+
+.day-tracker-root .time-block-resize.top {
+  border-radius: 6px 6px 0 0;
+}
+
+.day-tracker-root .time-block-resize.bottom {
+  border-radius: 0 0 6px 6px;
+}
+
+.day-tracker-root .time-block-resize:hover,
+.day-tracker-root .time-block-resize:active {
+  background: rgba(255,255,255,0.15);
+}
+
+.day-tracker-root .resize-dots {
+  font-size: 10px;
+  color: rgba(255,255,255,0.5);
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+.day-tracker-root .touch-drag-ghost {
+  position: fixed;
+  z-index: 1000;
+  background: #4a6cf7;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: none;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.9;
+}
+
+.day-tracker-root .daily-task-item.dragging {
+  opacity: 0.4;
+}
+
+.day-tracker-root .inline-add-block {
+  position: absolute;
+  left: 52px;
+  right: 8px;
+  z-index: 8;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 4px;
+  background: #1a2a3a;
+  border: 1px solid #4a6cf7;
+  border-radius: 6px;
+}
+
+.day-tracker-root .inline-block-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 4px 6px;
+  outline: none;
+}
+
+.day-tracker-root .inline-block-input::placeholder {
+  color: #666;
+}
+
+.day-tracker-root .inline-block-add {
+  background: #4a6cf7;
+  border: none;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.day-tracker-root .daily-tasks-drag-hint {
+  font-size: 12px;
+  color: #444;
+  margin-bottom: 6px;
+  font-style: italic;
+}
+
+/* Hour row */
+.day-tracker-root .hour-row {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #1a1a1a;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-radius: 6px;
+  padding: 0 8px;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.day-tracker-root .hour-row:hover {
+  background: #1a1a1a;
+}
+
+.day-tracker-root .hour-row.drop-target {
+  background: #1a2a3a;
+  border: 1px dashed #4a6cf7;
+}
+
+.day-tracker-root .hour-row.current {
+  background: #1a1a2a;
+  border-left: 3px solid #4a6cf7;
+}
+
+.day-tracker-root .hour-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  min-width: 44px;
+  padding-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.day-tracker-root .hour-row.current .hour-label {
+  color: #4a6cf7;
+}
+
+.day-tracker-root .hour-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.day-tracker-root .hour-empty {
+  font-size: 13px;
+  color: #333;
+}
+
+/* Date nav */
+.day-tracker-root .date-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.day-tracker-root .date-nav button {
+  background: #1a1a1a;
+  border: none;
+  color: #999;
+  font-size: 18px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.day-tracker-root .date-nav span {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ccc;
+}
+
+/* Week view */
+.day-tracker-root .week-day {
+  display: flex;
+  align-items: center;
+  padding: 14px 12px;
+  border-bottom: 1px solid #1a1a1a;
+  cursor: pointer;
+  border-radius: 8px;
+  margin: 0 -12px;
+  transition: background 0.15s;
+}
+
+.day-tracker-root .week-day:hover {
+  background: #1a1a1a;
+}
+
+.day-tracker-root .week-day.today {
+  background: #1a1a2a;
+  border-left: 3px solid #4a6cf7;
+}
+
+.day-tracker-root .week-day-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ccc;
+  min-width: 100px;
+}
+
+.day-tracker-root .week-day-date {
+  font-size: 12px;
+  color: #555;
+  min-width: 60px;
+}
+
+.day-tracker-root .week-stat {
+  font-size: 13px;
+  color: #888;
+  margin-left: auto;
+}
+
+.day-tracker-root .week-energy {
+  font-size: 13px;
+  color: #f7c948;
+  min-width: 50px;
+  text-align: right;
+}
+
+/* Goals */
+.day-tracker-root .goal-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 10px 0;
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.day-tracker-root .goal-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #e0e0e0;
+  font-size: 14px;
+  font-family: inherit;
+  padding: 4px 0;
+}
+
+.day-tracker-root .goal-input:focus {
+  outline: none;
+}
+
+.day-tracker-root .goal-num {
+  font-size: 13px;
+  color: #444;
+  font-weight: 600;
+  min-width: 20px;
+  padding-top: 5px;
+}
+
+.day-tracker-root .goal-delete {
+  background: none;
+  border: none;
+  color: #444;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.day-tracker-root .goal-delete:hover {
+  color: #e74c3c;
+}
+
+.day-tracker-root .add-goal {
+  margin-top: 12px;
+  background: #1a1a1a;
+  border: 1px dashed #333;
+  color: #666;
+  padding: 10px;
+  border-radius: 8px;
+  width: 100%;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.day-tracker-root .add-goal:hover {
+  border-color: #555;
+  color: #999;
+}
+
+/* Coach */
+.day-tracker-root .coach-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 80px;
+}
+
+.day-tracker-root .coach-msg {
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 90%;
+}
+
+.day-tracker-root .coach-msg.user {
+  background: #4a6cf7;
+  color: #fff;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+
+.day-tracker-root .coach-msg.assistant {
+  background: #1a1a1a;
+  color: #ddd;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+
+.day-tracker-root .coach-input-bar {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px;
+  background: #0f0f0f;
+  border-top: 1px solid #1a1a1a;
+  display: flex;
+  gap: 8px;
+}
+
+.day-tracker-root .coach-input {
+  flex: 1;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  color: #e0e0e0;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.day-tracker-root .coach-input:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.day-tracker-root .coach-send {
+  background: #4a6cf7;
+  border: none;
+  color: #fff;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.day-tracker-root .coach-send:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.day-tracker-root .coach-loading {
+  color: #666;
+  font-size: 13px;
+  font-style: italic;
+  padding: 8px 12px;
+}
+
+.day-tracker-root .coach-error {
+  color: #e74c3c;
+  font-size: 13px;
+  padding: 8px 12px;
+  background: #1a1010;
+  border-radius: 8px;
+}
+
+.day-tracker-root .coach-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #444;
+}
+
+.day-tracker-root .coach-empty h3 {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.day-tracker-root .coach-empty p {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Section headers */
+.day-tracker-root .section-header {
+  font-size: 13px;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+/* Calendar */
+.day-tracker-root .cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.day-tracker-root .cal-nav-btn {
+  background: #1a1a1a;
+  border: none;
+  color: #999;
+  font-size: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.day-tracker-root .cal-nav-btn:hover {
+  background: #252525;
+  color: #fff;
+}
+
+.day-tracker-root .cal-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.day-tracker-root .cal-month {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.day-tracker-root .cal-year {
+  font-size: 12px;
+  color: #555;
+}
+
+.day-tracker-root .cal-today-btn {
+  display: block;
+  margin: 0 auto 14px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #999;
+  padding: 4px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.day-tracker-root .cal-today-btn:hover {
+  color: #fff;
+  border-color: #4a6cf7;
+}
+
+.day-tracker-root .cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.day-tracker-root .cal-day-name {
+  font-size: 11px;
+  color: #555;
+  text-align: center;
+  padding: 4px 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.day-tracker-root .cal-cell {
+  aspect-ratio: 1;
+  background: #141414;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  border: 1px solid transparent;
+  padding: 2px;
+  min-height: 48px;
+}
+
+.day-tracker-root .cal-cell.empty {
+  background: transparent;
+  cursor: default;
+}
+
+.day-tracker-root .cal-cell:not(.empty):hover {
+  background: #1a1a2a;
+  border-color: #333;
+}
+
+.day-tracker-root .cal-cell.today {
+  background: #1a1a2a;
+  border-color: #4a6cf7;
+}
+
+.day-tracker-root .cal-cell.has-logs {
+  background: #1a2a1a;
+  border-color: #2a3a2a;
+}
+
+.day-tracker-root .cal-cell.today.has-logs {
+  background: #1a2a2a;
+  border-color: #4a6cf7;
+}
+
+.day-tracker-root .cal-day-num {
+  font-size: 13px;
+  font-weight: 600;
+  color: #888;
+}
+
+.day-tracker-root .cal-cell.today .cal-day-num {
+  color: #4a6cf7;
+}
+
+.day-tracker-root .cal-cell.has-logs .cal-day-num {
+  color: #ccc;
+}
+
+.day-tracker-root .cal-cell-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.day-tracker-root .cal-cell-hours {
+  font-size: 9px;
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.day-tracker-root .cal-cell-energy {
+  display: flex;
+  gap: 1.5px;
+}
+
+.day-tracker-root .cal-energy-pip {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #252525;
+}
+
+.day-tracker-root .cal-energy-pip.filled {
+  background: #f7c948;
+}
+
+/* Projects */
+.day-tracker-root .projects-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.day-tracker-root .projects-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.day-tracker-root .projects-subtitle {
+  font-size: 13px;
+  color: #555;
+  margin-top: 2px;
+}
+
+.day-tracker-root .new-project-btn {
+  background: #4a6cf7;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.day-tracker-root .projects-filters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.day-tracker-root .filter-select {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #ccc;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.day-tracker-root .projects-count {
+  margin-left: auto;
+  font-size: 13px;
+  color: #555;
+}
+
+.day-tracker-root .projects-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.day-tracker-root .project-card {
+  background: #1a1a1a;
+  border: 1px solid #252525;
+  border-radius: 10px;
+  padding: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.day-tracker-root .project-card:hover {
+  border-color: #333;
+}
+
+.day-tracker-root .project-card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.day-tracker-root .project-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.day-tracker-root .project-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.day-tracker-root .project-tag.category {
+  background: rgba(74, 108, 247, 0.15);
+  color: #7b9cff;
+  border: 1px solid rgba(74, 108, 247, 0.3);
+}
+
+.day-tracker-root .project-tag.status {
+  border: 1px solid #333;
+}
+
+.day-tracker-root .project-tag.status.active {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.day-tracker-root .project-tag.status.paused {
+  background: rgba(247, 201, 72, 0.12);
+  color: #f7c948;
+  border-color: rgba(247, 201, 72, 0.3);
+}
+
+.day-tracker-root .project-tag.status.completed {
+  background: rgba(107, 114, 128, 0.12);
+  color: #9ca3af;
+  border-color: rgba(107, 114, 128, 0.3);
+}
+
+.day-tracker-root .project-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e0e0e0;
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+
+.day-tracker-root .project-progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.day-tracker-root .project-tasks-count {
+  font-size: 12px;
+  color: #888;
+}
+
+.day-tracker-root .project-pct {
+  font-size: 12px;
+  color: #888;
+  font-weight: 600;
+}
+
+.day-tracker-root .project-progress-bar {
+  height: 4px;
+  background: #252525;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.day-tracker-root .project-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+.day-tracker-root .project-card-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.day-tracker-root .project-deadline {
+  font-size: 12px;
+  color: #555;
+}
+
+.day-tracker-root .project-open-link {
+  font-size: 12px;
+  color: #4a6cf7;
+  font-weight: 500;
+}
+
+/* Project detail modal */
+.day-tracker-root .project-detail-modal {
+  max-height: 85dvh;
+  overflow-y: auto;
+}
+
+.day-tracker-root .project-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.day-tracker-root .project-detail-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.day-tracker-root .icon-btn {
+  background: #252525;
+  border: none;
+  color: #999;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.day-tracker-root .icon-btn:hover {
+  color: #ccc;
+}
+
+.day-tracker-root .icon-btn.delete {
+  color: #ef4444;
+}
+
+.day-tracker-root .icon-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.day-tracker-root .project-tasks-section {
+  margin-top: 8px;
+}
+
+.day-tracker-root .project-task-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #1f1f1f;
+}
+
+.day-tracker-root .task-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 2px solid #333;
+  background: transparent;
+  color: #4a6cf7;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.day-tracker-root .task-check.checked {
+  background: #4a6cf7;
+  border-color: #4a6cf7;
+  color: #fff;
+}
+
+.day-tracker-root .task-text {
+  flex: 1;
+  font-size: 14px;
+  color: #ccc;
+}
+
+.day-tracker-root .task-text.done {
+  text-decoration: line-through;
+  color: #555;
+}
+
+.day-tracker-root .add-task-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.day-tracker-root .add-task-row .modal-input {
+  flex: 1;
+}
+
+/* Modal */
+.day-tracker-root .modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.day-tracker-root .modal {
+  background: #1a1a1a;
+  width: 100%;
+  max-width: 480px;
+  border-radius: 16px 16px 0 0;
+  padding: 20px 16px 32px;
+  animation: dtSlideUp 0.2s ease-out;
+}
+
+@keyframes dtSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.day-tracker-root .modal h3 {
+  font-size: 16px;
+  color: #fff;
+  margin-bottom: 16px;
+}
+
+.day-tracker-root .modal label {
+  display: block;
+  font-size: 12px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  margin-top: 12px;
+}
+
+.day-tracker-root .modal-input {
+  width: 100%;
+  background: #0f0f0f;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #e0e0e0;
+  padding: 10px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.day-tracker-root .modal-input:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.day-tracker-root .modal-select {
+  width: 100%;
+  background: #0f0f0f;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #e0e0e0;
+  padding: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.day-tracker-root .modal-select:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.day-tracker-root .color-picker {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.day-tracker-root .color-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.day-tracker-root .color-btn.selected {
+  border-color: #fff;
+  transform: scale(1.15);
+}
+
+.day-tracker-root input[type="date"] {
+  color-scheme: dark;
+}
+
+.day-tracker-root .modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.day-tracker-root .modal-actions button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+}
+
+.day-tracker-root .btn-cancel {
+  background: #222;
+  color: #999;
+}
+
+.day-tracker-root .btn-save {
+  background: #4a6cf7;
+  color: #fff;
+}
+
+.day-tracker-root .btn-clear {
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+/* Board / Vision Board */
+.day-tracker-root .board-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 160px);
+  width: 100%;
+}
+
+.day-tracker-root .board-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #141414;
+  border-bottom: 1px solid #1a1a1a;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.day-tracker-root .board-toolbar-left,
+.day-tracker-root .board-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.day-tracker-root .board-tool-btn {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #ccc;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.day-tracker-root .board-tool-btn:hover {
+  background: #252525;
+  color: #fff;
+}
+
+.day-tracker-root .board-tool-btn.small {
+  padding: 4px 8px;
+  min-width: 28px;
+  text-align: center;
+}
+
+.day-tracker-root .board-color-bar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.day-tracker-root .board-color-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.day-tracker-root .board-color-dot.selected {
+  border-color: #fff;
+  transform: scale(1.2);
+}
+
+.day-tracker-root .board-zoom-label {
+  font-size: 11px;
+  color: #666;
+  font-variant-numeric: tabular-nums;
+  min-width: 32px;
+  text-align: right;
+}
+
+.day-tracker-root .board-canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  background: #0a0a0a;
+  touch-action: none;
+}
+
+.day-tracker-root .board-canvas:active {
+  cursor: grabbing;
+}
+
+.day-tracker-root .board-grid {
+  position: absolute;
+  inset: -40px;
+  width: calc(100% + 80px);
+  height: calc(100% + 80px);
+  pointer-events: none;
+}
+
+.day-tracker-root .board-items-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+
+.day-tracker-root .board-item {
+  position: absolute;
+  cursor: grab;
+  user-select: none;
+  border-radius: 4px;
+  transition: box-shadow 0.15s;
+}
+
+.day-tracker-root .board-item:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  z-index: 10;
+}
+
+.day-tracker-root .board-item:active {
+  cursor: grabbing;
+}
+
+.day-tracker-root .board-item:hover .board-item-delete {
+  opacity: 1;
+}
+
+.day-tracker-root .board-item-delete {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 20;
+}
+
+.day-tracker-root .board-item.note {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.day-tracker-root .board-note-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a1a;
+  line-height: 1.4;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  flex: 1;
+}
+
+.day-tracker-root .board-note-edit {
+  width: 100%;
+  height: 100%;
+  min-height: 80px;
+  background: transparent;
+  border: none;
+  color: #1a1a1a;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  line-height: 1.4;
+  resize: none;
+  outline: none;
+  flex: 1;
+}
+
+.day-tracker-root .board-note-edit::placeholder {
+  color: rgba(0,0,0,0.3);
+}
+
+.day-tracker-root .board-item.image {
+  background: #fff;
+  padding: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+.day-tracker-root .board-img {
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.day-tracker-root .board-caption {
+  font-size: 11px;
+  color: #333;
+  padding: 4px 2px 0;
+  text-align: center;
+  font-weight: 500;
+}
+
+.day-tracker-root .board-caption-edit {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #ccc;
+  color: #333;
+  font-size: 11px;
+  font-family: inherit;
+  text-align: center;
+  padding: 4px 2px;
+  outline: none;
+  margin-top: 2px;
+}
+
+/* Notes */
+.day-tracker-root .notes-container {
+  padding-bottom: 20px;
+}
+
+.day-tracker-root .notes-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.day-tracker-root .notes-list-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.day-tracker-root .notes-new-btn {
+  background: #4a6cf7;
+  color: #fff;
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.day-tracker-root .notes-new-btn:hover {
+  background: #5b7bf8;
+}
+
+.day-tracker-root .notes-search {
+  width: 100%;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  color: #e0e0e0;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  margin-bottom: 8px;
+}
+
+.day-tracker-root .notes-search:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.day-tracker-root .notes-count {
+  font-size: 12px;
+  color: #555;
+  margin-bottom: 10px;
+}
+
+.day-tracker-root .notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.day-tracker-root .notes-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 12px;
+  background: #141414;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.day-tracker-root .notes-list-item:hover {
+  background: #1a1a1a;
+}
+
+.day-tracker-root .notes-item-color {
+  width: 4px;
+  height: 36px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.day-tracker-root .notes-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.day-tracker-root .notes-item-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #e0e0e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.day-tracker-root .notes-item-preview {
+  font-size: 13px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.day-tracker-root .notes-item-date {
+  font-size: 12px;
+  color: #555;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.day-tracker-root .notes-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #444;
+  font-size: 14px;
+}
+
+.day-tracker-root .notes-editor {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100dvh - 200px);
+}
+
+.day-tracker-root .notes-editor-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 8px;
+}
+
+.day-tracker-root .notes-back-btn {
+  background: none;
+  border: none;
+  color: #4a6cf7;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+  font-family: inherit;
+}
+
+.day-tracker-root .notes-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.day-tracker-root .notes-color-picks {
+  display: flex;
+  gap: 6px;
+}
+
+.day-tracker-root .notes-color-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.day-tracker-root .notes-color-dot.selected {
+  border-color: #fff;
+  transform: scale(1.2);
+}
+
+.day-tracker-root .notes-delete-btn {
+  background: none;
+  border: 1px solid #333;
+  color: #ef4444;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.day-tracker-root .notes-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.day-tracker-root .notes-title-input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  font-family: inherit;
+  padding: 0;
+  margin-bottom: 12px;
+}
+
+.day-tracker-root .notes-title-input:focus {
+  outline: none;
+}
+
+.day-tracker-root .notes-title-input::placeholder {
+  color: #444;
+}
+
+.day-tracker-root .notes-body-input {
+  width: 100%;
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #e0e0e0;
+  font-size: 15px;
+  font-family: inherit;
+  line-height: 1.7;
+  resize: none;
+  min-height: 300px;
+}
+
+.day-tracker-root .notes-body-input:focus {
+  outline: none;
+}
+
+.day-tracker-root .notes-body-input::placeholder {
+  color: #333;
+}
