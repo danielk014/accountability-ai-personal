@@ -11,6 +11,15 @@ function NotesView() {
 
   const selected = notes.find(n => n.id === selectedId);
 
+  // Re-load when another device syncs changes
+  useEffect(() => {
+    function handleRefresh() {
+      setNotes(loadNotes());
+    }
+    window.addEventListener('daytracker-data-refreshed', handleRefresh);
+    return () => window.removeEventListener('daytracker-data-refreshed', handleRefresh);
+  }, []);
+
   useEffect(() => {
     if (selected && textareaRef.current) {
       textareaRef.current.focus();

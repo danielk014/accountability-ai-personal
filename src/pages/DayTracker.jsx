@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { initStorage, migrateLocalToSupabase, pullFromSupabase, pushAllToSupabase } from '@/components/daytracker/storage';
+import { initStorage, cleanupStorage, migrateLocalToSupabase, pullFromSupabase, pushAllToSupabase } from '@/components/daytracker/storage';
 import DailyView from '@/components/daytracker/DailyView';
 import CalendarView from '@/components/daytracker/CalendarView';
 import WeekView from '@/components/daytracker/WeekView';
@@ -16,7 +16,6 @@ const TABS = ['Today', 'Calendar', 'Goals', 'Projects', 'Notes', 'Nutrition', 'C
 export default function DayTracker() {
   const { user } = useAuth();
   const [dataReady, setDataReady] = useState(false);
-  const [dataKey, setDataKey] = useState(0);
   const [tab, setTab] = useState('Today');
   const [selectedDate, setSelectedDate] = useState(null);
 
@@ -29,21 +28,13 @@ export default function DayTracker() {
       await pullFromSupabase();
       if (!cancelled) {
         setDataReady(true);
-        setDataKey(k => k + 1);
       }
       // After rendering, push all local data to Supabase in background
       // This ensures any localStorage-only data gets synced for other devices
       pushAllToSupabase().catch(() => {});
     })();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; cleanupStorage(); };
   }, [user]);
-
-  // Listen for realtime/visibility-based data refreshes from other devices
-  useEffect(() => {
-    const handler = () => setDataKey(k => k + 1);
-    window.addEventListener('daytracker-data-refreshed', handler);
-    return () => window.removeEventListener('daytracker-data-refreshed', handler);
-  }, []);
 
   if (!dataReady) {
     return (
@@ -75,7 +66,7 @@ export default function DayTracker() {
           ))}
         </nav>
 
-        <main className="content" key={dataKey}>
+        <main className="content">
           {tab === 'Today' && <DailyView overrideDate={selectedDate} />}
           {tab === 'Calendar' && <CalendarView onDaySelect={handleDaySelect} />}
           {tab === 'Goals' && <GoalsView />}

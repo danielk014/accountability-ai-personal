@@ -44,6 +44,16 @@ function GoalsView() {
     setLongTermGoals(loadLongTermGoals());
   }, []);
 
+  // Re-load when another device syncs changes
+  useEffect(() => {
+    function handleRefresh() {
+      setGoals(loadGoals());
+      setLongTermGoals(loadLongTermGoals());
+    }
+    window.addEventListener('daytracker-data-refreshed', handleRefresh);
+    return () => window.removeEventListener('daytracker-data-refreshed', handleRefresh);
+  }, []);
+
   function updateGoals(next) {
     setGoals(next);
     saveGoals(next);

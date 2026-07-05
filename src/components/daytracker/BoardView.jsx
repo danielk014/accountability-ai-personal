@@ -20,6 +20,15 @@ function BoardView() {
     setBoard(loadBoard());
   }, []);
 
+  // Re-load when another device syncs changes
+  useEffect(() => {
+    function handleRefresh() {
+      setBoard(loadBoard());
+    }
+    window.addEventListener('daytracker-data-refreshed', handleRefresh);
+    return () => window.removeEventListener('daytracker-data-refreshed', handleRefresh);
+  }, []);
+
   function persist(next) {
     setBoard(next);
     saveBoard(next);

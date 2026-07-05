@@ -23,60 +23,65 @@ const KEY_TO_TYPE = {
   [NOTES_KEY]: 'notes',
 };
 
+const TYPE_TO_KEY = Object.fromEntries(
+  Object.entries(KEY_TO_TYPE).map(([k, v]) => [v, k])
+);
+
 let _userId = null;
 let _realtimeChannel = null;
 let _visibilityHandler = null;
+let _pullInterval = null;
 const _debounceTimers = {};
-// Track which data types have been modified locally and need pushing
-const _locallyDirty = new Set();
 
-// Track local write timestamps so we can compare with Supabase
+// ---------- timestamp helpers ----------
+
 function _getLocalTimestamps() {
   try { return JSON.parse(localStorage.getItem(TIMESTAMPS_KEY)) || {}; } catch { return {}; }
 }
+
 function _setLocalTimestamp(dataType) {
   const ts = _getLocalTimestamps();
   ts[dataType] = new Date().toISOString();
   localStorage.setItem(TIMESTAMPS_KEY, JSON.stringify(ts));
 }
 
+// ---------- per-write sync to Supabase ----------
+
 function syncToSupabase(localStorageKey) {
   if (!_userId) return;
   const dataType = KEY_TO_TYPE[localStorageKey];
   if (!dataType) return;
 
-  // Track local write time and mark as needing push
+  // Record the local write timestamp
   _setLocalTimestamp(dataType);
-  _locallyDirty.add(dataType);
 
   clearTimeout(_debounceTimers[dataType]);
   _debounceTimers[dataType] = setTimeout(async () => {
     try {
       const raw = localStorage.getItem(localStorageKey);
       const data = raw ? JSON.parse(raw) : {};
+      const now = new Date().toISOString();
       const { error } = await supabase.from('user_data').upsert(
-        { user_id: _userId, data_type: dataType, data, updated_at: new Date().toISOString() },
+        { user_id: _userId, data_type: dataType, data, updated_at: now },
         { onConflict: 'user_id,data_type' }
       );
       if (error) {
-        console.error(`Supabase sync error for ${dataType}:`, error.message, error);
+        console.error(`[sync] upsert failed for ${dataType}:`, error.message);
       }
     } catch (err) {
-      console.error(`Supabase sync exception for ${dataType}:`, err);
+      console.error(`[sync] exception for ${dataType}:`, err);
     }
   }, 500);
 }
+
+// ---------- public load/save helpers ----------
 
 export function getDateStr(date = new Date()) {
   return date.toISOString().slice(0, 10);
 }
 
 export function loadLogs() {
-  try {
-    return JSON.parse(localStorage.getItem(LOGS_KEY)) || {};
-  } catch {
-    return {};
-  }
+  try { return JSON.parse(localStorage.getItem(LOGS_KEY)) || {}; } catch { return {}; }
 }
 
 export function saveLogs(logs) {
@@ -98,11 +103,7 @@ export function setHourLog(date, hour, data) {
 }
 
 export function loadGoals() {
-  try {
-    return JSON.parse(localStorage.getItem(GOALS_KEY)) || [];
-  } catch {
-    return [];
-  }
+  try { return JSON.parse(localStorage.getItem(GOALS_KEY)) || []; } catch { return []; }
 }
 
 export function saveGoals(goals) {
@@ -111,11 +112,7 @@ export function saveGoals(goals) {
 }
 
 export function loadLongTermGoals() {
-  try {
-    return JSON.parse(localStorage.getItem(LONG_TERM_GOALS_KEY)) || [];
-  } catch {
-    return [];
-  }
+  try { return JSON.parse(localStorage.getItem(LONG_TERM_GOALS_KEY)) || []; } catch { return []; }
 }
 
 export function saveLongTermGoals(goals) {
@@ -124,11 +121,7 @@ export function saveLongTermGoals(goals) {
 }
 
 export function loadProjects() {
-  try {
-    return JSON.parse(localStorage.getItem(PROJECTS_KEY)) || [];
-  } catch {
-    return [];
-  }
+  try { return JSON.parse(localStorage.getItem(PROJECTS_KEY)) || []; } catch { return []; }
 }
 
 export function saveProjects(projects) {
@@ -172,11 +165,7 @@ export function saveDailyTasks(date, tasks) {
 }
 
 export function loadRecurringTasks() {
-  try {
-    return JSON.parse(localStorage.getItem(RECURRING_TASKS_KEY)) || [];
-  } catch {
-    return [];
-  }
+  try { return JSON.parse(localStorage.getItem(RECURRING_TASKS_KEY)) || []; } catch { return []; }
 }
 
 export function saveRecurringTasks(tasks) {
@@ -207,11 +196,7 @@ export function saveBlocks(date, blocks) {
 }
 
 export function loadNotes() {
-  try {
-    return JSON.parse(localStorage.getItem(NOTES_KEY)) || [];
-  } catch {
-    return [];
-  }
+  try { return JSON.parse(localStorage.getItem(NOTES_KEY)) || []; } catch { return []; }
 }
 
 export function saveNotes(notes) {
@@ -220,19 +205,11 @@ export function saveNotes(notes) {
 }
 
 export function loadAllBlocks() {
-  try {
-    return JSON.parse(localStorage.getItem(BLOCKS_KEY)) || {};
-  } catch {
-    return {};
-  }
+  try { return JSON.parse(localStorage.getItem(BLOCKS_KEY)) || {}; } catch { return {}; }
 }
 
 export function loadAllDailyTasks() {
-  try {
-    return JSON.parse(localStorage.getItem(DAILY_TASKS_KEY)) || {};
-  } catch {
-    return {};
-  }
+  try { return JSON.parse(localStorage.getItem(DAILY_TASKS_KEY)) || {}; } catch { return {}; }
 }
 
 export function getLast7DaysLogs() {
@@ -272,18 +249,36 @@ export function getDayStats(date) {
   };
 }
 
-const TYPE_TO_KEY = Object.fromEntries(
-  Object.entries(KEY_TO_TYPE).map(([k, v]) => [v, k])
-);
+// ---------- push local data to Supabase (safe — checks remote timestamps first) ----------
 
-// Push locally-modified data to Supabase (ensures offline changes get synced)
 export async function pushAllToSupabase() {
   if (!_userId) return;
+
+  // Fetch remote timestamps so we only push data that is genuinely newer
+  const { data: remoteRows, error: fetchErr } = await supabase
+    .from('user_data')
+    .select('data_type, updated_at')
+    .eq('user_id', _userId);
+
+  if (fetchErr) {
+    console.error('[sync] pushAll: failed to fetch remote timestamps:', fetchErr);
+    return;
+  }
+
+  const remoteTimestamps = {};
+  for (const row of (remoteRows || [])) {
+    remoteTimestamps[row.data_type] = row.updated_at;
+  }
+
+  const localTimestamps = _getLocalTimestamps();
+
   for (const [localKey, dataType] of Object.entries(KEY_TO_TYPE)) {
-    // Only push data types that were actually modified locally,
-    // not data that was just pulled from Supabase — otherwise we
-    // overwrite newer remote data with stale local copies.
-    if (!_locallyDirty.has(dataType)) continue;
+    const localTs = localTimestamps[dataType];
+    const remoteTs = remoteTimestamps[dataType];
+
+    // Skip if remote already has data at least as new as local
+    if (remoteTs && localTs && remoteTs >= localTs) continue;
+
     const raw = localStorage.getItem(localKey);
     if (!raw) continue;
     try {
@@ -291,61 +286,14 @@ export async function pushAllToSupabase() {
       const isEmpty = Array.isArray(parsed) ? parsed.length === 0 : Object.keys(parsed).length === 0;
       if (isEmpty) continue;
       await supabase.from('user_data').upsert(
-        { user_id: _userId, data_type: dataType, data: parsed, updated_at: new Date().toISOString() },
+        { user_id: _userId, data_type: dataType, data: parsed, updated_at: localTs || new Date().toISOString() },
         { onConflict: 'user_id,data_type' }
       );
-      _locallyDirty.delete(dataType);
     } catch {}
   }
 }
 
-export function initStorage(userId) {
-  _userId = userId;
-
-  // Set up visibility-based sync: re-pull when user returns to the tab/app
-  if (_visibilityHandler) {
-    document.removeEventListener('visibilitychange', _visibilityHandler);
-  }
-  _visibilityHandler = () => {
-    if (document.visibilityState === 'visible' && _userId) {
-      pullFromSupabase().then(() => {
-        window.dispatchEvent(new CustomEvent('daytracker-data-refreshed'));
-      });
-    }
-  };
-  document.addEventListener('visibilitychange', _visibilityHandler);
-
-  // Set up Supabase realtime subscription for live sync across devices
-  if (_realtimeChannel) {
-    supabase.removeChannel(_realtimeChannel);
-  }
-  _realtimeChannel = supabase
-    .channel(`user_data_${userId}`)
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'user_data',
-      filter: `user_id=eq.${userId}`,
-    }, (payload) => {
-      // Another device wrote — update localStorage if their data is newer
-      const row = payload.new;
-      if (!row || !row.data_type) return;
-      const localKey = TYPE_TO_KEY[row.data_type];
-      if (!localKey) return;
-      const localTs = _getLocalTimestamps()[row.data_type];
-      const remoteTs = row.updated_at;
-      // Only apply remote change if it's newer than our last local write
-      if (!localTs || remoteTs > localTs) {
-        localStorage.setItem(localKey, JSON.stringify(row.data));
-        // Update local timestamp to match remote so we don't re-push
-        const ts = _getLocalTimestamps();
-        ts[row.data_type] = remoteTs;
-        localStorage.setItem(TIMESTAMPS_KEY, JSON.stringify(ts));
-        window.dispatchEvent(new CustomEvent('daytracker-data-refreshed'));
-      }
-    })
-    .subscribe();
-}
+// ---------- pull remote data into localStorage ----------
 
 export async function pullFromSupabase() {
   if (!_userId) return;
@@ -354,7 +302,7 @@ export async function pullFromSupabase() {
     .select('data_type, data, updated_at')
     .eq('user_id', _userId);
   if (error) {
-    console.error('pullFromSupabase failed:', error);
+    console.error('[sync] pullFromSupabase failed:', error);
     return;
   }
   const localTimestamps = _getLocalTimestamps();
@@ -370,12 +318,12 @@ export async function pullFromSupabase() {
     if (localEmpty || !localTs || remoteTs >= localTs) {
       localStorage.setItem(localKey, JSON.stringify(row.data));
       localTimestamps[row.data_type] = remoteTs;
-      // Remote is at least as new as local — no need to push this type back
-      _locallyDirty.delete(row.data_type);
     }
   }
   localStorage.setItem(TIMESTAMPS_KEY, JSON.stringify(localTimestamps));
 }
+
+// ---------- one-time migration for users who had data before sync existed ----------
 
 export async function migrateLocalToSupabase() {
   if (!_userId) return;
@@ -386,7 +334,7 @@ export async function migrateLocalToSupabase() {
     .select('data_type')
     .eq('user_id', _userId);
   if (error) {
-    console.error('migrateLocalToSupabase check failed:', error);
+    console.error('[sync] migrateLocalToSupabase check failed:', error);
     return;
   }
 
@@ -415,6 +363,83 @@ export async function migrateLocalToSupabase() {
   if (rows.length === 0) return;
   const { error: insertErr } = await supabase.from('user_data').insert(rows);
   if (insertErr) {
-    console.error('migrateLocalToSupabase insert failed:', insertErr);
+    console.error('[sync] migrateLocalToSupabase insert failed:', insertErr);
+  }
+}
+
+// ---------- dispatch helper ----------
+
+function _notifyRefresh() {
+  window.dispatchEvent(new CustomEvent('daytracker-data-refreshed'));
+}
+
+// ---------- init / cleanup ----------
+
+export function initStorage(userId) {
+  _userId = userId;
+
+  // --- visibility-based sync: re-pull when user returns to the tab/app ---
+  if (_visibilityHandler) {
+    document.removeEventListener('visibilitychange', _visibilityHandler);
+  }
+  _visibilityHandler = () => {
+    if (document.visibilityState === 'visible' && _userId) {
+      pullFromSupabase().then(_notifyRefresh);
+    }
+  };
+  document.addEventListener('visibilitychange', _visibilityHandler);
+
+  // --- periodic pull as fallback (realtime WebSockets drop on mobile) ---
+  if (_pullInterval) clearInterval(_pullInterval);
+  _pullInterval = setInterval(() => {
+    if (_userId && document.visibilityState === 'visible') {
+      pullFromSupabase().then(_notifyRefresh);
+    }
+  }, 30_000);
+
+  // --- Supabase realtime subscription for live sync across devices ---
+  if (_realtimeChannel) {
+    supabase.removeChannel(_realtimeChannel);
+  }
+  _realtimeChannel = supabase
+    .channel(`user_data_${userId}`)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'user_data',
+      filter: `user_id=eq.${userId}`,
+    }, (payload) => {
+      // Another device wrote — update localStorage if their data is newer
+      const row = payload.new;
+      if (!row || !row.data_type) return;
+      const localKey = TYPE_TO_KEY[row.data_type];
+      if (!localKey) return;
+      const localTs = _getLocalTimestamps()[row.data_type];
+      const remoteTs = row.updated_at;
+      // Only apply remote change if it's newer than our last local write
+      if (!localTs || remoteTs > localTs) {
+        localStorage.setItem(localKey, JSON.stringify(row.data));
+        // Update local timestamp to match remote so we don't re-push
+        const ts = _getLocalTimestamps();
+        ts[row.data_type] = remoteTs;
+        localStorage.setItem(TIMESTAMPS_KEY, JSON.stringify(ts));
+        _notifyRefresh();
+      }
+    })
+    .subscribe();
+}
+
+export function cleanupStorage() {
+  if (_visibilityHandler) {
+    document.removeEventListener('visibilitychange', _visibilityHandler);
+    _visibilityHandler = null;
+  }
+  if (_pullInterval) {
+    clearInterval(_pullInterval);
+    _pullInterval = null;
+  }
+  if (_realtimeChannel) {
+    supabase.removeChannel(_realtimeChannel);
+    _realtimeChannel = null;
   }
 }
