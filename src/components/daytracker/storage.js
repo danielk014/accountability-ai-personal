@@ -45,6 +45,36 @@ function _setLocalTimestamp(dataType) {
   localStorage.setItem(TIMESTAMPS_KEY, JSON.stringify(ts));
 }
 
+// ---------- write a single data type to Supabase (update existing row, or insert) ----------
+
+async function _writeToSupabase(dataType, data, timestamp) {
+  // Try updating the existing row first
+  const { data: updated, error: updateErr } = await supabase
+    .from('user_data')
+    .update({ data, updated_at: timestamp })
+    .eq('user_id', _userId)
+    .eq('data_type', dataType)
+    .select('data_type');
+
+  if (updateErr) {
+    console.error(`[sync] update failed for ${dataType}:`, updateErr.message);
+    return;
+  }
+
+  // If no row was updated, insert a new one
+  if (!updated || updated.length === 0) {
+    const { error: insertErr } = await supabase.from('user_data').insert({
+      user_id: _userId,
+      data_type: dataType,
+      data,
+      updated_at: timestamp,
+    });
+    if (insertErr) {
+      console.error(`[sync] insert failed for ${dataType}:`, insertErr.message);
+    }
+  }
+}
+
 // ---------- per-write sync to Supabase ----------
 
 function syncToSupabase(localStorageKey) {
@@ -60,14 +90,7 @@ function syncToSupabase(localStorageKey) {
     try {
       const raw = localStorage.getItem(localStorageKey);
       const data = raw ? JSON.parse(raw) : {};
-      const now = new Date().toISOString();
-      const { error } = await supabase.from('user_data').upsert(
-        { user_id: _userId, data_type: dataType, data, updated_at: now },
-        { onConflict: 'user_id,data_type' }
-      );
-      if (error) {
-        console.error(`[sync] upsert failed for ${dataType}:`, error.message);
-      }
+      await _writeToSupabase(dataType, data, new Date().toISOString());
     } catch (err) {
       console.error(`[sync] exception for ${dataType}:`, err);
     }
@@ -285,10 +308,7 @@ export async function pushAllToSupabase() {
       const parsed = JSON.parse(raw);
       const isEmpty = Array.isArray(parsed) ? parsed.length === 0 : Object.keys(parsed).length === 0;
       if (isEmpty) continue;
-      await supabase.from('user_data').upsert(
-        { user_id: _userId, data_type: dataType, data: parsed, updated_at: localTs || new Date().toISOString() },
-        { onConflict: 'user_id,data_type' }
-      );
+      await _writeToSupabase(dataType, parsed, localTs || new Date().toISOString());
     } catch {}
   }
 }
@@ -341,7 +361,6 @@ export async function migrateLocalToSupabase() {
   const existingTypes = new Set((existing || []).map(r => r.data_type));
 
   // Push any local data types that are missing from Supabase
-  const rows = [];
   for (const [localKey, dataType] of Object.entries(KEY_TO_TYPE)) {
     if (existingTypes.has(dataType)) continue; // already in Supabase
     const raw = localStorage.getItem(localKey);
@@ -350,20 +369,10 @@ export async function migrateLocalToSupabase() {
       const parsed = JSON.parse(raw);
       const isEmpty = Array.isArray(parsed) ? parsed.length === 0 : Object.keys(parsed).length === 0;
       if (isEmpty) continue;
-      rows.push({
-        user_id: _userId,
-        data_type: dataType,
-        data: parsed,
-        updated_at: new Date().toISOString(),
-      });
+      await _writeToSupabase(dataType, parsed, new Date().toISOString());
     } catch {
       // skip unparseable
     }
-  }
-  if (rows.length === 0) return;
-  const { error: insertErr } = await supabase.from('user_data').insert(rows);
-  if (insertErr) {
-    console.error('[sync] migrateLocalToSupabase insert failed:', insertErr);
   }
 }
 
