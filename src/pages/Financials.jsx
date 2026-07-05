@@ -36,24 +36,46 @@ function _migrateItems(fin) {
 
 function loadFin() {
   const empty = EMPTY_FIN();
+
+  let remote = null;
+  let local = null;
   try {
     const raw = supabaseStorage.getItem(getStorageKey());
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed) return _migrateItems({ ...empty, ...parsed });
-    }
+    if (raw) remote = JSON.parse(raw);
   } catch {}
   try {
-    // Fallback: localStorage backup (written by saveFin)
-    const local = localStorage.getItem(getStorageKey());
-    if (local) {
-      const parsed = JSON.parse(local);
-      if (parsed) {
-        supabaseStorage.setItem(getStorageKey(), local);
-        return _migrateItems({ ...empty, ...parsed });
-      }
-    }
+    const raw = localStorage.getItem(getStorageKey());
+    if (raw) local = JSON.parse(raw);
   } catch {}
+
+  // If we have both, merge them (union by id) so no items are lost
+  if (remote && local) {
+    const mergeArr = (a, b) => {
+      const map = new Map();
+      [...(b || []), ...(a || [])].forEach(item => { if (item?.id) map.set(item.id, item); });
+      return [...map.values()];
+    };
+    const merged = {
+      ...empty,
+      income_sources:    mergeArr(local.income_sources, remote.income_sources),
+      recurring_expenses:mergeArr(local.recurring_expenses, remote.recurring_expenses),
+      wishlist_expenses: mergeArr(local.wishlist_expenses, remote.wishlist_expenses),
+      one_time_expenses: mergeArr(local.one_time_expenses, remote.one_time_expenses),
+      savings_deposits:  mergeArr(local.savings_deposits, remote.savings_deposits),
+    };
+    const result = _migrateItems(merged);
+    // Persist the merged version so both sources stay in sync
+    const json = JSON.stringify(result);
+    supabaseStorage.setItem(getStorageKey(), json);
+    try { localStorage.setItem(getStorageKey(), json); } catch {}
+    return result;
+  }
+
+  if (remote) return _migrateItems({ ...empty, ...remote });
+  if (local) {
+    supabaseStorage.setItem(getStorageKey(), JSON.stringify(local));
+    return _migrateItems({ ...empty, ...local });
+  }
   return empty;
 }
 function saveFin(d) {
