@@ -5,6 +5,8 @@ You are given these things every time I talk to you:
 2. MY SHORT-TERM GOALS — what I've said matters right now.
 3. MY LOGS — what I planned and actually did each hour for all their recorded days, with an energy rating 1–5.
 4. MY NUTRITION LOG — what I ate each day, with calories, macros, and individual foods.
+5. MY FINANCIAL DATA — income, expenses, savings deposits, and budget breakdown.
+6. MY GYM DATA — workout routines, exercises, sets/reps/weight, bodyweight tracking, and progress.
 
 YOUR JOB:
 - Judge my week against MY GOALS (both long-term and short-term), not against generic productivity. Tell me plainly if I'm on track or slipping, and cite the specific hours/days that prove it.
@@ -130,13 +132,74 @@ function formatLogs(logs) {
   return output || '(No logs yet)';
 }
 
+function formatFinancials(fin) {
+  if (!fin) return '(No financial data yet)';
+  let output = '';
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const byMonth = (arr) => (arr || []).filter(e => e.month === currentMonth);
+
+  const income = byMonth(fin.income_sources);
+  const recurring = byMonth(fin.recurring_expenses);
+  const wishlist = byMonth(fin.wishlist_expenses);
+  const oneTime = byMonth(fin.one_time_expenses);
+  const savings = byMonth(fin.savings_deposits);
+
+  const sum = (arr) => arr.reduce((t, i) => t + (parseFloat(i.amount) || 0), 0);
+  const totalIncome = sum(income);
+  const totalExpenses = sum(recurring) + sum(wishlist) + sum(oneTime);
+  const totalSaved = sum(savings);
+  const allTimeSaved = sum(fin.savings_deposits || []);
+  const surplus = totalIncome - totalExpenses;
+
+  output += `Month: ${currentMonth}\n`;
+  if (income.length > 0) output += `Income ($${totalIncome.toFixed(0)}): ${income.map(i => `${i.name} $${i.amount}`).join(', ')}\n`;
+  if (recurring.length > 0) output += `Recurring expenses ($${sum(recurring).toFixed(0)}): ${recurring.map(i => `${i.name} $${i.amount}`).join(', ')}\n`;
+  if (wishlist.length > 0) output += `Optional spending ($${sum(wishlist).toFixed(0)}): ${wishlist.map(i => `${i.name} $${i.amount}`).join(', ')}\n`;
+  if (oneTime.length > 0) output += `One-time payments ($${sum(oneTime).toFixed(0)}): ${oneTime.map(i => `${i.name} $${i.amount}`).join(', ')}\n`;
+  if (savings.length > 0) output += `Savings deposits this month ($${totalSaved.toFixed(0)}): ${savings.map(i => `${i.name} $${i.amount}`).join(', ')}\n`;
+  output += `Monthly surplus: $${surplus.toFixed(0)} | Savings rate: ${totalIncome > 0 ? ((surplus / totalIncome) * 100).toFixed(0) : 0}%\n`;
+  output += `Total saved all time: $${allTimeSaved.toFixed(0)}`;
+
+  return output || '(No financial data yet)';
+}
+
+function formatGymData(gym) {
+  if (!gym) return '(No gym data yet)';
+  let output = '';
+
+  if (gym.weight_unit) output += `Weight unit: ${gym.weight_unit}\n`;
+
+  // Workout days & exercises
+  for (const day of (gym.workout_days || [])) {
+    output += `\n${day.name} Day:\n`;
+    if ((day.exercises || []).length === 0) {
+      output += '  No exercises yet\n';
+    } else {
+      for (const ex of day.exercises) {
+        const sets = (ex.sets || []).map((s, i) => `Set ${i + 1}: ${s.weight}${gym.weight_unit} × ${s.reps}`).join(', ');
+        const lastLog = (ex.weight_log || []).slice(-1)[0];
+        const lastStr = lastLog ? ` | Last: ${lastLog.weight}${gym.weight_unit} × ${lastLog.reps} on ${lastLog.date}` : '';
+        output += `  - ${ex.name}: ${sets || 'no sets'}${lastStr}\n`;
+      }
+    }
+  }
+
+  // Bodyweight
+  const bw = (gym.bodyweight_log || []).slice(-14);
+  if (bw.length > 0) {
+    output += '\nRecent bodyweight: ' + bw.map(e => `${e.date}: ${e.weight}${gym.weight_unit}`).join(', ') + '\n';
+  }
+
+  return output || '(No gym data yet)';
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { message, logs, goals, longTermGoals, dailyTasks, scheduleBlocks, nutrition, coachPersonality, coachContextFiles, attachments } = req.body;
+    const { message, logs, goals, longTermGoals, dailyTasks, scheduleBlocks, nutrition, financials, gymData, coachPersonality, coachContextFiles, attachments } = req.body;
 
     const context = `
 MY LONG-TERM GOALS (life vision):
@@ -156,6 +219,12 @@ ${formatLogs(logs)}
 
 MY NUTRITION LOG (food intake per day):
 ${formatNutrition(nutrition)}
+
+MY FINANCIAL DATA:
+${formatFinancials(financials)}
+
+MY GYM DATA:
+${formatGymData(gymData)}
 `;
 
     // Build system prompt with optional custom personality

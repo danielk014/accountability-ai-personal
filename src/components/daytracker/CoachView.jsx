@@ -8,6 +8,8 @@ import { base44 } from '@/api/base44Client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import ModelSettingsPanel from '@/components/ModelSettingsPanel';
+import { supabaseStorage } from '@/api/supabaseStorage';
+import { getUserPrefix } from '@/lib/userStore';
 
 const DEFAULT_COACH_PERSONALITY = `You are my personal time, life, and strategic coach living inside my hour-by-hour tracker.
 
@@ -170,12 +172,28 @@ function CoachView() {
       const coachPersonality = profile?.model_personalities?.coach || null;
       const coachContextFiles = profile?.model_context_files?.coach || [];
 
+      // Load financial data
+      let financials = null;
+      try {
+        const finRaw = supabaseStorage.getItem(`${getUserPrefix()}accountable_financials_v2`);
+        if (finRaw) financials = JSON.parse(finRaw);
+      } catch {}
+
+      // Load gym data
+      let gymData = null;
+      try {
+        const gymRaw = supabaseStorage.getItem(`${getUserPrefix()}gym_tracker_v1`);
+        if (gymRaw) gymData = JSON.parse(gymRaw);
+      } catch {}
+
       const res = await fetch('/api/coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMsg,
           logs, goals, longTermGoals, dailyTasks, scheduleBlocks, nutrition,
+          financials,
+          gymData,
           coachPersonality,
           coachContextFiles,
           attachments: currentAttachments.map(a => ({ name: a.name, mediaType: a.mediaType, data: a.data })),
