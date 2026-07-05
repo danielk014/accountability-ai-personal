@@ -121,7 +121,7 @@ const TOOLS = [
   },
   {
     name: "delete_task",
-    description: "Delete a task or habit permanently.",
+    description: "Delete a task or habit permanently. IMPORTANT: Before calling this tool, you MUST ask the user to confirm deletion TWICE. First say what you're about to delete and ask if they're sure. Then after they confirm, ask one more time 'Are you absolutely sure you want to delete [task name]? This cannot be undone.' Only call this tool after receiving two confirmations.",
     input_schema: {
       type: "object",
       properties: {
@@ -252,7 +252,7 @@ const TOOLS = [
   },
   {
     name: "delete_todo_item",
-    description: "Delete a to-do item permanently.",
+    description: "Delete a to-do item permanently. IMPORTANT: Before calling this tool, you MUST ask the user to confirm deletion TWICE. First say what you're about to delete and ask if they're sure. Then after they confirm, ask one more time 'Are you absolutely sure you want to delete [item name]? This cannot be undone.' Only call this tool after receiving two confirmations.",
     input_schema: {
       type: "object",
       properties: {

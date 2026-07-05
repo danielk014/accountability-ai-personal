@@ -18,7 +18,7 @@ import { loadConversations, saveConversation, deleteConversation, newConversatio
 const getStorageKey = () => `${getUserPrefix()}accountable_financials_v2`;
 const getChatKey    = () => `${getUserPrefix()}accountable_financials_chat`;
 
-const EMPTY_FIN = () => ({ income_sources: [], recurring_expenses: [], wishlist_expenses: [], one_time_expenses: [] });
+const EMPTY_FIN = () => ({ income_sources: [], recurring_expenses: [], wishlist_expenses: [], one_time_expenses: [], savings_deposits: [] });
 
 // Tag any items that predate the month-aware system with the current month
 function _migrateItems(fin) {
@@ -30,6 +30,7 @@ function _migrateItems(fin) {
     recurring_expenses: tag(fin.recurring_expenses),
     wishlist_expenses:  tag(fin.wishlist_expenses),
     one_time_expenses:  tag(fin.one_time_expenses),
+    savings_deposits:   tag(fin.savings_deposits),
   };
 }
 
@@ -279,9 +280,13 @@ function buildFinancialSystemPrompt(fin, selectedMonth) {
   const rate = income > 0 ? ((savings / income) * 100).toFixed(1) : 0;
   const fmtItem = (i) => `${i.name}: $${fmt(i.amount)}${i.day ? ` (due ${ordinal(i.day)})` : ""}`;
 
+  const savedItems = byMonth(fin.savings_deposits);
+  const savedTotal = sum(savedItems);
+  const allTimeSaved = sum(fin.savings_deposits || []);
+
   return `You are a sharp financial advisor who blends the wisdom of Warren Buffett, Charlie Munger, and Dave Ramsey. From Buffett and Munger: long-term thinking, compounding, only buy what you understand, patience over speculation, moats, and rational decision-making. From Ramsey: zero debt, baby steps, gazelle intensity on paying off debt, emergency fund first, live below your means, and no debt is good debt except maybe a mortgage. When the user has debt, channel Ramsey's urgency. When talking about investing and wealth building, bring in Buffett and Munger's principles. Be direct and specific — use the user's real numbers when you respond. Talk like a smart, no-nonsense person, not a report. No markdown headers, no bullet lists, no bold text. Just straight talk in natural sentences. Use the tools immediately when asked to change financial data.
 
-Viewing month: ${monthLabel(m)}. User's finances for this month: income $${fmt(income)} (${byMonth(fin.income_sources).map(fmtItem).join(", ") || "none"}), recurring expenses $${fmt(recurring)} (${byMonth(fin.recurring_expenses).map(fmtItem).join(", ") || "none"}), optional spending $${fmt(wishlist)} (${byMonth(fin.wishlist_expenses).map(fmtItem).join(", ") || "none"}), one-time payments $${fmt(oneTime)} (${oneTimeItems.map(fmtItem).join(", ") || "none"}), savings $${fmt(savings)} (${rate}% savings rate).
+Viewing month: ${monthLabel(m)}. User's finances for this month: income $${fmt(income)} (${byMonth(fin.income_sources).map(fmtItem).join(", ") || "none"}), recurring expenses $${fmt(recurring)} (${byMonth(fin.recurring_expenses).map(fmtItem).join(", ") || "none"}), optional spending $${fmt(wishlist)} (${byMonth(fin.wishlist_expenses).map(fmtItem).join(", ") || "none"}), one-time payments $${fmt(oneTime)} (${oneTimeItems.map(fmtItem).join(", ") || "none"}), net surplus $${fmt(savings)} (${rate}% savings rate). Savings deposits this month: $${fmt(savedTotal)} (${savedItems.map(fmtItem).join(", ") || "none"}). Total saved all time: $${fmt(allTimeSaved)}.
 
 Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
 }
@@ -352,8 +357,32 @@ const FINANCIAL_TOOLS = [
     },
   },
   {
+    name: "add_savings_deposit",
+    description: "Record a savings deposit — money the user has set aside into savings, investments, emergency fund, etc.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name:   { type: "string", description: "Description (e.g. 'Emergency fund', '401k contribution', 'Index fund')" },
+        amount: { type: "number", description: "Amount saved in dollars" },
+        day:    { type: "number", description: "Day of month (1-31), optional" },
+      },
+      required: ["name", "amount"],
+    },
+  },
+  {
+    name: "delete_savings_deposit",
+    description: "Delete a savings deposit entry by name.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Name of the savings deposit to delete (partial match)" },
+      },
+      required: ["name"],
+    },
+  },
+  {
     name: "list_financials",
-    description: "List all current income sources and expenses.",
+    description: "List all current income sources, expenses, and savings deposits.",
     input_schema: { type: "object", properties: {} },
   },
 ];
@@ -424,8 +453,19 @@ function executeFinancialTool(name, input, update, selectedMonth) {
       }
       return { error: `No income or expense found matching "${input.name}"` };
     }
+    case "add_savings_deposit": {
+      const item = { id: uid(), name: input.name, amount: parseFloat(input.amount), day: input.day || null, month };
+      update({ savings_deposits: [...(fin.savings_deposits || []), item] });
+      return { success: true, added: { name: item.name, amount: item.amount } };
+    }
+    case "delete_savings_deposit": {
+      const match = (fin.savings_deposits || []).find(s => s.name.toLowerCase().includes(input.name.toLowerCase()));
+      if (!match) return { error: `No savings deposit found matching "${input.name}"` };
+      update({ savings_deposits: (fin.savings_deposits || []).filter(s => s.id !== match.id) });
+      return { success: true, deleted: match.name };
+    }
     case "list_financials":
-      return { income_sources: fin.income_sources, recurring_expenses: fin.recurring_expenses, wishlist_expenses: fin.wishlist_expenses, one_time_expenses: fin.one_time_expenses || [] };
+      return { income_sources: fin.income_sources, recurring_expenses: fin.recurring_expenses, wishlist_expenses: fin.wishlist_expenses, one_time_expenses: fin.one_time_expenses || [], savings_deposits: fin.savings_deposits || [] };
     default:
       return { error: `Unknown tool: ${name}` };
   }
@@ -786,6 +826,69 @@ function ExpensesTab({ fin, update, selectedMonth }) {
   );
 }
 
+// ── SAVINGS TAB ──────────────────────────────────────────────────────────────
+function SavingsTab({ fin, update, selectedMonth }) {
+  const items = (fin.savings_deposits || []).filter(s => s.month === selectedMonth);
+  const total = sum(items);
+
+  // Calculate total saved across all months
+  const allTimeSavings = sum(fin.savings_deposits || []);
+
+  return (
+    <div className="space-y-6">
+      {/* Total saved banner */}
+      <div className={cn("rounded-2xl p-6 border", allTimeSavings > 0 ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-200")}>
+        <p className="text-sm font-medium text-slate-500">Total Saved (All Time)</p>
+        <p className={cn("text-3xl font-extrabold mt-1", allTimeSavings > 0 ? "text-emerald-600" : "text-slate-400")}>${fmt(allTimeSavings)}</p>
+        {allTimeSavings > 0 && (
+          <p className="text-xs text-emerald-500 mt-1">Across {new Set((fin.savings_deposits || []).map(d => d.month)).size} month(s)</p>
+        )}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+        <div className="px-6 py-5 border-b border-slate-100">
+          <h3 className="font-semibold text-slate-800 text-base">Savings Deposits</h3>
+          <p className="text-xs text-slate-400 mt-0.5">Track money saved in {monthLabel(selectedMonth)}</p>
+        </div>
+
+        <div className="px-6 pb-2">
+          {items.length === 0 ? (
+            <div className="py-10 text-center text-slate-400">
+              <Wallet className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+              <p className="text-sm">No savings recorded for {monthLabel(selectedMonth)}</p>
+              <p className="text-xs mt-1">Add money you've set aside — emergency fund, investments, etc.</p>
+            </div>
+          ) : (
+            <div>
+              {items.map(item => (
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  dayLabel="On"
+                  showPerMonth={false}
+                  onDelete={id => update(prev => ({ savings_deposits: (prev.savings_deposits || []).filter(s => s.id !== id) }))}
+                  onUpdate={updated => update(prev => ({ savings_deposits: (prev.savings_deposits || []).map(s => s.id === updated.id ? updated : s) }))}
+                />
+              ))}
+              <div className="flex items-center justify-between py-3 font-semibold text-sm border-t border-slate-100">
+                <span className="text-slate-600">Total This Month</span>
+                <span className="text-emerald-600 text-base">${fmt(total)}</span>
+              </div>
+            </div>
+          )}
+          <AddRow
+            placeholder="e.g. Emergency fund, 401k, Index fund..."
+            dayLabel="Date"
+            month={selectedMonth}
+            onAdd={item => update(prev => ({ savings_deposits: [...(prev.savings_deposits || []), item] }))}
+          />
+          <div className="pb-4" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── OVERVIEW TAB ──────────────────────────────────────────────────────────────
 function OverviewTab({ fin, selectedMonth }) {
   const [yearly, setYearly] = useState(false);
@@ -842,11 +945,22 @@ function OverviewTab({ fin, selectedMonth }) {
           </div>
           <div className={cn("flex justify-between items-center rounded-xl p-4 mt-2", savings >= 0 ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200")}>
             <div>
-              <p className={cn("font-bold text-sm", savings >= 0 ? "text-emerald-700" : "text-red-600")}>{savings >= 0 ? `${yearly ? "Yearly" : "Monthly"} savings` : `${yearly ? "Yearly" : "Monthly"} deficit`}</p>
+              <p className={cn("font-bold text-sm", savings >= 0 ? "text-emerald-700" : "text-red-600")}>{savings >= 0 ? `${yearly ? "Yearly" : "Monthly"} surplus` : `${yearly ? "Yearly" : "Monthly"} deficit`}</p>
               {sum(fin.income_sources) > 0 && <p className="text-xs text-slate-400 mt-0.5">{savings >= 0 ? `${rate}% savings rate` : "Spending exceeds income"}</p>}
             </div>
             <span className={cn("text-xl font-extrabold", savings >= 0 ? "text-emerald-600" : "text-red-600")}>{savings < 0 ? "-" : ""}${fmt(Math.abs(savings))}</span>
           </div>
+          {(() => {
+            const savedItems = (fin.savings_deposits || []).filter(e => yearly ? e.month?.startsWith(currentYear) : e.month === selectedMonth);
+            const savedTotal = sum(savedItems);
+            if (savedTotal <= 0) return null;
+            return (
+              <div className="flex justify-between items-center py-2.5 border-b border-slate-100 mt-1">
+                <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><Wallet className="w-4 h-4 text-emerald-400" />{yearly ? `Saved (${currentYear})` : "Saved This Month"}</span>
+                <span className="text-sm font-bold text-emerald-600 whitespace-nowrap ml-2">${fmt(savedTotal)}</span>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
@@ -1179,15 +1293,17 @@ function SummaryCards({ fin, selectedMonth }) {
   const totalExp  = recurring + oneTime;
   const savings   = income - totalExp;
   const rate      = income > 0 ? ((savings / income) * 100).toFixed(0) : 0;
+  const saved     = sum(byMonth(fin.savings_deposits));
 
   const cards = [
     { label: "Income",        value: `$${fmtWhole(income)}`,    color: "text-emerald-600", icon: TrendingUp,   iconColor: "text-emerald-400" },
     { label: "Expenses",      value: `$${fmtWhole(totalExp)}`,  color: "text-rose-500",    icon: TrendingDown, iconColor: "text-rose-400" },
+    { label: "Saved",         value: `$${fmtWhole(saved)}`,     color: "text-emerald-600", icon: Wallet,       iconColor: "text-emerald-400" },
     { label: "Savings Rate",  value: `${Math.max(0, rate)}%`,   color: "text-slate-700",   icon: Wallet,       iconColor: "text-slate-400" },
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-8">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-8">
       {cards.map(c => (
         <div key={c.label} className="bg-white rounded-2xl border border-slate-200 px-3 py-3 sm:px-5 sm:py-4">
           <div className="flex items-start justify-between gap-1">
@@ -1202,7 +1318,7 @@ function SummaryCards({ fin, selectedMonth }) {
 }
 
 // ── MAIN PAGE ──────────────────────────────────────────────────────────────────
-const TABS = ["Overview", "Income", "Expenses", "AI Advisor"];
+const TABS = ["Overview", "Income", "Expenses", "Savings", "AI Advisor"];
 
 export default function Financials() {
   const [fin, setFin] = useState(loadFin);
@@ -1232,6 +1348,7 @@ export default function Financials() {
           recurring_expenses:mergeArr(prev.recurring_expenses,         loaded.recurring_expenses),
           wishlist_expenses: mergeArr(prev.wishlist_expenses,          loaded.wishlist_expenses),
           one_time_expenses: mergeArr(prev.one_time_expenses || [],    loaded.one_time_expenses || []),
+          savings_deposits:  mergeArr(prev.savings_deposits || [],     loaded.savings_deposits || []),
         };
         // After remote data arrives, auto-populate recurring expenses for the
         // currently-viewed month if it still has none.
@@ -1266,6 +1383,7 @@ export default function Financials() {
         recurring_expenses:prev.recurring_expenses,
         wishlist_expenses: prev.wishlist_expenses,
         one_time_expenses: prev.one_time_expenses || [],
+        savings_deposits:  prev.savings_deposits || [],
         ...patch,
       };
       saveFin(next);
@@ -1309,6 +1427,7 @@ export default function Financials() {
       {activeTab === "Overview"    && <OverviewTab fin={fin} selectedMonth={selectedMonth} />}
       {activeTab === "Income"      && <IncomeTab fin={fin} update={update} selectedMonth={selectedMonth} />}
       {activeTab === "Expenses"    && <ExpensesTab fin={fin} update={update} selectedMonth={selectedMonth} />}
+      {activeTab === "Savings"     && <SavingsTab fin={fin} update={update} selectedMonth={selectedMonth} />}
       {activeTab === "AI Advisor"  && <AdvisorTab fin={fin} update={update} selectedMonth={selectedMonth} />}
     </div>
   );
