@@ -63,6 +63,17 @@ function DailyView({ overrideDate }) {
     setBlocks(loadBlocks(date));
   }, [date]);
 
+  // Re-load data when another device syncs changes via Supabase realtime
+  useEffect(() => {
+    function handleDataRefresh() {
+      setTasks(loadDailyTasks(date));
+      setRecurringTasks(loadRecurringTasks());
+      setBlocks(loadBlocks(date));
+    }
+    window.addEventListener('daytracker-data-refreshed', handleDataRefresh);
+    return () => window.removeEventListener('daytracker-data-refreshed', handleDataRefresh);
+  }, [date]);
+
   useEffect(() => {
     if (date === today && currentRef.current) {
       currentRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });

@@ -27,6 +27,8 @@ let _userId = null;
 let _realtimeChannel = null;
 let _visibilityHandler = null;
 const _debounceTimers = {};
+// Track which data types have been modified locally and need pushing
+const _locallyDirty = new Set();
 
 // Track local write timestamps so we can compare with Supabase
 function _getLocalTimestamps() {
@@ -43,8 +45,9 @@ function syncToSupabase(localStorageKey) {
   const dataType = KEY_TO_TYPE[localStorageKey];
   if (!dataType) return;
 
-  // Track local write time
+  // Track local write time and mark as needing push
   _setLocalTimestamp(dataType);
+  _locallyDirty.add(dataType);
 
   clearTimeout(_debounceTimers[dataType]);
   _debounceTimers[dataType] = setTimeout(async () => {
@@ -273,10 +276,14 @@ const TYPE_TO_KEY = Object.fromEntries(
   Object.entries(KEY_TO_TYPE).map(([k, v]) => [v, k])
 );
 
-// Push ALL local data to Supabase (ensures nothing is stuck in localStorage only)
+// Push locally-modified data to Supabase (ensures offline changes get synced)
 export async function pushAllToSupabase() {
   if (!_userId) return;
   for (const [localKey, dataType] of Object.entries(KEY_TO_TYPE)) {
+    // Only push data types that were actually modified locally,
+    // not data that was just pulled from Supabase — otherwise we
+    // overwrite newer remote data with stale local copies.
+    if (!_locallyDirty.has(dataType)) continue;
     const raw = localStorage.getItem(localKey);
     if (!raw) continue;
     try {
@@ -287,6 +294,7 @@ export async function pushAllToSupabase() {
         { user_id: _userId, data_type: dataType, data: parsed, updated_at: new Date().toISOString() },
         { onConflict: 'user_id,data_type' }
       );
+      _locallyDirty.delete(dataType);
     } catch {}
   }
 }
@@ -362,6 +370,8 @@ export async function pullFromSupabase() {
     if (localEmpty || !localTs || remoteTs >= localTs) {
       localStorage.setItem(localKey, JSON.stringify(row.data));
       localTimestamps[row.data_type] = remoteTs;
+      // Remote is at least as new as local — no need to push this type back
+      _locallyDirty.delete(row.data_type);
     }
   }
   localStorage.setItem(TIMESTAMPS_KEY, JSON.stringify(localTimestamps));
