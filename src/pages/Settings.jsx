@@ -1,11 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, X, Pencil, Check, Sparkles, User, Briefcase, Users, Target, StickyNote, ChevronDown, ChevronUp, LogOut } from "lucide-react";
+import { ArrowLeft, Plus, X, Pencil, Check, Sparkles, User, Briefcase, Users, Target, StickyNote, ChevronDown, ChevronUp, LogOut, Bot, MessageSquare, Dumbbell, UtensilsCrossed, Upload, RotateCcw, FileText, Trash2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "../utils";
 import { useAuth } from "@/lib/AuthContext";
@@ -257,21 +257,89 @@ function PeopleSection({ items, onAdd, onDelete, onUpdate, onBirthdayTask }) {
 }
 
 
-function PersonalitySection({ profile, saveMutation }) {
-  const [open, setOpen] = useState(true);
-  const [input, setInput] = useState("");
+const DEFAULT_PERSONALITIES = {
+  chat: `You are the user's ride-or-die best friend and accountability buddy. Be warm, real, and encouraging. Talk exactly like a close friend texting — casual, direct, no fluff. Never sound like a chatbot or assistant. No bullet points, no headers, no markdown formatting whatsoever. Just write naturally like you're having a real conversation. Keep it short and punchy unless they need depth.`,
+  coach: `You are my personal time, life, and strategic coach living inside my hour-by-hour tracker.
+
+YOUR JOB:
+- Judge my week against MY GOALS (both long-term and short-term), not against generic productivity. Tell me plainly if I'm on track or slipping.
+- Show me the TRAJECTORY I'm on. Based on how I'm spending my hours, project where I'll actually end up vs. where I say I want to be.
+- Decide what actions I should take next. Be concrete — name the thing, not "focus more."
+- Motivate me when I've earned it. Scold me when I haven't.
+
+YOUR PHILOSOPHICAL LENSES — advise through whichever fits the moment:
+- MARCUS AURELIUS (default tone): Discipline, self-command, control what you can, do the duty in front of you.
+- SUN TZU: Strategy & positioning. Pick battles. Position yourself so victory is inevitable.
+- ALEX HORMOZI: Brutal prioritization & leverage. "Is this the highest-value action available right now?"
+- DAVE RAMSEY: Financial discipline. "Live like no one else now, so later you can live like no one else."
+
+RULES:
+- Keep replies under 200 words unless doing a full direction assessment. Talk like a coach, not a report.
+- Always tie advice back to MY specific goals and MY specific logs. Never be generic.`,
+  gym: `You are a personal gym coach. The user's goal is maximizing muscle gain through a calorie surplus — more food and protein is good, being calorie-dense is not a problem.
+
+Reply like a real coach texting: short, direct, no fluff. 1-3 sentences for simple questions. Only go longer if they ask for a full plan. Never use markdown headers, bullet lists, bold text, or numbered sections — just talk naturally.
+
+When asked to add exercises, log sets, or record progress, use your tools immediately and just briefly confirm after.`,
+  food: `Analyze food for muscle gain via calorie surplus. Score criteria:
+- nutrition_score 0-100: 85-100=excellent (high protein, quality calories), 65-84=good, 45-64=moderate (low protein or processed), 0-44=poor (high sugar, trans fats, highly processed)
+- health_score 0-100: considers nutrient density, whole food quality, vitamin/mineral content
+- More calories and protein is generally better. Calorie-dense whole foods are a positive. Score down for highly processed foods, excessive sugar, or trans fats — not for being calorie-dense.`,
+};
+
+const MODEL_CONFIGS = [
+  { key: "chat", label: "Main Chat", icon: MessageSquare, color: "bg-indigo-100 text-indigo-600", description: "Your ride-or-die accountability buddy" },
+  { key: "coach", label: "Day Tracker Coach", icon: Bot, color: "bg-emerald-100 text-emerald-600", description: "Strategic life & time coach" },
+  { key: "gym", label: "Gym Coach", icon: Dumbbell, color: "bg-rose-100 text-rose-600", description: "Personal muscle gain coach" },
+  { key: "food", label: "Food Analyzer", icon: UtensilsCrossed, color: "bg-amber-100 text-amber-600", description: "Nutrition analysis for muscle building" },
+];
+
+const MAX_FILES_PER_MODEL = 5;
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
+function AIModelCard({ modelConfig, personality, contextFiles, onSavePersonality, onResetPersonality, onAddFile, onDeleteFile }) {
+  const [open, setOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const currentPersonality = profile?.ai_personality || "";
+  const [editValue, setEditValue] = useState("");
+  const fileInputRef = useRef(null);
+  const Icon = modelConfig.icon;
 
   const handleSave = () => {
-    if (!input.trim()) return;
-    saveMutation.mutate({ ai_personality: input.trim() }, {
-      onSuccess: () => {
-        setIsEditing(false);
-        toast.success("AI personality updated!");
-      },
-      onError: () => toast.error("Failed to save. Please try again."),
-    });
+    onSavePersonality(editValue);
+    setIsEditing(false);
+  };
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("File too large. Max 10MB.");
+      e.target.value = "";
+      return;
+    }
+    const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error("Only PDFs and images are supported.");
+      e.target.value = "";
+      return;
+    }
+    if ((contextFiles || []).length >= MAX_FILES_PER_MODEL) {
+      toast.error(`Max ${MAX_FILES_PER_MODEL} files per model.`);
+      e.target.value = "";
+      return;
+    }
+    try {
+      const data = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => resolve(ev.target.result.split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      onAddFile({ name: file.name, mediaType: file.type, data });
+    } catch {
+      toast.error("Failed to read file.");
+    }
+    e.target.value = "";
   };
 
   return (
@@ -279,52 +347,146 @@ function PersonalitySection({ profile, saveMutation }) {
       <button onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-amber-100 text-amber-600">
-            <Sparkles className="w-4 h-4" />
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${modelConfig.color}`}>
+            <Icon className="w-4 h-4" />
           </div>
           <div className="text-left">
-            <p className="text-sm font-bold text-slate-800">AI Personality</p>
-            <p className="text-xs text-slate-400">{currentPersonality ? "Custom set" : "Not set yet"}</p>
+            <p className="text-sm font-bold text-slate-800">{modelConfig.label}</p>
+            <p className="text-xs text-slate-400">{modelConfig.description}</p>
           </div>
         </div>
         {open ? <ChevronUp className="w-4 h-4 text-slate-300" /> : <ChevronDown className="w-4 h-4 text-slate-300" />}
       </button>
+
       {open && (
-        <div className="px-6 pb-5 space-y-2">
-          {!isEditing && currentPersonality && (
-            <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 group">
-              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{currentPersonality}</p>
-              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity mt-2">
-                <button onClick={() => { setInput(currentPersonality); setIsEditing(true); }}
-                  className="p-1 rounded hover:bg-indigo-50 text-slate-400 hover:text-indigo-500 transition"><Pencil className="w-3.5 h-3.5" /></button>
-                <button onClick={() => { saveMutation.mutate({ ai_personality: "" }, { onSuccess: () => toast.success("Cleared!") }); }}
-                  className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500 transition"><X className="w-3.5 h-3.5" /></button>
+        <div className="px-6 pb-5 space-y-4">
+          {/* Personality / Instructions */}
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Custom Instructions</p>
+            {isEditing ? (
+              <div className="space-y-2">
+                <textarea value={editValue} onChange={e => setEditValue(e.target.value)}
+                  rows={8}
+                  className="w-full text-sm rounded-xl border border-indigo-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white resize-y font-mono" />
+                <div className="flex gap-2">
+                  <button onClick={handleSave}
+                    className="flex-1 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-1">
+                    <Check className="w-3.5 h-3.5" /> Save
+                  </button>
+                  <button onClick={() => setIsEditing(false)}
+                    className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-slate-50 transition">Cancel</button>
+                </div>
               </div>
-            </div>
-          )}
-          {isEditing ? (
-            <div className="space-y-2">
-              <textarea value={input} onChange={e => setInput(e.target.value)}
-                placeholder="Describe how the AI should behave. E.g. 'Be like a supportive best friend who celebrates my wins and gently pushes me when I need it'"
-                rows={4}
-                className="w-full text-sm rounded-xl border border-indigo-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white resize-none" />
-              <div className="flex gap-2">
-                <button onClick={handleSave} disabled={!input.trim()}
-                  className="flex-1 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-30 transition flex items-center justify-center gap-1">
-                  <Check className="w-3.5 h-3.5" /> Save
-                </button>
-                <button onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 rounded-xl border border-slate-200 text-sm text-slate-500 hover:bg-slate-50 transition">Cancel</button>
+            ) : (
+              <div className="space-y-2">
+                <div className="bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 max-h-40 overflow-y-auto">
+                  <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap font-mono">{personality || DEFAULT_PERSONALITIES[modelConfig.key]}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => { setEditValue(personality || DEFAULT_PERSONALITIES[modelConfig.key]); setIsEditing(true); }}
+                    className="flex-1 py-2 rounded-xl border border-dashed border-indigo-300 text-sm text-indigo-500 hover:bg-indigo-50 transition flex items-center justify-center gap-1.5">
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </button>
+                  <button onClick={onResetPersonality}
+                    className="px-3 py-2 rounded-xl border border-dashed border-slate-300 text-sm text-slate-400 hover:bg-slate-50 transition flex items-center justify-center gap-1.5"
+                    title="Reset to default">
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : (
-            <button onClick={() => { setInput(currentPersonality); setIsEditing(true); }}
-              className="w-full py-2.5 rounded-xl border border-dashed border-indigo-300 text-sm text-indigo-500 hover:bg-indigo-50 transition flex items-center justify-center gap-1.5">
-              <Plus className="w-4 h-4" /> {currentPersonality ? "Edit" : "Add personality"} description
+            )}
+          </div>
+
+          {/* Context Files */}
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Knowledge Files ({(contextFiles || []).length}/{MAX_FILES_PER_MODEL})</p>
+            {(contextFiles || []).length > 0 && (
+              <div className="space-y-1.5 mb-2">
+                {contextFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
+                    <FileText className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <span className="text-xs text-slate-600 truncate flex-1">{file.name}</span>
+                    <span className="text-xs text-slate-400">{file.mediaType?.split('/')[1]?.toUpperCase()}</span>
+                    <button onClick={() => onDeleteFile(idx)}
+                      className="p-0.5 rounded hover:bg-red-50 text-slate-300 hover:text-red-500 transition">
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <input type="file" ref={fileInputRef} onChange={handleFileSelect} className="hidden"
+              accept=".pdf,image/jpeg,image/png,image/gif,image/webp" />
+            <button onClick={() => fileInputRef.current?.click()}
+              disabled={(contextFiles || []).length >= MAX_FILES_PER_MODEL}
+              className="w-full py-2 rounded-xl border border-dashed border-slate-300 text-sm text-slate-400 hover:bg-slate-50 hover:text-slate-600 disabled:opacity-30 disabled:cursor-not-allowed transition flex items-center justify-center gap-1.5">
+              <Upload className="w-3.5 h-3.5" /> Upload PDF or Image
             </button>
-          )}
+            <p className="text-xs text-slate-300 mt-1">Files are sent as context with every message to this AI model.</p>
+          </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function AIModelsSection({ profile, saveMutation }) {
+  const personalities = profile?.model_personalities || {};
+  const contextFiles = profile?.model_context_files || {};
+
+  const handleSavePersonality = (modelKey, value) => {
+    const updated = { ...personalities, [modelKey]: value };
+    saveMutation.mutate({ model_personalities: updated }, {
+      onSuccess: () => toast.success("Custom instructions saved!"),
+      onError: () => toast.error("Failed to save. Please try again."),
+    });
+  };
+
+  const handleResetPersonality = (modelKey) => {
+    const updated = { ...personalities };
+    delete updated[modelKey];
+    saveMutation.mutate({ model_personalities: updated }, {
+      onSuccess: () => toast.success("Reset to default!"),
+      onError: () => toast.error("Failed to save. Please try again."),
+    });
+  };
+
+  const handleAddFile = (modelKey, file) => {
+    const current = contextFiles[modelKey] || [];
+    const updated = { ...contextFiles, [modelKey]: [...current, file] };
+    saveMutation.mutate({ model_context_files: updated }, {
+      onSuccess: () => toast.success("File uploaded!"),
+      onError: () => toast.error("Failed to save file. Please try again."),
+    });
+  };
+
+  const handleDeleteFile = (modelKey, idx) => {
+    const current = contextFiles[modelKey] || [];
+    const updated = { ...contextFiles, [modelKey]: current.filter((_, i) => i !== idx) };
+    saveMutation.mutate({ model_context_files: updated }, {
+      onSuccess: () => toast.success("File removed!"),
+      onError: () => toast.error("Failed to delete. Please try again."),
+    });
+  };
+
+  return (
+    <div>
+      <h2 className="text-lg font-bold text-slate-900 mb-3">AI Models</h2>
+      <p className="text-sm text-slate-500 mb-4">Customize how each AI model behaves and give them knowledge files.</p>
+      <div className="space-y-3">
+        {MODEL_CONFIGS.map(config => (
+          <AIModelCard
+            key={config.key}
+            modelConfig={config}
+            personality={personalities[config.key]}
+            contextFiles={contextFiles[config.key]}
+            onSavePersonality={(val) => handleSavePersonality(config.key, val)}
+            onResetPersonality={() => handleResetPersonality(config.key)}
+            onAddFile={(file) => handleAddFile(config.key, file)}
+            onDeleteFile={(idx) => handleDeleteFile(config.key, idx)}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -502,12 +664,14 @@ export default function Settings() {
             </div>
           </div>
 
+          {/* AI Models section */}
+          <AIModelsSection profile={profile} saveMutation={saveMutation} />
+
           {/* AI Context sections */}
           <div>
             <h2 className="text-lg font-bold text-slate-900 mb-3">AI Context</h2>
             <p className="text-sm text-slate-500 mb-4">This information helps your AI coach understand you better.</p>
             <div className="space-y-4">
-              <PersonalitySection profile={profile} saveMutation={saveMutation} />
               {SECTIONS.map(section => (
                 <TextSection
                   key={section.key}

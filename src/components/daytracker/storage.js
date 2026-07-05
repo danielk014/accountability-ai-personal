@@ -9,6 +9,7 @@ const DAILY_TASKS_KEY = 'daily-tracker-daily-tasks';
 const RECURRING_TASKS_KEY = 'daily-tracker-recurring-tasks';
 const BLOCKS_KEY = 'daily-tracker-blocks';
 const NOTES_KEY = 'daily-tracker-notes';
+const TIMESTAMPS_KEY = 'daily-tracker-sync-timestamps';
 
 const KEY_TO_TYPE = {
   [LOGS_KEY]: 'logs',
@@ -23,12 +24,27 @@ const KEY_TO_TYPE = {
 };
 
 let _userId = null;
+let _realtimeChannel = null;
+let _visibilityHandler = null;
 const _debounceTimers = {};
+
+// Track local write timestamps so we can compare with Supabase
+function _getLocalTimestamps() {
+  try { return JSON.parse(localStorage.getItem(TIMESTAMPS_KEY)) || {}; } catch { return {}; }
+}
+function _setLocalTimestamp(dataType) {
+  const ts = _getLocalTimestamps();
+  ts[dataType] = new Date().toISOString();
+  localStorage.setItem(TIMESTAMPS_KEY, JSON.stringify(ts));
+}
 
 function syncToSupabase(localStorageKey) {
   if (!_userId) return;
   const dataType = KEY_TO_TYPE[localStorageKey];
   if (!dataType) return;
+
+  // Track local write time
+  _setLocalTimestamp(dataType);
 
   clearTimeout(_debounceTimers[dataType]);
   _debounceTimers[dataType] = setTimeout(async () => {
@@ -259,24 +275,76 @@ const TYPE_TO_KEY = Object.fromEntries(
 
 export function initStorage(userId) {
   _userId = userId;
+
+  // Set up visibility-based sync: re-pull when user returns to the tab/app
+  if (_visibilityHandler) {
+    document.removeEventListener('visibilitychange', _visibilityHandler);
+  }
+  _visibilityHandler = () => {
+    if (document.visibilityState === 'visible' && _userId) {
+      pullFromSupabase().then(() => {
+        window.dispatchEvent(new CustomEvent('daytracker-data-refreshed'));
+      });
+    }
+  };
+  document.addEventListener('visibilitychange', _visibilityHandler);
+
+  // Set up Supabase realtime subscription for live sync across devices
+  if (_realtimeChannel) {
+    supabase.removeChannel(_realtimeChannel);
+  }
+  _realtimeChannel = supabase
+    .channel(`user_data_${userId}`)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'user_data',
+      filter: `user_id=eq.${userId}`,
+    }, (payload) => {
+      // Another device wrote — update localStorage if their data is newer
+      const row = payload.new;
+      if (!row || !row.data_type) return;
+      const localKey = TYPE_TO_KEY[row.data_type];
+      if (!localKey) return;
+      const localTs = _getLocalTimestamps()[row.data_type];
+      const remoteTs = row.updated_at;
+      // Only apply remote change if it's newer than our last local write
+      if (!localTs || remoteTs > localTs) {
+        localStorage.setItem(localKey, JSON.stringify(row.data));
+        // Update local timestamp to match remote so we don't re-push
+        const ts = _getLocalTimestamps();
+        ts[row.data_type] = remoteTs;
+        localStorage.setItem(TIMESTAMPS_KEY, JSON.stringify(ts));
+        window.dispatchEvent(new CustomEvent('daytracker-data-refreshed'));
+      }
+    })
+    .subscribe();
 }
 
 export async function pullFromSupabase() {
   if (!_userId) return;
   const { data, error } = await supabase
     .from('user_data')
-    .select('data_type, data')
+    .select('data_type, data, updated_at')
     .eq('user_id', _userId);
   if (error) {
     console.error('pullFromSupabase failed:', error);
     return;
   }
+  const localTimestamps = _getLocalTimestamps();
   for (const row of data) {
     const localKey = TYPE_TO_KEY[row.data_type];
-    if (localKey) {
+    if (!localKey) continue;
+    const localTs = localTimestamps[row.data_type];
+    const remoteTs = row.updated_at;
+    // Only overwrite local if remote is newer (or local has no timestamp)
+    if (!localTs || remoteTs >= localTs) {
       localStorage.setItem(localKey, JSON.stringify(row.data));
+      // Update local timestamp to match
+      localTimestamps[row.data_type] = remoteTs;
     }
   }
+  localStorage.setItem(TIMESTAMPS_KEY, JSON.stringify(localTimestamps));
 }
 
 export async function migrateLocalToSupabase() {

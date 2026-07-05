@@ -8,9 +8,10 @@ import GoalsView from '@/components/daytracker/GoalsView';
 import ProjectsView from '@/components/daytracker/ProjectsView';
 import NotesView from '@/components/daytracker/NotesView';
 import CoachView from '@/components/daytracker/CoachView';
+import NutritionView from '@/components/daytracker/NutritionView';
 import '@/components/daytracker/daytracker.css';
 
-const TABS = ['Today', 'Calendar', 'Goals', 'Projects', 'Notes', 'Coach'];
+const TABS = ['Today', 'Calendar', 'Goals', 'Projects', 'Notes', 'Nutrition', 'Coach'];
 
 export default function DayTracker() {
   const { user } = useAuth();
@@ -33,6 +34,13 @@ export default function DayTracker() {
     })();
     return () => { cancelled = true; };
   }, [user]);
+
+  // Listen for realtime/visibility-based data refreshes from other devices
+  useEffect(() => {
+    const handler = () => setDataKey(k => k + 1);
+    window.addEventListener('daytracker-data-refreshed', handler);
+    return () => window.removeEventListener('daytracker-data-refreshed', handler);
+  }, []);
 
   if (!dataReady) {
     return (
@@ -70,6 +78,7 @@ export default function DayTracker() {
           {tab === 'Goals' && <GoalsView />}
           {tab === 'Projects' && <ProjectsView />}
           {tab === 'Notes' && <NotesView />}
+          {tab === 'Nutrition' && <NutritionView />}
           {tab === 'Coach' && <CoachView />}
         </main>
       </div>

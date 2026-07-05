@@ -647,7 +647,9 @@ export async function buildSystemPrompt() {
         }).join('\n');
         lines.push(`## People in My Life\n${text}`);
       }
-      if (profile.ai_personality) lines.push(`## How to Talk to Me\n${profile.ai_personality}`);
+      // Use per-model personality if set, fall back to legacy ai_personality
+      const chatPersonality = profile.model_personalities?.chat || profile.ai_personality;
+      if (chatPersonality) lines.push(`## How to Talk to Me\n${chatPersonality}`);
     }
 
     if (projects.length > 0) {
@@ -908,7 +910,40 @@ async function _agenticLoop(history, systemPrompt) {
 
 export async function sendMessageToClaude(history) {
   const systemPrompt = await buildSystemPrompt();
+
+  // Inject per-model context files into the first user message
+  try {
+    const user = await base44.auth.me();
+    const profiles = await base44.entities.UserProfile.filter({ created_by: user.email });
+    const profile = profiles[0];
+    const chatFiles = profile?.model_context_files?.chat || [];
+    if (chatFiles.length > 0) {
+      history = _injectContextFiles(history, chatFiles);
+    }
+  } catch {}
+
   return _agenticLoop(history, systemPrompt);
+}
+
+function _injectContextFiles(history, files) {
+  if (!files || files.length === 0) return history;
+  const fileBlocks = files.map(f => {
+    if (f.mediaType === 'application/pdf') {
+      return { type: 'document', source: { type: 'base64', media_type: f.mediaType, data: f.data } };
+    }
+    return { type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.data } };
+  });
+  // Prepend context files to the first user message
+  const modified = [...history];
+  const firstUserIdx = modified.findIndex(m => m.role === 'user');
+  if (firstUserIdx >= 0) {
+    const msg = modified[firstUserIdx];
+    const existingContent = typeof msg.content === 'string'
+      ? [{ type: 'text', text: msg.content }]
+      : Array.isArray(msg.content) ? msg.content : [{ type: 'text', text: String(msg.content) }];
+    modified[firstUserIdx] = { ...msg, content: [...fileBlocks, ...existingContent] };
+  }
+  return modified;
 }
 
 // ─── Same loop but with extra context appended to the system prompt ───────────
@@ -1104,17 +1139,36 @@ async function _executeGymTool(name, input) {
 }
 
 export async function sendGymMessage(history, gymContext) {
-  const systemPrompt = `You are a personal gym coach. The user's goal is maximizing muscle gain through a calorie surplus — more food and protein is good, being calorie-dense is not a problem.
+  const defaultGymPrompt = `You are a personal gym coach. The user's goal is maximizing muscle gain through a calorie surplus — more food and protein is good, being calorie-dense is not a problem.
 
 Reply like a real coach texting: short, direct, no fluff. 1-3 sentences for simple questions. Only go longer if they ask for a full plan. Never use markdown headers, bullet lists, bold text, or numbered sections — just talk naturally. If you need to list things, work them into a sentence.
 
 You have full access to the user's workout data, bodyweight history, and today's nutrition log below — reference it when relevant.
 
-When asked to add exercises, log sets, or record progress, use your tools immediately and just briefly confirm after.
+When asked to add exercises, log sets, or record progress, use your tools immediately and just briefly confirm after.`;
+
+  // Load per-model personality
+  let customPrompt = defaultGymPrompt;
+  let gymFiles = [];
+  try {
+    const user = await base44.auth.me();
+    const profiles = await base44.entities.UserProfile.filter({ created_by: user.email });
+    const profile = profiles[0];
+    if (profile?.model_personalities?.gym) {
+      customPrompt = profile.model_personalities.gym;
+    }
+    gymFiles = profile?.model_context_files?.gym || [];
+  } catch {}
+
+  const systemPrompt = `${customPrompt}
 
 Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
 
 ${gymContext}`;
+
+  if (gymFiles.length > 0) {
+    history = _injectContextFiles(history, gymFiles);
+  }
 
   let messages = history.map(m => ({ role: m.role, content: m.content }));
 
@@ -1162,7 +1216,28 @@ export async function analyzeFoodWithAI(imageBase64, mediaType, description) {
   if (imageBase64) {
     content.push({ type: "image", source: { type: "base64", media_type: mediaType || "image/jpeg", data: imageBase64 } });
   }
-  const prompt = `Analyze this food${description ? `: "${description}"` : ""}. The user's goal is to be in a calorie surplus to maximize muscle growth — more calories and protein is generally better, and calorie-dense whole foods are a positive. Score down for highly processed foods, excessive sugar, or trans fats, not for being calorie-dense. Estimate nutritional values for a typical serving. Return ONLY valid JSON in this exact format with no other text:
+
+  // Load per-model food personality
+  let foodCustomInstructions = "";
+  try {
+    const user = await base44.auth.me();
+    const profiles = await base44.entities.UserProfile.filter({ created_by: user.email });
+    const profile = profiles[0];
+    if (profile?.model_personalities?.food) {
+      foodCustomInstructions = `\n\nAdditional user instructions for analysis: ${profile.model_personalities.food}`;
+    }
+    // Include food context files
+    const foodFiles = profile?.model_context_files?.food || [];
+    for (const f of foodFiles) {
+      if (f.mediaType === 'application/pdf') {
+        content.push({ type: 'document', source: { type: 'base64', media_type: f.mediaType, data: f.data } });
+      } else {
+        content.push({ type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.data } });
+      }
+    }
+  } catch {}
+
+  const prompt = `Analyze this food${description ? `: "${description}"` : ""}. The user's goal is to be in a calorie surplus to maximize muscle growth — more calories and protein is generally better, and calorie-dense whole foods are a positive. Score down for highly processed foods, excessive sugar, or trans fats, not for being calorie-dense. Estimate nutritional values for a typical serving.${foodCustomInstructions} Return ONLY valid JSON in this exact format with no other text:
 {"name":"food name","serving":"serving description","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"saturated_fat_g":0,"sugar_g":0,"fiber_g":0,"nutrition_score":0,"health_score":0,"sodium_mg":0,"potassium_mg":0,"calcium_mg":0,"iron_mg":0,"vitamin_a_pct":0,"vitamin_c_pct":0,"vitamin_d_pct":0,"health_note":"one sentence on whether this food supports muscle-building calorie surplus or not"}
 nutrition_score is 0-100 for muscle gain via calorie surplus: 85-100=excellent (high protein, quality calories), 65-84=good, 45-64=moderate (low protein or processed), 0-44=poor (high sugar, trans fats, or highly processed with little protein).
 health_score is 0-100 for overall healthiness: considers nutrient density, whole food quality, vitamin/mineral content, balance. 85-100=very healthy, 65-84=healthy, 45-64=moderate, 0-44=unhealthy.

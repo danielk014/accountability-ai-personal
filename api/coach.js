@@ -4,6 +4,7 @@ You are given these things every time I talk to you:
 1. MY LONG-TERM GOALS — the big-picture vision for my life: where I want to be in 1, 3, 5, 10 years.
 2. MY SHORT-TERM GOALS — what I've said matters right now.
 3. MY LOGS — what I planned and actually did each hour for all their recorded days, with an energy rating 1–5.
+4. MY NUTRITION LOG — what I ate each day, with calories, macros, and individual foods.
 
 YOUR JOB:
 - Judge my week against MY GOALS (both long-term and short-term), not against generic productivity. Tell me plainly if I'm on track or slipping, and cite the specific hours/days that prove it.
@@ -90,6 +91,27 @@ function formatDailyTasks(dailyTasks) {
   return output || '(No daily tasks yet)';
 }
 
+function formatNutrition(nutrition) {
+  if (!nutrition || !nutrition.logs || nutrition.logs.length === 0) return '(No nutrition data yet)';
+  const sorted = [...nutrition.logs].sort((a, b) => a.date.localeCompare(b.date));
+  // Only include recent days to keep context manageable
+  const recent = sorted.slice(-14);
+  let output = '';
+  for (const day of recent) {
+    if (!day.foods || day.foods.length === 0) continue;
+    const totals = day.foods.reduce((acc, f) => ({
+      cal: acc.cal + (f.calories || 0),
+      pro: acc.pro + (f.protein || 0),
+      carb: acc.carb + (f.carbs || 0),
+      fat: acc.fat + (f.fat || 0),
+      fiber: acc.fiber + (f.fiber || 0),
+    }), { cal: 0, pro: 0, carb: 0, fat: 0, fiber: 0 });
+    output += `\n${day.date}: ${Math.round(totals.cal)} kcal | ${Math.round(totals.pro)}g protein | ${Math.round(totals.carb)}g carbs | ${Math.round(totals.fat)}g fat | ${Math.round(totals.fiber)}g fiber`;
+    output += `\n  Foods: ${day.foods.map(f => `${f.name} (${f.calories} kcal)`).join(', ')}`;
+  }
+  return output || '(No nutrition data yet)';
+}
+
 function formatLogs(logs) {
   if (!logs || Object.keys(logs).length === 0) return '(No logs yet)';
   const sorted = Object.keys(logs).sort();
@@ -114,7 +136,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { message, logs, goals, longTermGoals, dailyTasks, scheduleBlocks } = req.body;
+    const { message, logs, goals, longTermGoals, dailyTasks, scheduleBlocks, nutrition, coachPersonality, coachContextFiles, attachments } = req.body;
 
     const context = `
 MY LONG-TERM GOALS (life vision):
@@ -131,7 +153,45 @@ ${formatScheduleBlocks(scheduleBlocks)}
 
 MY HOUR LOGS (all recorded days):
 ${formatLogs(logs)}
+
+MY NUTRITION LOG (food intake per day):
+${formatNutrition(nutrition)}
 `;
+
+    // Build system prompt with optional custom personality
+    let systemPrompt = SYSTEM_PROMPT;
+    if (coachPersonality) {
+      systemPrompt += `\n\n--- USER'S CUSTOM INSTRUCTIONS ---\n${coachPersonality}`;
+    }
+
+    // Build user message content with context files and attachments
+    const userContent = [];
+
+    // Add persistent context files
+    if (coachContextFiles && coachContextFiles.length > 0) {
+      for (const f of coachContextFiles) {
+        if (f.mediaType === 'application/pdf') {
+          userContent.push({ type: 'document', source: { type: 'base64', media_type: f.mediaType, data: f.data } });
+        } else if (f.mediaType?.startsWith('image/')) {
+          userContent.push({ type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.data } });
+        }
+      }
+    }
+
+    // Add per-message attachments
+    if (attachments && attachments.length > 0) {
+      for (const att of attachments) {
+        if (att.mediaType === 'application/pdf') {
+          userContent.push({ type: 'document', source: { type: 'base64', media_type: att.mediaType, data: att.data } });
+        } else if (att.mediaType?.startsWith('image/')) {
+          userContent.push({ type: 'image', source: { type: 'base64', media_type: att.mediaType, data: att.data } });
+        }
+      }
+    }
+
+    userContent.push({ type: 'text', text: context + '\n\nMy question: ' + message });
+
+    const hasPdf = userContent.some(b => b.type === 'document');
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -139,13 +199,14 @@ ${formatLogs(logs)}
         'Content-Type': 'application/json',
         'x-api-key': process.env.ANTHROPIC_API_KEY,
         'anthropic-version': '2023-06-01',
+        ...(hasPdf && { 'anthropic-beta': 'pdfs-2024-09-25' }),
       },
       body: JSON.stringify({
         model: 'claude-opus-4-6',
         max_tokens: 500,
-        system: SYSTEM_PROMPT,
+        system: systemPrompt,
         messages: [
-          { role: 'user', content: context + '\n\nMy question: ' + message }
+          { role: 'user', content: userContent }
         ]
       }),
     });
