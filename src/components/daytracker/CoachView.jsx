@@ -5,8 +5,27 @@ import { loadNutrition } from './NutritionView';
 import ChatHistoryPanel from '@/components/ChatHistoryPanel';
 import { loadConversations, saveConversation, deleteConversation, newConversation } from '@/lib/chatHistory';
 import { base44 } from '@/api/base44Client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import ModelSettingsPanel from '@/components/ModelSettingsPanel';
+
+const DEFAULT_COACH_PERSONALITY = `You are my personal time, life, and strategic coach living inside my hour-by-hour tracker.
+
+YOUR JOB:
+- Judge my week against MY GOALS (both long-term and short-term), not against generic productivity. Tell me plainly if I'm on track or slipping.
+- Show me the TRAJECTORY I'm on. Based on how I'm spending my hours, project where I'll actually end up vs. where I say I want to be.
+- Decide what actions I should take next. Be concrete — name the thing, not "focus more."
+- Motivate me when I've earned it. Scold me when I haven't.
+
+YOUR PHILOSOPHICAL LENSES — advise through whichever fits the moment:
+- MARCUS AURELIUS (default tone): Discipline, self-command, control what you can, do the duty in front of you.
+- SUN TZU: Strategy & positioning. Pick battles. Position yourself so victory is inevitable.
+- ALEX HORMOZI: Brutal prioritization & leverage. "Is this the highest-value action available right now?"
+- DAVE RAMSEY: Financial discipline. "Live like no one else now, so later you can live like no one else."
+
+RULES:
+- Keep replies under 200 words unless doing a full direction assessment. Talk like a coach, not a report.
+- Always tie advice back to MY specific goals and MY specific logs. Never be generic.`;
 
 function readFileAsBase64(file) {
   return new Promise((resolve, reject) => {
@@ -30,6 +49,7 @@ function CoachView() {
   const fileInputRef = useRef(null);
 
   // Load profile for coach personality & context files
+  const queryClient = useQueryClient();
   const { data: me } = useQuery({ queryKey: ['me'], queryFn: () => base44.auth.me() });
   const { data: profiles = [] } = useQuery({
     queryKey: ['profile', me?.email],
@@ -37,6 +57,19 @@ function CoachView() {
     enabled: !!me?.email,
   });
   const profile = profiles[0];
+
+  const handleSaveProfile = async (data) => {
+    try {
+      if (profile?.id) {
+        await base44.entities.UserProfile.update(profile.id, data);
+      } else {
+        await base44.entities.UserProfile.create(data);
+      }
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+    } catch {
+      toast.error('Failed to save. Please try again.');
+    }
+  };
 
   // Initialize from stored conversations
   useEffect(() => {
@@ -185,7 +218,7 @@ function CoachView() {
         onNewChat={handleNewChat}
       />
 
-      <div style={{ marginBottom: 12 }}>
+      <div style={{ marginBottom: 12, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
         <button
           onClick={() => setShowHistory(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition font-medium"
@@ -193,6 +226,14 @@ function CoachView() {
           <History className="w-4 h-4" /> Chat History
         </button>
       </div>
+
+      <ModelSettingsPanel
+        modelKey="coach"
+        label="Coach"
+        defaultPersonality={DEFAULT_COACH_PERSONALITY}
+        profile={profile}
+        onSaveProfile={handleSaveProfile}
+      />
 
       {messages.length === 0 && !loading && (
         <div className="coach-empty">

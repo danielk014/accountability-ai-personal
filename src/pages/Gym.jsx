@@ -15,6 +15,15 @@ import {
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths, differenceInDays, parseISO } from "date-fns";
 import ChatHistoryPanel from "@/components/ChatHistoryPanel";
 import { loadConversations, saveConversation, deleteConversation, newConversation, migrateFlat } from "@/lib/chatHistory";
+import ModelSettingsPanel from "@/components/ModelSettingsPanel";
+import { base44 } from "@/api/base44Client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
+const DEFAULT_GYM_PERSONALITY = `You are a personal gym coach. The user's goal is maximizing muscle gain through a calorie surplus — more food and protein is good, being calorie-dense is not a problem.
+
+Reply like a real coach texting: short, direct, no fluff. 1-3 sentences for simple questions. Only go longer if they ask for a full plan. Never use markdown headers, bullet lists, bold text, or numbered sections — just talk naturally.
+
+When asked to add exercises, log sets, or record progress, use your tools immediately and just briefly confirm after.`;
 
 // ── Storage helpers ──────────────────────────────────────────────────────────
 const getStorageKey    = () => `${getUserPrefix()}gym_tracker_v1`;
@@ -1483,6 +1492,29 @@ function AICoachTab({ gymData, nutrition, bodyweight, physique, onDataChange }) 
   const fileInputRef = useRef(null);
   const bottomRef    = useRef(null);
 
+  // Load profile for gym personality & context files
+  const queryClient = useQueryClient();
+  const { data: me } = useQuery({ queryKey: ['me'], queryFn: () => base44.auth.me() });
+  const { data: gymProfiles = [] } = useQuery({
+    queryKey: ['profile', me?.email],
+    queryFn: () => me?.email ? base44.entities.UserProfile.filter({ created_by: me.email }) : [],
+    enabled: !!me?.email,
+  });
+  const gymProfile = gymProfiles[0];
+
+  const handleSaveGymProfile = async (data) => {
+    try {
+      if (gymProfile?.id) {
+        await base44.entities.UserProfile.update(gymProfile.id, data);
+      } else {
+        await base44.entities.UserProfile.create(data);
+      }
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+    } catch {
+      toast.error('Failed to save. Please try again.');
+    }
+  };
+
   useEffect(() => {
     // Migrate flat chat to conversation system
     const oldMsgs = loadChat();
@@ -1714,6 +1746,14 @@ function AICoachTab({ gymData, nutrition, bodyweight, physique, onDataChange }) 
           <History className="w-4 h-4" /> Chat History
         </button>
       </div>
+
+      <ModelSettingsPanel
+        modelKey="gym"
+        label="Gym Coach"
+        defaultPersonality={DEFAULT_GYM_PERSONALITY}
+        profile={gymProfile}
+        onSaveProfile={handleSaveGymProfile}
+      />
 
       {/* Selection toolbar */}
       {isSelectionMode && (
