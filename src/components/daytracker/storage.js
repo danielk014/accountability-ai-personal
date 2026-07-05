@@ -273,6 +273,24 @@ const TYPE_TO_KEY = Object.fromEntries(
   Object.entries(KEY_TO_TYPE).map(([k, v]) => [v, k])
 );
 
+// Push ALL local data to Supabase (ensures nothing is stuck in localStorage only)
+export async function pushAllToSupabase() {
+  if (!_userId) return;
+  for (const [localKey, dataType] of Object.entries(KEY_TO_TYPE)) {
+    const raw = localStorage.getItem(localKey);
+    if (!raw) continue;
+    try {
+      const parsed = JSON.parse(raw);
+      const isEmpty = Array.isArray(parsed) ? parsed.length === 0 : Object.keys(parsed).length === 0;
+      if (isEmpty) continue;
+      await supabase.from('user_data').upsert(
+        { user_id: _userId, data_type: dataType, data: parsed, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id,data_type' }
+      );
+    } catch {}
+  }
+}
+
 export function initStorage(userId) {
   _userId = userId;
 
@@ -337,10 +355,12 @@ export async function pullFromSupabase() {
     if (!localKey) continue;
     const localTs = localTimestamps[row.data_type];
     const remoteTs = row.updated_at;
-    // Only overwrite local if remote is newer (or local has no timestamp)
-    if (!localTs || remoteTs >= localTs) {
+    const localRaw = localStorage.getItem(localKey);
+    const localEmpty = !localRaw || localRaw === '{}' || localRaw === '[]';
+
+    // Pull from Supabase if: local is empty, no local timestamp, or remote is newer
+    if (localEmpty || !localTs || remoteTs >= localTs) {
       localStorage.setItem(localKey, JSON.stringify(row.data));
-      // Update local timestamp to match
       localTimestamps[row.data_type] = remoteTs;
     }
   }
@@ -349,19 +369,23 @@ export async function pullFromSupabase() {
 
 export async function migrateLocalToSupabase() {
   if (!_userId) return;
+
+  // Fetch which data types already exist in Supabase for this user
   const { data: existing, error } = await supabase
     .from('user_data')
     .select('data_type')
-    .eq('user_id', _userId)
-    .limit(1);
+    .eq('user_id', _userId);
   if (error) {
     console.error('migrateLocalToSupabase check failed:', error);
     return;
   }
-  if (existing && existing.length > 0) return;
 
+  const existingTypes = new Set((existing || []).map(r => r.data_type));
+
+  // Push any local data types that are missing from Supabase
   const rows = [];
   for (const [localKey, dataType] of Object.entries(KEY_TO_TYPE)) {
+    if (existingTypes.has(dataType)) continue; // already in Supabase
     const raw = localStorage.getItem(localKey);
     if (!raw) continue;
     try {

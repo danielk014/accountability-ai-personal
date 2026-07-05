@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { initStorage, migrateLocalToSupabase, pullFromSupabase } from '@/components/daytracker/storage';
+import { initStorage, migrateLocalToSupabase, pullFromSupabase, pushAllToSupabase } from '@/components/daytracker/storage';
 import DailyView from '@/components/daytracker/DailyView';
 import CalendarView from '@/components/daytracker/CalendarView';
 import WeekView from '@/components/daytracker/WeekView';
@@ -31,6 +31,9 @@ export default function DayTracker() {
         setDataReady(true);
         setDataKey(k => k + 1);
       }
+      // After rendering, push all local data to Supabase in background
+      // This ensures any localStorage-only data gets synced for other devices
+      pushAllToSupabase().catch(() => {});
     })();
     return () => { cancelled = true; };
   }, [user]);
