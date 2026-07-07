@@ -1,5 +1,6 @@
 import { supabase } from '@/api/supabaseClient';
 
+// ── localStorage keys (used as local cache) ──────────────────────────────────
 const LOGS_KEY = 'daily-tracker-logs';
 const GOALS_KEY = 'daily-tracker-goals';
 const LONG_TERM_GOALS_KEY = 'daily-tracker-long-term-goals';
@@ -11,21 +12,25 @@ const BLOCKS_KEY = 'daily-tracker-blocks';
 const NOTES_KEY = 'daily-tracker-notes';
 const TIMESTAMPS_KEY = 'daily-tracker-sync-timestamps';
 
-const KEY_TO_TYPE = {
-  [LOGS_KEY]: 'logs',
-  [GOALS_KEY]: 'goals',
-  [LONG_TERM_GOALS_KEY]: 'long_term_goals',
-  [PROJECTS_KEY]: 'projects',
-  [BOARD_KEY]: 'board',
-  [DAILY_TASKS_KEY]: 'daily_tasks',
-  [RECURRING_TASKS_KEY]: 'recurring_tasks',
-  [BLOCKS_KEY]: 'blocks',
-  [NOTES_KEY]: 'notes',
+// ── Mapping: localStorage key  ↔  user_kv key (prefixed with dt: to avoid collisions) ──
+const LOCAL_TO_KV = {
+  [LOGS_KEY]: 'dt:logs',
+  [GOALS_KEY]: 'dt:goals',
+  [LONG_TERM_GOALS_KEY]: 'dt:long_term_goals',
+  [PROJECTS_KEY]: 'dt:projects',
+  [BOARD_KEY]: 'dt:board',
+  [DAILY_TASKS_KEY]: 'dt:daily_tasks',
+  [RECURRING_TASKS_KEY]: 'dt:recurring_tasks',
+  [BLOCKS_KEY]: 'dt:blocks',
+  [NOTES_KEY]: 'dt:notes',
 };
 
-const TYPE_TO_KEY = Object.fromEntries(
-  Object.entries(KEY_TO_TYPE).map(([k, v]) => [v, k])
+const KV_TO_LOCAL = Object.fromEntries(
+  Object.entries(LOCAL_TO_KV).map(([l, k]) => [k, l])
 );
+
+// All dt: keys we care about (for filtering pull results)
+const DT_KV_KEYS = Object.values(LOCAL_TO_KV);
 
 let _userId = null;
 let _realtimeChannel = null;
@@ -33,71 +38,44 @@ let _visibilityHandler = null;
 let _pullInterval = null;
 const _debounceTimers = {};
 
-// ---------- timestamp helpers ----------
+// ── timestamp helpers ────────────────────────────────────────────────────────
 
 function _getLocalTimestamps() {
   try { return JSON.parse(localStorage.getItem(TIMESTAMPS_KEY)) || {}; } catch { return {}; }
 }
 
-function _setLocalTimestamp(dataType) {
+function _setLocalTimestamp(kvKey) {
   const ts = _getLocalTimestamps();
-  ts[dataType] = new Date().toISOString();
+  ts[kvKey] = new Date().toISOString();
   localStorage.setItem(TIMESTAMPS_KEY, JSON.stringify(ts));
 }
 
-// ---------- write a single data type to Supabase (update existing row, or insert) ----------
+// ── write to user_kv (same table + pattern as supabaseStorage) ───────────────
 
-async function _writeToSupabase(dataType, data, timestamp) {
-  // Try updating the existing row first
-  const { data: updated, error: updateErr } = await supabase
-    .from('user_data')
-    .update({ data, updated_at: timestamp })
-    .eq('user_id', _userId)
-    .eq('data_type', dataType)
-    .select('data_type');
-
-  if (updateErr) {
-    console.error(`[sync] update failed for ${dataType}:`, updateErr.message);
-    return;
-  }
-
-  // If no row was updated, insert a new one
-  if (!updated || updated.length === 0) {
-    const { error: insertErr } = await supabase.from('user_data').insert({
-      user_id: _userId,
-      data_type: dataType,
-      data,
-      updated_at: timestamp,
-    });
-    if (insertErr) {
-      console.error(`[sync] insert failed for ${dataType}:`, insertErr.message);
-    }
-  }
-}
-
-// ---------- per-write sync to Supabase ----------
-
-function syncToSupabase(localStorageKey) {
+function _syncToKV(localKey) {
   if (!_userId) return;
-  const dataType = KEY_TO_TYPE[localStorageKey];
-  if (!dataType) return;
+  const kvKey = LOCAL_TO_KV[localKey];
+  if (!kvKey) return;
 
-  // Record the local write timestamp
-  _setLocalTimestamp(dataType);
+  _setLocalTimestamp(kvKey);
 
-  clearTimeout(_debounceTimers[dataType]);
-  _debounceTimers[dataType] = setTimeout(async () => {
+  clearTimeout(_debounceTimers[kvKey]);
+  _debounceTimers[kvKey] = setTimeout(async () => {
     try {
-      const raw = localStorage.getItem(localStorageKey);
-      const data = raw ? JSON.parse(raw) : {};
-      await _writeToSupabase(dataType, data, new Date().toISOString());
+      const raw = localStorage.getItem(localKey);
+      const value = raw ? JSON.parse(raw) : {};
+      const { error } = await supabase.from('user_kv').upsert(
+        { user_id: _userId, key: kvKey, value, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id,key' }
+      );
+      if (error) console.error(`[dt-sync] write failed for ${kvKey}:`, error.message);
     } catch (err) {
-      console.error(`[sync] exception for ${dataType}:`, err);
+      console.error(`[dt-sync] exception for ${kvKey}:`, err);
     }
   }, 500);
 }
 
-// ---------- public load/save helpers ----------
+// ── public load/save helpers ─────────────────────────────────────────────────
 
 export function getDateStr(date = new Date()) {
   return date.toISOString().slice(0, 10);
@@ -109,7 +87,7 @@ export function loadLogs() {
 
 export function saveLogs(logs) {
   localStorage.setItem(LOGS_KEY, JSON.stringify(logs));
-  syncToSupabase(LOGS_KEY);
+  _syncToKV(LOGS_KEY);
 }
 
 export function getHourLog(date, hour) {
@@ -131,7 +109,7 @@ export function loadGoals() {
 
 export function saveGoals(goals) {
   localStorage.setItem(GOALS_KEY, JSON.stringify(goals));
-  syncToSupabase(GOALS_KEY);
+  _syncToKV(GOALS_KEY);
 }
 
 export function loadLongTermGoals() {
@@ -140,7 +118,7 @@ export function loadLongTermGoals() {
 
 export function saveLongTermGoals(goals) {
   localStorage.setItem(LONG_TERM_GOALS_KEY, JSON.stringify(goals));
-  syncToSupabase(LONG_TERM_GOALS_KEY);
+  _syncToKV(LONG_TERM_GOALS_KEY);
 }
 
 export function loadProjects() {
@@ -149,7 +127,7 @@ export function loadProjects() {
 
 export function saveProjects(projects) {
   localStorage.setItem(PROJECTS_KEY, JSON.stringify(projects));
-  syncToSupabase(PROJECTS_KEY);
+  _syncToKV(PROJECTS_KEY);
 }
 
 export function loadBoard() {
@@ -162,7 +140,7 @@ export function loadBoard() {
 
 export function saveBoard(board) {
   localStorage.setItem(BOARD_KEY, JSON.stringify(board));
-  syncToSupabase(BOARD_KEY);
+  _syncToKV(BOARD_KEY);
 }
 
 export function loadDailyTasks(date) {
@@ -184,7 +162,7 @@ export function saveDailyTasks(date, tasks) {
     obj[date] = tasks;
     localStorage.setItem(DAILY_TASKS_KEY, JSON.stringify(obj));
   }
-  syncToSupabase(DAILY_TASKS_KEY);
+  _syncToKV(DAILY_TASKS_KEY);
 }
 
 export function loadRecurringTasks() {
@@ -193,7 +171,7 @@ export function loadRecurringTasks() {
 
 export function saveRecurringTasks(tasks) {
   localStorage.setItem(RECURRING_TASKS_KEY, JSON.stringify(tasks));
-  syncToSupabase(RECURRING_TASKS_KEY);
+  _syncToKV(RECURRING_TASKS_KEY);
 }
 
 export function loadBlocks(date) {
@@ -215,7 +193,7 @@ export function saveBlocks(date, blocks) {
     obj[date] = blocks;
     localStorage.setItem(BLOCKS_KEY, JSON.stringify(obj));
   }
-  syncToSupabase(BLOCKS_KEY);
+  _syncToKV(BLOCKS_KEY);
 }
 
 export function loadNotes() {
@@ -224,7 +202,7 @@ export function loadNotes() {
 
 export function saveNotes(notes) {
   localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
-  syncToSupabase(NOTES_KEY);
+  _syncToKV(NOTES_KEY);
 }
 
 export function loadAllBlocks() {
@@ -272,32 +250,33 @@ export function getDayStats(date) {
   };
 }
 
-// ---------- push local data to Supabase (safe — checks remote timestamps first) ----------
+// ── push all local data to user_kv ───────────────────────────────────────────
 
 export async function pushAllToSupabase() {
   if (!_userId) return;
 
   // Fetch remote timestamps so we only push data that is genuinely newer
   const { data: remoteRows, error: fetchErr } = await supabase
-    .from('user_data')
-    .select('data_type, updated_at')
-    .eq('user_id', _userId);
+    .from('user_kv')
+    .select('key, updated_at')
+    .eq('user_id', _userId)
+    .in('key', DT_KV_KEYS);
 
   if (fetchErr) {
-    console.error('[sync] pushAll: failed to fetch remote timestamps:', fetchErr);
+    console.error('[dt-sync] pushAll fetch failed:', fetchErr);
     return;
   }
 
   const remoteTimestamps = {};
   for (const row of (remoteRows || [])) {
-    remoteTimestamps[row.data_type] = row.updated_at;
+    remoteTimestamps[row.key] = row.updated_at;
   }
 
   const localTimestamps = _getLocalTimestamps();
 
-  for (const [localKey, dataType] of Object.entries(KEY_TO_TYPE)) {
-    const localTs = localTimestamps[dataType];
-    const remoteTs = remoteTimestamps[dataType];
+  for (const [localKey, kvKey] of Object.entries(LOCAL_TO_KV)) {
+    const localTs = localTimestamps[kvKey];
+    const remoteTs = remoteTimestamps[kvKey];
 
     // Skip if remote already has data at least as new as local
     if (remoteTs && localTs && remoteTs >= localTs) continue;
@@ -308,86 +287,112 @@ export async function pushAllToSupabase() {
       const parsed = JSON.parse(raw);
       const isEmpty = Array.isArray(parsed) ? parsed.length === 0 : Object.keys(parsed).length === 0;
       if (isEmpty) continue;
-      await _writeToSupabase(dataType, parsed, localTs || new Date().toISOString());
+      await supabase.from('user_kv').upsert(
+        { user_id: _userId, key: kvKey, value: parsed, updated_at: localTs || new Date().toISOString() },
+        { onConflict: 'user_id,key' }
+      );
     } catch {}
   }
 }
 
-// ---------- pull remote data into localStorage ----------
+// ── pull remote data into localStorage ───────────────────────────────────────
 
 export async function pullFromSupabase() {
   if (!_userId) return;
   const { data, error } = await supabase
-    .from('user_data')
-    .select('data_type, data, updated_at')
-    .eq('user_id', _userId);
+    .from('user_kv')
+    .select('key, value, updated_at')
+    .eq('user_id', _userId)
+    .in('key', DT_KV_KEYS);
   if (error) {
-    console.error('[sync] pullFromSupabase failed:', error);
+    console.error('[dt-sync] pull failed:', error);
     return;
   }
   const localTimestamps = _getLocalTimestamps();
-  for (const row of data) {
-    const localKey = TYPE_TO_KEY[row.data_type];
+  for (const row of (data || [])) {
+    const localKey = KV_TO_LOCAL[row.key];
     if (!localKey) continue;
-    const localTs = localTimestamps[row.data_type];
+    const localTs = localTimestamps[row.key];
     const remoteTs = row.updated_at;
     const localRaw = localStorage.getItem(localKey);
     const localEmpty = !localRaw || localRaw === '{}' || localRaw === '[]';
 
-    // Pull from Supabase if: local is empty, no local timestamp, or remote is newer
     if (localEmpty || !localTs || remoteTs >= localTs) {
-      localStorage.setItem(localKey, JSON.stringify(row.data));
-      localTimestamps[row.data_type] = remoteTs;
+      localStorage.setItem(localKey, JSON.stringify(row.value));
+      localTimestamps[row.key] = remoteTs;
     }
   }
   localStorage.setItem(TIMESTAMPS_KEY, JSON.stringify(localTimestamps));
 }
 
-// ---------- one-time migration for users who had data before sync existed ----------
+// ── one-time migration: localStorage → user_kv, and old user_data → user_kv ─
 
 export async function migrateLocalToSupabase() {
   if (!_userId) return;
 
-  // Fetch which data types already exist in Supabase for this user
-  const { data: existing, error } = await supabase
-    .from('user_data')
-    .select('data_type')
-    .eq('user_id', _userId);
-  if (error) {
-    console.error('[sync] migrateLocalToSupabase check failed:', error);
-    return;
-  }
+  // 1. Check which dt: keys already exist in user_kv
+  const { data: existing } = await supabase
+    .from('user_kv')
+    .select('key')
+    .eq('user_id', _userId)
+    .in('key', DT_KV_KEYS);
 
-  const existingTypes = new Set((existing || []).map(r => r.data_type));
+  const existingKeys = new Set((existing || []).map(r => r.key));
 
-  // Push any local data types that are missing from Supabase
-  for (const [localKey, dataType] of Object.entries(KEY_TO_TYPE)) {
-    if (existingTypes.has(dataType)) continue; // already in Supabase
+  // 2. Push any local data that's missing from user_kv
+  for (const [localKey, kvKey] of Object.entries(LOCAL_TO_KV)) {
+    if (existingKeys.has(kvKey)) continue;
     const raw = localStorage.getItem(localKey);
     if (!raw) continue;
     try {
       const parsed = JSON.parse(raw);
       const isEmpty = Array.isArray(parsed) ? parsed.length === 0 : Object.keys(parsed).length === 0;
       if (isEmpty) continue;
-      await _writeToSupabase(dataType, parsed, new Date().toISOString());
-    } catch {
-      // skip unparseable
+      await supabase.from('user_kv').upsert(
+        { user_id: _userId, key: kvKey, value: parsed, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id,key' }
+      );
+    } catch {}
+  }
+
+  // 3. Migrate any data stuck in the old user_data table → user_kv
+  //    (maps old data_type names like 'daily_tasks' → new keys like 'dt:daily_tasks')
+  const OLD_TYPE_TO_KV = {
+    logs: 'dt:logs', goals: 'dt:goals', long_term_goals: 'dt:long_term_goals',
+    projects: 'dt:projects', board: 'dt:board', daily_tasks: 'dt:daily_tasks',
+    recurring_tasks: 'dt:recurring_tasks', blocks: 'dt:blocks', notes: 'dt:notes',
+  };
+  try {
+    const { data: oldRows } = await supabase
+      .from('user_data')
+      .select('data_type, data, updated_at')
+      .eq('user_id', _userId);
+    for (const row of (oldRows || [])) {
+      const kvKey = OLD_TYPE_TO_KV[row.data_type];
+      if (!kvKey || existingKeys.has(kvKey)) continue;
+      await supabase.from('user_kv').upsert(
+        { user_id: _userId, key: kvKey, value: row.data, updated_at: row.updated_at },
+        { onConflict: 'user_id,key' }
+      );
+      existingKeys.add(kvKey);
     }
+  } catch {
+    // user_data table may not exist — that's fine
   }
 }
 
-// ---------- dispatch helper ----------
+// ── dispatch helper ──────────────────────────────────────────────────────────
 
 function _notifyRefresh() {
   window.dispatchEvent(new CustomEvent('daytracker-data-refreshed'));
 }
 
-// ---------- init / cleanup ----------
+// ── init / cleanup ───────────────────────────────────────────────────────────
 
 export function initStorage(userId) {
   _userId = userId;
 
-  // --- visibility-based sync: re-pull when user returns to the tab/app ---
+  // Re-pull when user returns to the tab/app
   if (_visibilityHandler) {
     document.removeEventListener('visibilitychange', _visibilityHandler);
   }
@@ -398,7 +403,7 @@ export function initStorage(userId) {
   };
   document.addEventListener('visibilitychange', _visibilityHandler);
 
-  // --- periodic pull as fallback (realtime WebSockets drop on mobile) ---
+  // Periodic pull as fallback (realtime WebSockets drop on mobile)
   if (_pullInterval) clearInterval(_pullInterval);
   _pullInterval = setInterval(() => {
     if (_userId && document.visibilityState === 'visible') {
@@ -406,31 +411,29 @@ export function initStorage(userId) {
     }
   }, 30_000);
 
-  // --- Supabase realtime subscription for live sync across devices ---
+  // Supabase realtime on the user_kv table (same table supabaseStorage uses)
   if (_realtimeChannel) {
     supabase.removeChannel(_realtimeChannel);
   }
   _realtimeChannel = supabase
-    .channel(`user_data_${userId}`)
+    .channel(`dt_kv_${userId}`)
     .on('postgres_changes', {
       event: '*',
       schema: 'public',
-      table: 'user_data',
+      table: 'user_kv',
       filter: `user_id=eq.${userId}`,
     }, (payload) => {
-      // Another device wrote — update localStorage if their data is newer
       const row = payload.new;
-      if (!row || !row.data_type) return;
-      const localKey = TYPE_TO_KEY[row.data_type];
+      if (!row || !row.key) return;
+      // Only handle day-tracker keys (ignore nutrition, chat, etc.)
+      const localKey = KV_TO_LOCAL[row.key];
       if (!localKey) return;
-      const localTs = _getLocalTimestamps()[row.data_type];
+      const localTs = _getLocalTimestamps()[row.key];
       const remoteTs = row.updated_at;
-      // Only apply remote change if it's newer than our last local write
       if (!localTs || remoteTs > localTs) {
-        localStorage.setItem(localKey, JSON.stringify(row.data));
-        // Update local timestamp to match remote so we don't re-push
+        localStorage.setItem(localKey, JSON.stringify(row.value));
         const ts = _getLocalTimestamps();
-        ts[row.data_type] = remoteTs;
+        ts[row.key] = remoteTs;
         localStorage.setItem(TIMESTAMPS_KEY, JSON.stringify(ts));
         _notifyRefresh();
       }
