@@ -8,7 +8,6 @@ import {
   ChevronLeft, ChevronRight, Calendar, Repeat, History,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { getUserPrefix } from "@/lib/userStore";
 import { supabaseStorage } from "@/api/supabaseStorage";
 import ChatHistoryPanel from "@/components/ChatHistoryPanel";
@@ -299,7 +298,7 @@ function buildFinancialSystemPrompt(fin, selectedMonth) {
   const oneTime   = sum(oneTimeItems);
   const totalExpenses = recurring + wishlist + oneTime;
   const savings = income - totalExpenses;
-  const rate = income > 0 ? ((savings / income) * 100).toFixed(1) : 0;
+  const rate = income > 0 ? ((savings / income) * 100).toFixed(1) : '0.0';
   const fmtItem = (i) => `${i.name}: $${fmt(i.amount)}${i.day ? ` (due ${ordinal(i.day)})` : ""}`;
 
   const savedItems = byMonth(fin.savings_deposits);

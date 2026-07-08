@@ -3,7 +3,6 @@ import { useAuth } from '@/lib/AuthContext';
 import { initStorage, cleanupStorage, migrateLocalToSupabase, pullFromSupabase, pushAllToSupabase } from '@/components/daytracker/storage';
 import DailyView from '@/components/daytracker/DailyView';
 import CalendarView from '@/components/daytracker/CalendarView';
-import WeekView from '@/components/daytracker/WeekView';
 import GoalsView from '@/components/daytracker/GoalsView';
 import ProjectsView from '@/components/daytracker/ProjectsView';
 import NotesView from '@/components/daytracker/NotesView';
@@ -31,7 +30,7 @@ export default function DayTracker() {
       }
       // After rendering, push all local data to Supabase in background
       // This ensures any localStorage-only data gets synced for other devices
-      pushAllToSupabase().catch(() => {});
+      pushAllToSupabase().catch(e => console.error('[DayTracker] Failed to sync to Supabase:', e));
     })();
     return () => { cancelled = true; cleanupStorage(); };
   }, [user]);

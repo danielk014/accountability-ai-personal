@@ -2,7 +2,7 @@ import { base44 } from './base44Client';
 import { queryClientInstance } from '@/lib/query-client';
 import { addReminder, getReminders, deleteReminder } from '@/lib/reminderEngine';
 
-const BASE_SYSTEM = `You are the user's ride-or-die best friend and accountability buddy. Be warm, real, and encouraging. Talk exactly like a close friend texting — casual, direct, no fluff. Never sound like a chatbot or assistant. No bullet points, no headers, no markdown formatting whatsoever. Just write naturally like you're having a real conversation. Keep it short and punchy unless they need depth.
+const BASE_SYSTEM_TEMPLATE = `You are the user's ride-or-die best friend and accountability buddy. Be warm, real, and encouraging. Talk exactly like a close friend texting — casual, direct, no fluff. Never sound like a chatbot or assistant. No bullet points, no headers, no markdown formatting whatsoever. Just write naturally like you're having a real conversation. Keep it short and punchy unless they need depth.
 
 You have tools to directly manage the user's data. When they ask you to add, edit, delete, or schedule anything — sleep entries, tasks, habits, calendar events, people, or context — use your tools to do it immediately without asking for confirmation unless critical information is missing. After using a tool, briefly confirm what you did in a casual way.
 
@@ -10,10 +10,12 @@ IMPORTANT — Tasks vs To-Do items:
 - Use create_task ONLY for recurring habits (daily, weekdays, etc.) or scheduled calendar events (frequency='once' with a date). Examples: "add a daily workout habit", "schedule a dentist appointment on Friday".
 - Use create_todo_item when the user says "add to my to-do list", "put this on my to-do", "add a to-do", "remind me to do X" (without a specific time), or any one-off task that isn't a recurring habit. To-do items live in the To-Do list on the dashboard.
 
-When the user mentions someone important in their life (a friend, family member, partner, etc.) or shares personal info about themselves (where they live, their job, a goal, etc.), proactively save it using add_person or update_context so it's remembered for future conversations.
+When the user mentions someone important in their life (a friend, family member, partner, etc.) or shares personal info about themselves (where they live, their job, a goal, etc.), proactively save it using add_person or update_context so it's remembered for future conversations.`;
 
-Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-Current time: ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+function buildBaseSystem() {
+  const now = new Date();
+  return BASE_SYSTEM_TEMPLATE + `\n\nCurrent date: ${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\nCurrent time: ${now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`;
+}
 
 import { getUserPrefix } from '@/lib/userStore';
 import { supabaseStorage } from '@/api/supabaseStorage';
@@ -723,7 +725,7 @@ export async function buildSystemPrompt() {
         const recurring = sumAmts(fin.recurring_expenses || []);
         const wishlist = sumAmts(fin.wishlist_expenses || []);
         const savings = income - recurring - wishlist;
-        const rate = income > 0 ? ((savings / income) * 100).toFixed(1) : 0;
+        const rate = income > 0 ? ((savings / income) * 100).toFixed(1) : '0.0';
         if (income > 0 || recurring > 0) {
           let finText = `Income: $${fmtAmt(income)}/mo`;
           if ((fin.income_sources || []).length > 0) finText += ` (${fin.income_sources.map(s => `${s.name}: $${fmtAmt(s.amount)}`).join(', ')})`;
@@ -733,7 +735,7 @@ export async function buildSystemPrompt() {
           lines.push(`## My Finances\n${finText}`);
         }
       }
-    } catch {}
+    } catch (e) { console.error('[buildSystemPrompt] Error loading financial data:', e); }
 
     // Gym data from supabaseStorage
     try {
@@ -765,7 +767,7 @@ export async function buildSystemPrompt() {
           lines.push(gymSection);
         }
       }
-    } catch {}
+    } catch (e) { console.error('[buildSystemPrompt] Error loading gym data:', e); }
 
     // Upcoming events and birthdays (next 30 days)
     try {
@@ -796,17 +798,17 @@ export async function buildSystemPrompt() {
         const allLines = [...bdayLines, ...eventLines].sort((a, b) => a.localeCompare(b));
         lines.push(`## Upcoming Events & Birthdays (Next 30 Days)\n${allLines.join('\n')}`);
       }
-    } catch {}
+    } catch (e) { console.error('[buildSystemPrompt] Error loading events/birthdays:', e); }
 
-    if (lines.length === 0) return BASE_SYSTEM;
+    if (lines.length === 0) return buildBaseSystem();
 
-    return `${BASE_SYSTEM}
+    return `${buildBaseSystem()}
 
 Here is everything you know about the user — always use this for personal, relevant answers:
 
 ${lines.join('\n\n')}`;
   } catch {
-    return BASE_SYSTEM;
+    return buildBaseSystem();
   }
 }
 
@@ -842,7 +844,8 @@ export async function sendOneOffPrompt(prompt) {
     }),
   });
   if (!response.ok) throw new Error(`Claude API error ${response.status}: ${await response.text()}`);
-  return (await response.json()).content[0].text;
+  const data = await response.json();
+  return data.content?.[0]?.text ?? '';
 }
 
 // ─── Shared agentic loop (used by both chat variants) ────────────────────────
@@ -859,9 +862,6 @@ async function _agenticLoop(history, systemPrompt) {
 
   const hasPdf = messages.some(m =>
     Array.isArray(m.content) && m.content.some(b => b.type === 'document')
-  );
-  const hasFiles = messages.some(m =>
-    Array.isArray(m.content) && m.content.some(b => b.type === 'image' || b.type === 'document')
   );
 
   for (let turn = 0; turn < 8; turn++) {
@@ -920,7 +920,7 @@ export async function sendMessageToClaude(history) {
     if (chatFiles.length > 0) {
       history = _injectContextFiles(history, chatFiles);
     }
-  } catch {}
+  } catch (e) { console.error('[sendMessageToClaude] Error injecting context files:', e); }
 
   return _agenticLoop(history, systemPrompt);
 }
@@ -994,7 +994,7 @@ function _loadGymData() {
       }
       return parsed;
     }
-  } catch {}
+  } catch (e) { console.error('[_loadGymData] Error loading gym data:', e); }
   return { weight_unit: 'kg', workout_days: [] };
 }
 
@@ -1158,7 +1158,7 @@ When asked to add exercises, log sets, or record progress, use your tools immedi
       customPrompt = profile.model_personalities.gym;
     }
     gymFiles = profile?.model_context_files?.gym || [];
-  } catch {}
+  } catch (e) { console.error('[sendGymMessage] Error loading gym personality:', e); }
 
   const systemPrompt = `${customPrompt}
 
@@ -1235,7 +1235,7 @@ export async function analyzeFoodWithAI(imageBase64, mediaType, description) {
         content.push({ type: 'image', source: { type: 'base64', media_type: f.mediaType, data: f.data } });
       }
     }
-  } catch {}
+  } catch (e) { console.error('[analyzeFoodWithAI] Error loading food personality/files:', e); }
 
   const prompt = `Analyze this food${description ? `: "${description}"` : ""}. The user's goal is to be in a calorie surplus to maximize muscle growth — more calories and protein is generally better, and calorie-dense whole foods are a positive. Score down for highly processed foods, excessive sugar, or trans fats, not for being calorie-dense. Estimate nutritional values for a typical serving.${foodCustomInstructions} Return ONLY valid JSON in this exact format with no other text:
 {"name":"food name","serving":"serving description","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"saturated_fat_g":0,"sugar_g":0,"fiber_g":0,"nutrition_score":0,"health_score":0,"sodium_mg":0,"potassium_mg":0,"calcium_mg":0,"iron_mg":0,"vitamin_a_pct":0,"vitamin_c_pct":0,"vitamin_d_pct":0,"health_note":"one sentence on whether this food supports muscle-building calorie surplus or not"}

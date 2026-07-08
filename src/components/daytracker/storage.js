@@ -246,7 +246,7 @@ export function getDayStats(date) {
 
   return {
     logged,
-    avgEnergy: energyCount > 0 ? (totalEnergy / energyCount).toFixed(1) : 0
+    avgEnergy: energyCount > 0 ? (totalEnergy / energyCount).toFixed(1) : '0.0'
   };
 }
 
