@@ -56,12 +56,12 @@ RULES:
 - Always tie advice back to MY specific goals and MY specific logs. Never be generic.`;
 
 function formatScheduleBlocks(scheduleBlocks) {
-  if (!scheduleBlocks || Object.keys(scheduleBlocks).length === 0) return '(No schedule blocks yet)';
+  if (!scheduleBlocks || typeof scheduleBlocks !== 'object' || Array.isArray(scheduleBlocks) || Object.keys(scheduleBlocks).length === 0) return '(No schedule blocks yet)';
   const sorted = Object.keys(scheduleBlocks).sort();
   let output = '';
   for (const date of sorted) {
     const blocks = scheduleBlocks[date];
-    if (!blocks || blocks.length === 0) continue;
+    if (!Array.isArray(blocks) || blocks.length === 0) continue;
     output += `\n${date}:\n`;
     const sortedBlocks = [...blocks].sort((a, b) => a.startHour - b.startHour);
     for (const block of sortedBlocks) {
@@ -78,12 +78,12 @@ function formatScheduleBlocks(scheduleBlocks) {
 function pad(n) { return n.toString().padStart(2, '0'); }
 
 function formatDailyTasks(dailyTasks) {
-  if (!dailyTasks || Object.keys(dailyTasks).length === 0) return '(No daily tasks yet)';
+  if (!dailyTasks || typeof dailyTasks !== 'object' || Array.isArray(dailyTasks) || Object.keys(dailyTasks).length === 0) return '(No daily tasks yet)';
   const sorted = Object.keys(dailyTasks).sort();
   let output = '';
   for (const date of sorted) {
     const tasks = dailyTasks[date];
-    if (!tasks || tasks.length === 0) continue;
+    if (!Array.isArray(tasks) || tasks.length === 0) continue;
     output += `\n${date}:\n`;
     for (const task of tasks) {
       const status = task.done ? '[DONE]' : '[TODO]';
@@ -94,7 +94,7 @@ function formatDailyTasks(dailyTasks) {
 }
 
 function formatNutrition(nutrition) {
-  if (!nutrition || !nutrition.logs || nutrition.logs.length === 0) return '(No nutrition data yet)';
+  if (!nutrition || typeof nutrition !== 'object' || !Array.isArray(nutrition.logs) || nutrition.logs.length === 0) return '(No nutrition data yet)';
   const sorted = [...nutrition.logs].sort((a, b) => a.date.localeCompare(b.date));
   // Only include recent days to keep context manageable
   const recent = sorted.slice(-14);
@@ -133,10 +133,10 @@ function formatLogs(logs) {
 }
 
 function formatFinancials(fin) {
-  if (!fin) return '(No financial data yet)';
+  if (!fin || typeof fin !== 'object') return '(No financial data yet)';
   let output = '';
   const currentMonth = new Date().toISOString().slice(0, 7);
-  const byMonth = (arr) => (arr || []).filter(e => e.month === currentMonth);
+  const byMonth = (arr) => (Array.isArray(arr) ? arr : []).filter(e => e.month === currentMonth);
 
   const income = byMonth(fin.income_sources);
   const recurring = byMonth(fin.recurring_expenses);
@@ -199,14 +199,19 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { message, logs, goals, longTermGoals, dailyTasks, scheduleBlocks, nutrition, financials, gymData, coachPersonality, coachContextFiles, attachments } = req.body;
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const { message, logs, dailyTasks, scheduleBlocks, nutrition, financials, gymData, coachPersonality } = body;
+    const longTermGoals = Array.isArray(body.longTermGoals) ? body.longTermGoals : [];
+    const goals = Array.isArray(body.goals) ? body.goals : [];
+    const coachContextFiles = Array.isArray(body.coachContextFiles) ? body.coachContextFiles : [];
+    const attachments = Array.isArray(body.attachments) ? body.attachments : [];
 
     const context = `
 MY LONG-TERM GOALS (life vision):
-${longTermGoals && longTermGoals.length > 0 ? longTermGoals.map((g, i) => `${i + 1}. ${g}`).join('\n') : '(No long-term goals set yet)'}
+${longTermGoals.length > 0 ? longTermGoals.map((g, i) => `${i + 1}. ${g}`).join('\n') : '(No long-term goals set yet)'}
 
 MY SHORT-TERM GOALS (current focus):
-${goals && goals.length > 0 ? goals.map((g, i) => `${i + 1}. ${g}`).join('\n') : '(No short-term goals set yet)'}
+${goals.length > 0 ? goals.map((g, i) => `${i + 1}. ${g}`).join('\n') : '(No short-term goals set yet)'}
 
 MY DAILY TASKS (to-do items per day):
 ${formatDailyTasks(dailyTasks)}
@@ -237,7 +242,7 @@ ${formatGymData(gymData)}
     const userContent = [];
 
     // Add persistent context files
-    if (coachContextFiles && coachContextFiles.length > 0) {
+    if (coachContextFiles.length > 0) {
       for (const f of coachContextFiles) {
         if (f.mediaType === 'application/pdf') {
           userContent.push({ type: 'document', source: { type: 'base64', media_type: f.mediaType, data: f.data } });
@@ -248,7 +253,7 @@ ${formatGymData(gymData)}
     }
 
     // Add per-message attachments
-    if (attachments && attachments.length > 0) {
+    if (attachments.length > 0) {
       for (const att of attachments) {
         if (att.mediaType === 'application/pdf') {
           userContent.push({ type: 'document', source: { type: 'base64', media_type: att.mediaType, data: att.data } });

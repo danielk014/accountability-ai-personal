@@ -291,7 +291,7 @@ function CoachView() {
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '6px 0' }}>
           {attachments.map((att, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#f1f5f9', borderRadius: 8, padding: '4px 10px', fontSize: 12, color: '#475569' }}>
-              {att.preview ? (
+              {att.preview && typeof att.preview === 'string' && (att.preview.startsWith('data:') || att.preview.startsWith('https://')) ? (
                 <img src={att.preview} alt="" style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover' }} />
               ) : (
                 <FileText style={{ width: 14, height: 14 }} />

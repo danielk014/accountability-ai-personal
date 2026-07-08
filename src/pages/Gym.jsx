@@ -1817,8 +1817,10 @@ function AICoachTab({ gymData, nutrition, bodyweight, physique, onDataChange }) 
               {m._attachments?.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 p-2 pb-0">
                   {m._attachments.map((att, ai) => (
-                    <img key={ai} src={att.preview} alt={att.name}
-                      className="max-w-[180px] max-h-[140px] rounded-xl object-cover border border-indigo-300" />
+                    typeof att.preview === 'string' && (att.preview.startsWith('data:') || att.preview.startsWith('https://'))
+                      ? <img key={ai} src={att.preview} alt={att.name}
+                          className="max-w-[180px] max-h-[140px] rounded-xl object-cover border border-indigo-300" />
+                      : null
                   ))}
                 </div>
               )}
