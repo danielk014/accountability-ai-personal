@@ -1646,7 +1646,7 @@ function AICoachTab({ gymData, nutrition, bodyweight, physique, onDataChange }) 
       if (file.size > 20 * 1024 * 1024) { toast.error(`${file.name} is too large`); continue; }
       try {
         const data    = await readAsBase64(file);
-        const preview = URL.createObjectURL(file);
+        const preview = sanitizeImageSrc(URL.createObjectURL(file));
         setAttachments(prev => [...prev, { id: generateId(), name: file.name, mediaType: file.type, data, preview }]);
       } catch { toast.error(`Failed to read ${file.name}`); }
     }

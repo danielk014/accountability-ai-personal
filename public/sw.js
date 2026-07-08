@@ -46,8 +46,8 @@ self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 // ── Messages from the main app ─────────────────────────────────────────────────
 
 self.addEventListener('message', (event) => {
-  // Validate the message origin matches the service worker's own origin
-  if (event.origin && event.origin !== self.location.origin) return;
+  // Only accept messages from controlled clients (same-origin WindowClient/Worker)
+  if (!event.source || !(event.source instanceof Client)) return;
 
   const { type, reminders } = event.data || {};
 
