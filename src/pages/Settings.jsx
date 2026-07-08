@@ -1,11 +1,10 @@
 import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, X, Pencil, Check, Sparkles, User, Briefcase, Users, Target, StickyNote, ChevronDown, ChevronUp, LogOut, Bot, MessageSquare, Dumbbell, UtensilsCrossed, Upload, RotateCcw, FileText, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, X, Pencil, Check, User, Briefcase, Users, Target, StickyNote, ChevronDown, ChevronUp, LogOut, Bot, MessageSquare, Dumbbell, UtensilsCrossed, Upload, RotateCcw, FileText, Trash2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "../utils";
 import { useAuth } from "@/lib/AuthContext";

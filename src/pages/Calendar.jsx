@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format, startOfWeek, addDays, isSameDay, parseISO } from "date-fns";
+import { format, startOfWeek, addDays, isSameDay } from "date-fns";
 import { ChevronLeft, ChevronRight, Plus, ListTodo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";

@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Button } from "@/components/ui/button";
-import { Copy, Zap, CheckCircle2, AlertCircle, Loader2, ChevronRight, Clock, FileText, Image } from 'lucide-react';
+import { Zap, CheckCircle2, AlertCircle, Loader2, ChevronRight, Clock, FileText, Image } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
 const FunctionDisplay = ({ toolCall }) => {
   const [expanded, setExpanded] = useState(false);

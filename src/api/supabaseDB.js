@@ -28,6 +28,9 @@ export function _clearUser() {
 // ─── ID generator (same as localDB) ──────────────────────────────────────────
 
 function generateId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
   return Math.random().toString(36).slice(2, 11) + Date.now().toString(36)
 }
 
@@ -102,10 +105,12 @@ function createEntityStore(entityType) {
     },
 
     async update(id, updateData) {
+      if (!_currentUserId) throw new Error('Not authenticated')
       const { data: existing, error: fetchErr } = await supabase
         .from('user_entities')
         .select('data')
         .eq('id', id)
+        .eq('user_id', _currentUserId)
         .single()
 
       if (fetchErr || !existing) throw new Error(`Record ${id} not found`)
@@ -116,6 +121,7 @@ function createEntityStore(entityType) {
         .from('user_entities')
         .update({ data: updated })
         .eq('id', id)
+        .eq('user_id', _currentUserId)
 
       if (error) throw new Error(error.message)
       listeners.forEach(cb => cb([updated]))
@@ -123,10 +129,12 @@ function createEntityStore(entityType) {
     },
 
     async delete(id) {
+      if (!_currentUserId) throw new Error('Not authenticated')
       const { error } = await supabase
         .from('user_entities')
         .delete()
         .eq('id', id)
+        .eq('user_id', _currentUserId)
 
       if (error) throw new Error(error.message)
       listeners.forEach(cb => cb([]))
@@ -218,7 +226,7 @@ export async function runCleanup() {
       .eq('user_id', _currentUserId)
       .eq('entity_type', 'TaskCompletion')
       .filter('data->>completed_date', 'lt', cutoffDate7)
-  } catch {}
+  } catch (e) { console.warn('[cleanup] TaskCompletion:', e) }
 
   // TodoItem: drop completed items older than 30 days (filter in JS)
   try {
@@ -241,7 +249,7 @@ export async function runCleanup() {
         await supabase.from('user_entities').delete().in('id', toDelete)
       }
     }
-  } catch {}
+  } catch (e) { console.warn('[cleanup] TodoItem:', e) }
 
   // Sleep: drop entries older than 90 days
   try {
@@ -251,7 +259,7 @@ export async function runCleanup() {
       .eq('user_id', _currentUserId)
       .eq('entity_type', 'Sleep')
       .filter('data->>date', 'lt', cutoffDate90)
-  } catch {}
+  } catch (e) { console.warn('[cleanup] Sleep:', e) }
 }
 
 // ─── Exported DB (same shape as localDB) ─────────────────────────────────────

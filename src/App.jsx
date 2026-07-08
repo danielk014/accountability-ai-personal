@@ -13,7 +13,7 @@ import { Loader2 } from 'lucide-react';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
-const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
+const MainPage = mainPageKey ? Pages[mainPageKey] : () => null;
 
 const LayoutWrapper = ({ children, currentPageName }) => Layout
   ? <Layout currentPageName={currentPageName}>{children}</Layout>
@@ -23,7 +23,7 @@ const LayoutWrapper = ({ children, currentPageName }) => Layout
 function CleanupRunner() {
   const { isAuthenticated } = useAuth();
   useEffect(() => {
-    if (isAuthenticated) runCleanup();
+    if (isAuthenticated) runCleanup().catch(e => console.warn('[cleanup]', e));
   }, [isAuthenticated]);
   return null;
 }

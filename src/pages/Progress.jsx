@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Check, Flag, RotateCcw } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { format, subDays } from "date-fns";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { runCleanup } from "@/api/supabaseDB";
 

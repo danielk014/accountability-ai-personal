@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { Mail, Loader2, AlertCircle, Plus, Check, Link as LinkIcon } from "lucide-react";
+import { Mail, Loader2, Plus, Check } from "lucide-react";
 import { toast } from "sonner";
 
 export default function EmailInsights() {

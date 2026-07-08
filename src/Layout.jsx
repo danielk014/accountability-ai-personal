@@ -22,10 +22,13 @@ export default function Layout({ children, currentPageName }) {
   const { user } = useAuth();
   const [unread, setUnread] = useState(getUnreadCount);
 
-  // Run reminder check every 30 s
+  // Run reminder check every 30 s (skip when tab is hidden)
   useEffect(() => {
-    checkReminders(); // check immediately on mount
-    const interval = setInterval(checkReminders, 30_000);
+    const tick = () => {
+      if (document.visibilityState !== 'hidden') checkReminders();
+    };
+    tick();
+    const interval = setInterval(tick, 30_000);
     return () => clearInterval(interval);
   }, []);
 

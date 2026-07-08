@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Settings, ChevronDown, ChevronUp, Pencil, Check, X, Upload, FileText, Trash2, RotateCcw } from 'lucide-react';
+import { Settings, ChevronDown, ChevronUp, Pencil, Check, Upload, FileText, Trash2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
 const MAX_FILES = 5;

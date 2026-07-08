@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { format, subWeeks, startOfWeek, addDays } from "date-fns";
 import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 6am to 11pm
 const CATEGORY_COLORS = {
