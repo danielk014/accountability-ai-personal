@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { sanitizeImageSrc } from '@/lib/sanitize';
 import {
   Plus, Trash2, Pencil, Check, X, Dumbbell, Send, Loader2, Bot,
   Scale, Paperclip, Camera, ArrowLeft, CheckSquare, Square, ChevronLeft, ChevronRight,
@@ -1816,12 +1817,13 @@ function AICoachTab({ gymData, nutrition, bodyweight, physique, onDataChange }) 
             )}>
               {m._attachments?.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 p-2 pb-0">
-                  {m._attachments.map((att, ai) => (
-                    typeof att.preview === 'string' && (att.preview.startsWith('data:') || att.preview.startsWith('https://'))
-                      ? <img key={ai} src={att.preview} alt={att.name}
+                  {m._attachments.map((att, ai) => {
+                    const safeSrc = sanitizeImageSrc(att.preview);
+                    return safeSrc
+                      ? <img key={ai} src={safeSrc} alt={att.name}
                           className="max-w-[180px] max-h-[140px] rounded-xl object-cover border border-indigo-300" />
-                      : null
-                  ))}
+                      : null;
+                  })}
                 </div>
               )}
               {m.content && <div className="px-4 py-2.5 whitespace-pre-wrap">{m.content}</div>}

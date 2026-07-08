@@ -185,7 +185,7 @@ function formatGymData(gym) {
   }
 
   // Bodyweight
-  const bw = (gym.bodyweight_log || []).slice(-14);
+  const bw = (Array.isArray(gym.bodyweight_log) ? gym.bodyweight_log : []).slice(-14);
   if (bw.length > 0) {
     output += '\nRecent bodyweight: ' + bw.map(e => `${e.date}: ${e.weight}${gym.weight_unit}`).join(', ') + '\n';
   }
