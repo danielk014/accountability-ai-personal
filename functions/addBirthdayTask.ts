@@ -41,13 +41,11 @@ Deno.serve(async (req) => {
     const pad = (n: number) => String(n).padStart(2, '0');
     const scheduledDate = `${thisYearBirthday.getFullYear()}-${pad(thisYearBirthday.getMonth() + 1)}-${pad(thisYearBirthday.getDate())}`;
 
-    // Create the birthday task with frequency as the day of week
-    const dow = thisYearBirthday.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-    
+    // Create the birthday task as a one-time event on the scheduled date
     await base44.entities.Task.create({
       name: taskName,
       category: 'personal',
-      frequency: dow, // Repeat on this day of week
+      frequency: 'once',
       scheduled_date: scheduledDate,
       is_active: true,
       reminder_enabled: true,
