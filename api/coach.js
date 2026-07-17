@@ -193,6 +193,54 @@ function formatGymData(gym) {
   return output || '(No gym data yet)';
 }
 
+const SCHEDULE_TOOLS = [
+  {
+    name: 'add_schedule_block',
+    description: 'Add a time block to the user\'s day tracker schedule. Use this when the user asks you to add, schedule, or plan something on their schedule.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'The date in YYYY-MM-DD format. Use today\'s date if not specified.' },
+        text: { type: 'string', description: 'What the block is for (e.g. "Deep work", "Sleep", "Gym")' },
+        startHour: { type: 'integer', minimum: 0, maximum: 23, description: 'Start hour (0-23)' },
+        endHour: { type: 'integer', minimum: 1, maximum: 24, description: 'End hour (1-24)' },
+        type: { type: 'string', enum: ['planned', 'actual'], description: 'Whether this is planned or actually happened. Default: planned' },
+      },
+      required: ['date', 'text', 'startHour', 'endHour'],
+    },
+  },
+  {
+    name: 'remove_schedule_block',
+    description: 'Remove a time block from the user\'s schedule by matching the text and date.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'The date in YYYY-MM-DD format' },
+        text: { type: 'string', description: 'The text of the block to remove (partial match is fine)' },
+      },
+      required: ['date', 'text'],
+    },
+  },
+  {
+    name: 'update_schedule_block',
+    description: 'Update an existing time block on the user\'s schedule (change time, text, etc).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'The date in YYYY-MM-DD format' },
+        matchText: { type: 'string', description: 'Text of the existing block to find (partial match)' },
+        newText: { type: 'string', description: 'New text for the block (optional)' },
+        newStartHour: { type: 'integer', minimum: 0, maximum: 23, description: 'New start hour (optional)' },
+        newEndHour: { type: 'integer', minimum: 1, maximum: 24, description: 'New end hour (optional)' },
+      },
+      required: ['date', 'matchText'],
+    },
+  },
+];
+
+const BLOCK_COLORS = ['#6366f1', '#22c55e', '#eab308', '#ef4444', '#a855f7', '#f97316'];
+const ACTUAL_COLOR = '#64748b';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -206,7 +254,11 @@ export default async function handler(req, res) {
     const coachContextFiles = Array.isArray(body.coachContextFiles) ? body.coachContextFiles : [];
     const attachments = Array.isArray(body.attachments) ? body.attachments : [];
 
+    const today = new Date().toISOString().slice(0, 10);
+
     const context = `
+TODAY'S DATE: ${today}
+
 MY LONG-TERM GOALS (life vision):
 ${longTermGoals.length > 0 ? longTermGoals.map((g, i) => `${i + 1}. ${g}`).join('\n') : '(No long-term goals set yet)'}
 
@@ -234,6 +286,7 @@ ${formatGymData(gymData)}
 
     // Build system prompt with optional custom personality
     let systemPrompt = SYSTEM_PROMPT;
+    systemPrompt += `\n\nYou have tools to modify the user's day tracker schedule. Use them when the user asks you to add, adjust, remove, or plan schedule blocks. You can add blocks for sleep, work, gym, study, etc. When adding blocks, use today's date (${today}) unless the user specifies a different date.`;
     if (coachPersonality) {
       systemPrompt += `\n\n--- USER'S CUSTOM INSTRUCTIONS ---\n${coachPersonality}`;
     }
@@ -267,31 +320,95 @@ ${formatGymData(gymData)}
 
     const hasPdf = userContent.some(b => b.type === 'document');
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01',
-        ...(hasPdf && { 'anthropic-beta': 'pdfs-2024-09-25' }),
-      },
-      body: JSON.stringify({
-        model: 'claude-opus-4-6',
-        max_tokens: 500,
-        system: systemPrompt,
-        messages: [
-          { role: 'user', content: userContent }
-        ]
-      }),
-    });
+    // First API call - may include tool use
+    let messages = [{ role: 'user', content: userContent }];
+    const scheduleChanges = [];
+    let replyText = '';
+    let maxIterations = 5;
 
-    const data = await response.json();
+    while (maxIterations-- > 0) {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.ANTHROPIC_API_KEY,
+          'anthropic-version': '2023-06-01',
+          ...(hasPdf && { 'anthropic-beta': 'pdfs-2024-09-25' }),
+        },
+        body: JSON.stringify({
+          model: 'claude-opus-4-6',
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages,
+          tools: SCHEDULE_TOOLS,
+        }),
+      });
 
-    if (!response.ok) {
-      return res.status(response.status).json({ error: data.error?.message || 'API error' });
+      const data = await response.json();
+
+      if (!response.ok) {
+        return res.status(response.status).json({ error: data.error?.message || 'API error' });
+      }
+
+      // Process response content
+      const toolUseBlocks = data.content.filter(b => b.type === 'tool_use');
+      const textBlocks = data.content.filter(b => b.type === 'text');
+
+      if (textBlocks.length > 0) {
+        replyText += textBlocks.map(b => b.text).join('\n');
+      }
+
+      // If no tool use, we're done
+      if (toolUseBlocks.length === 0 || data.stop_reason !== 'tool_use') {
+        break;
+      }
+
+      // Process tool calls and build tool results
+      messages.push({ role: 'assistant', content: data.content });
+
+      const toolResults = [];
+      for (const toolBlock of toolUseBlocks) {
+        const { name, input, id } = toolBlock;
+        let result = '';
+
+        if (name === 'add_schedule_block') {
+          const colorIdx = scheduleChanges.length % BLOCK_COLORS.length;
+          const block = {
+            id: Date.now() + Math.random(),
+            text: input.text,
+            startHour: input.startHour,
+            endHour: input.endHour,
+            color: input.type === 'actual' ? ACTUAL_COLOR : BLOCK_COLORS[colorIdx],
+            type: input.type || 'planned',
+          };
+          scheduleChanges.push({ action: 'add', date: input.date, block });
+          result = `Added "${input.text}" from ${pad(input.startHour)}:00 to ${pad(input.endHour)}:00 on ${input.date}`;
+        } else if (name === 'remove_schedule_block') {
+          scheduleChanges.push({ action: 'remove', date: input.date, matchText: input.text });
+          result = `Removed block matching "${input.text}" on ${input.date}`;
+        } else if (name === 'update_schedule_block') {
+          scheduleChanges.push({
+            action: 'update',
+            date: input.date,
+            matchText: input.matchText,
+            updates: {
+              ...(input.newText && { text: input.newText }),
+              ...(input.newStartHour !== undefined && { startHour: input.newStartHour }),
+              ...(input.newEndHour !== undefined && { endHour: input.newEndHour }),
+            },
+          });
+          result = `Updated block "${input.matchText}" on ${input.date}`;
+        } else {
+          result = 'Unknown tool';
+        }
+
+        toolResults.push({ type: 'tool_result', tool_use_id: id, content: result });
+      }
+
+      messages.push({ role: 'user', content: toolResults });
     }
 
-    res.json({ reply: data.content[0].text });
+    res.json({ reply: replyText, scheduleChanges });
   } catch (error) {
     console.error('Coach API error:', error.message);
     res.status(500).json({ error: error.message });

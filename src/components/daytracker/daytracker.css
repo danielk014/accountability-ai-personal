@@ -1820,3 +1820,503 @@
 .day-tracker-root .notes-body-input::placeholder {
   color: #cbd5e1;
 }
+
+/* Daily Stats Row */
+.day-tracker-root .daily-stats-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.day-tracker-root .daily-stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  font-size: 13px;
+}
+
+.day-tracker-root .daily-stat-chip.sleep {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
+.day-tracker-root .daily-stat-chip.work {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.day-tracker-root .daily-stat-chip.total {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.day-tracker-root .daily-stat-icon {
+  font-size: 15px;
+}
+
+.day-tracker-root .daily-stat-value {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.day-tracker-root .daily-stat-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Dashboard Tasks in Sidebar */
+.day-tracker-root .dashboard-tasks-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 8px;
+}
+
+.day-tracker-root .dashboard-tasks-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+
+.day-tracker-root .dashboard-task-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  margin-bottom: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.day-tracker-root .dashboard-task-item:hover {
+  background: #f1f5f9;
+}
+
+.day-tracker-root .dashboard-task-item.completed {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.day-tracker-root .dashboard-task-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 2px solid #94a3b8;
+  background: transparent;
+  color: #fff;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.day-tracker-root .dashboard-task-check.checked {
+  background: #22c55e;
+  border-color: #22c55e;
+}
+
+.day-tracker-root .dashboard-task-name {
+  flex: 1;
+  font-weight: 500;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.day-tracker-root .dashboard-task-time {
+  font-size: 11px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.day-tracker-root .dashboard-task-category {
+  font-size: 10px;
+  color: #6366f1;
+  text-transform: capitalize;
+  flex-shrink: 0;
+}
+
+/* Life Lessons */
+.day-tracker-root .life-lessons-container {
+  padding-bottom: 20px;
+}
+
+.day-tracker-root .ll-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.day-tracker-root .ll-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.day-tracker-root .ll-subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.day-tracker-root .ll-add-btn {
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.day-tracker-root .ll-add-btn:hover {
+  background: #4f46e5;
+}
+
+/* Form */
+.day-tracker-root .ll-form {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.day-tracker-root .ll-form-input {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #1e293b;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  margin-bottom: 10px;
+}
+
+.day-tracker-root .ll-form-input:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.day-tracker-root .ll-form-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.day-tracker-root .ll-form-body {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.6;
+}
+
+.day-tracker-root .ll-form-context {
+  resize: vertical;
+  min-height: 50px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.day-tracker-root .ll-form-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.day-tracker-root .ll-form-field {
+  flex: 1;
+}
+
+.day-tracker-root .ll-form-label {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+
+.day-tracker-root .ll-form-select {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #1e293b;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.day-tracker-root .ll-form-select:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.day-tracker-root .ll-form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Search & Filters */
+.day-tracker-root .ll-controls {
+  margin-bottom: 14px;
+}
+
+.day-tracker-root .ll-search {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  color: #1e293b;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  margin-bottom: 10px;
+}
+
+.day-tracker-root .ll-search:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.day-tracker-root .ll-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.day-tracker-root .ll-filter-chip {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.day-tracker-root .ll-filter-chip:hover {
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.day-tracker-root .ll-filter-chip.active {
+  background: #eef2ff;
+  border-color: #6366f1;
+  color: #6366f1;
+  font-weight: 600;
+}
+
+/* Lesson Cards */
+.day-tracker-root .ll-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.day-tracker-root .ll-card {
+  display: flex;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.day-tracker-root .ll-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.day-tracker-root .ll-card-accent {
+  width: 4px;
+  flex-shrink: 0;
+}
+
+.day-tracker-root .ll-card-content {
+  flex: 1;
+  padding: 14px 16px;
+  min-width: 0;
+}
+
+.day-tracker-root .ll-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.day-tracker-root .ll-card-category {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 12px;
+  border: 1px solid;
+}
+
+.day-tracker-root .ll-card-reviews {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.day-tracker-root .ll-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+  line-height: 1.3;
+}
+
+.day-tracker-root .ll-card-lesson {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.day-tracker-root .ll-card-lesson.collapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.day-tracker-root .ll-card-expand-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  font-style: italic;
+  margin-top: 4px;
+  display: block;
+}
+
+.day-tracker-root .ll-card-expanded {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.day-tracker-root .ll-card-context {
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 3px solid #e2e8f0;
+}
+
+.day-tracker-root .ll-card-context-label {
+  font-weight: 600;
+  color: #475569;
+  margin-right: 4px;
+}
+
+.day-tracker-root .ll-card-source {
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: italic;
+  margin-bottom: 8px;
+}
+
+.day-tracker-root .ll-card-meta {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.day-tracker-root .ll-card-date {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.day-tracker-root .ll-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.day-tracker-root .ll-action-btn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.day-tracker-root .ll-action-btn:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.day-tracker-root .ll-action-btn.review {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #6366f1;
+}
+
+.day-tracker-root .ll-action-btn.review:hover {
+  background: #e0e7ff;
+}
+
+.day-tracker-root .ll-action-btn.delete:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #ef4444;
+}
+
+/* Empty states */
+.day-tracker-root .ll-empty {
+  text-align: center;
+  padding: 30px 20px;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.day-tracker-root .ll-empty-start {
+  text-align: center;
+  padding: 50px 20px;
+  color: #94a3b8;
+}
+
+.day-tracker-root .ll-empty-start h3 {
+  font-size: 16px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.day-tracker-root .ll-empty-start p {
+  font-size: 14px;
+  line-height: 1.5;
+}

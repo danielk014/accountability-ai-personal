@@ -8,14 +8,15 @@ import ProjectsView from '@/components/daytracker/ProjectsView';
 import NotesView from '@/components/daytracker/NotesView';
 import CoachView from '@/components/daytracker/CoachView';
 import NutritionView from '@/components/daytracker/NutritionView';
+import LifeLessonsView from '@/components/daytracker/LifeLessonsView';
 import '@/components/daytracker/daytracker.css';
 
-const TABS = ['Today', 'Calendar', 'Goals', 'Projects', 'Notes', 'Nutrition', 'Coach'];
+const TABS = ['Calendar2', 'Calendar', 'Goals', 'Projects', 'Notes', 'Lessons', 'Nutrition', 'Coach'];
 
 export default function DayTracker() {
   const { user } = useAuth();
   const [dataReady, setDataReady] = useState(false);
-  const [tab, setTab] = useState('Today');
+  const [tab, setTab] = useState('Calendar2');
   const [selectedDate, setSelectedDate] = useState(null);
 
   useEffect(() => {
@@ -47,7 +48,7 @@ export default function DayTracker() {
 
   function handleDaySelect(date) {
     setSelectedDate(date);
-    setTab('Today');
+    setTab('Calendar2');
   }
 
   return (
@@ -58,7 +59,7 @@ export default function DayTracker() {
             <button
               key={t}
               className={`tab ${tab === t ? 'active' : ''}`}
-              onClick={() => { setTab(t); if (t !== 'Today') setSelectedDate(null); }}
+              onClick={() => { setTab(t); if (t !== 'Calendar2') setSelectedDate(null); }}
             >
               {t}
             </button>
@@ -66,11 +67,12 @@ export default function DayTracker() {
         </nav>
 
         <main className="content">
-          {tab === 'Today' && <DailyView overrideDate={selectedDate} />}
+          {tab === 'Calendar2' && <DailyView overrideDate={selectedDate} />}
           {tab === 'Calendar' && <CalendarView onDaySelect={handleDaySelect} />}
           {tab === 'Goals' && <GoalsView />}
           {tab === 'Projects' && <ProjectsView />}
           {tab === 'Notes' && <NotesView />}
+          {tab === 'Lessons' && <LifeLessonsView />}
           {tab === 'Nutrition' && <NutritionView />}
           {tab === 'Coach' && <CoachView />}
         </main>

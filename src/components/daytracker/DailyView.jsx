@@ -1,4 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
+import { format } from 'date-fns';
 import {
   getDateStr,
   loadDailyTasks, saveDailyTasks,
@@ -81,6 +84,63 @@ function DailyView({ overrideDate }) {
   }, [date, today]);
 
   const currentHour = date === today ? new Date().getHours() : -1;
+
+  // Fetch dashboard tasks from base44
+  const queryClient = useQueryClient();
+  const { data: me } = useQuery({ queryKey: ['me'], queryFn: () => base44.auth.me() });
+  const { data: dashboardTasks = [] } = useQuery({
+    queryKey: ['tasks', me?.email],
+    queryFn: () => me?.email ? base44.entities.Task.filter({ created_by: me.email }) : [],
+    enabled: !!me?.email,
+  });
+  const { data: completions = [] } = useQuery({
+    queryKey: ['completions', me?.email],
+    queryFn: () => me?.email ? base44.entities.TaskCompletion.filter({ created_by: me.email }, '-completed_date', 500) : [],
+    enabled: !!me?.email,
+  });
+
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const todayCompletions = completions.filter(c => c.completed_date === todayStr);
+  const completedTaskIds = new Set(todayCompletions.map(c => c.task_id));
+
+  const dayOfWeek = format(new Date(), 'EEEE').toLowerCase();
+  const isWeekday = !['saturday', 'sunday'].includes(dayOfWeek);
+  const activeDashboardTasks = dashboardTasks.filter(t => t.is_active !== false);
+  const todaysDashboardTasks = activeDashboardTasks.filter(t => {
+    if (t.scheduled_date && t.scheduled_date > todayStr && t.frequency !== 'once') return false;
+    if (t.frequency === 'once') return t.scheduled_date === todayStr;
+    if (t.frequency === 'daily') return true;
+    if (t.frequency === 'weekdays') return isWeekday;
+    if (t.frequency === 'weekends') return !isWeekday;
+    if (t.frequency === dayOfWeek) return true;
+    return false;
+  }).sort((a, b) => (a.scheduled_time || '99:99').localeCompare(b.scheduled_time || '99:99'));
+
+  const toggleDashboardCompletion = useMutation({
+    mutationFn: async (task) => {
+      if (completedTaskIds.has(task.id)) {
+        const completion = todayCompletions.find(c => c.task_id === task.id);
+        if (completion) {
+          await base44.entities.TaskCompletion.delete(completion.id);
+          const updates = { streak: Math.max(0, (task.streak || 0) - 1), total_completions: Math.max(0, (task.total_completions || 0) - 1) };
+          if (task.frequency === 'once') updates.is_active = true;
+          await base44.entities.Task.update(task.id, updates);
+        }
+      } else {
+        await base44.entities.TaskCompletion.create({ task_id: task.id, task_name: task.name, completed_date: todayStr, completed_at: format(new Date(), 'HH:mm') });
+        if (task.frequency === 'once') {
+          await base44.entities.Task.delete(task.id);
+        } else {
+          const newStreak = (task.streak || 0) + 1;
+          await base44.entities.Task.update(task.id, { streak: newStreak, best_streak: Math.max(newStreak, task.best_streak || 0), total_completions: (task.total_completions || 0) + 1 });
+        }
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['completions'] });
+    },
+  });
 
   function shiftDate(days) {
     const d = new Date(date + 'T12:00:00');
@@ -386,6 +446,14 @@ function DailyView({ overrideDate }) {
   const doneCount = allTasks.filter(t => t.done).length;
   const activeDropHour = touchDragHour !== null ? touchDragHour : dropHour;
 
+  // Calculate sleep and work hours from blocks
+  const sleepHours = blocks
+    .filter(b => /sleep|nap|rest|bed/i.test(b.text))
+    .reduce((sum, b) => sum + (b.endHour - b.startHour), 0);
+  const workHours = blocks
+    .filter(b => /work|job|office|meeting|client|business|code|coding|programming|develop/i.test(b.text))
+    .reduce((sum, b) => sum + (b.endHour - b.startHour), 0);
+
   return (
     <div>
       <div className="date-nav">
@@ -393,6 +461,30 @@ function DailyView({ overrideDate }) {
         <span>{formatDate(date)}</span>
         <button onClick={() => shiftDate(1)}>&rarr;</button>
       </div>
+
+      {blocks.length > 0 && (sleepHours > 0 || workHours > 0) && (
+        <div className="daily-stats-row">
+          {sleepHours > 0 && (
+            <div className="daily-stat-chip sleep">
+              <span className="daily-stat-icon">&#x1F4A4;</span>
+              <span className="daily-stat-value">{sleepHours}h</span>
+              <span className="daily-stat-label">sleep</span>
+            </div>
+          )}
+          {workHours > 0 && (
+            <div className="daily-stat-chip work">
+              <span className="daily-stat-icon">&#x1F4BC;</span>
+              <span className="daily-stat-value">{workHours}h</span>
+              <span className="daily-stat-label">work</span>
+            </div>
+          )}
+          <div className="daily-stat-chip total">
+            <span className="daily-stat-icon">&#x23F1;</span>
+            <span className="daily-stat-value">{blocks.reduce((s, b) => s + (b.endHour - b.startHour), 0)}h</span>
+            <span className="daily-stat-label">logged</span>
+          </div>
+        </div>
+      )}
 
       <div className="daily-split">
         <div className="daily-schedule-panel">
@@ -491,6 +583,34 @@ function DailyView({ overrideDate }) {
         </div>
 
         <div className="daily-tasks-panel">
+          {/* Dashboard Tasks */}
+          {todaysDashboardTasks.length > 0 && date === today && (
+            <div className="dashboard-tasks-section">
+              <div className="dashboard-tasks-title">
+                <span style={{ color: '#6366f1' }}>&#x2605;</span>
+                <span>Dashboard Tasks</span>
+                <span className="daily-tasks-badge">{todaysDashboardTasks.length}</span>
+              </div>
+              {todaysDashboardTasks.map(task => {
+                const isDone = completedTaskIds.has(task.id);
+                return (
+                  <div
+                    key={task.id}
+                    className={`dashboard-task-item ${isDone ? 'completed' : ''}`}
+                    onClick={() => toggleDashboardCompletion.mutate(task)}
+                  >
+                    <div className={`dashboard-task-check ${isDone ? 'checked' : ''}`}>
+                      {isDone ? '\u2713' : ''}
+                    </div>
+                    <span className="dashboard-task-name">{task.name}</span>
+                    {task.scheduled_time && <span className="dashboard-task-time">{task.scheduled_time}</span>}
+                    {task.category && <span className="dashboard-task-category">{task.category}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           <div className="daily-tasks-section">
             <div className="daily-tasks-header">
               <div className="daily-tasks-title">

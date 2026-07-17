@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { sanitizeImageSrc } from '@/lib/sanitize';
 import { History, Paperclip, X, FileText } from 'lucide-react';
-import { loadLogs, loadGoals, loadLongTermGoals, loadAllDailyTasks, loadAllBlocks } from './storage';
+import { loadLogs, loadGoals, loadLongTermGoals, loadAllDailyTasks, loadAllBlocks, loadBlocks, saveBlocks } from './storage';
 import { loadNutrition } from './NutritionView';
 import ChatHistoryPanel from '@/components/ChatHistoryPanel';
 import { loadConversations, saveConversation, deleteConversation, newConversation } from '@/lib/chatHistory';
@@ -208,6 +208,32 @@ function CoachView() {
       }
 
       const data = await res.json();
+
+      // Apply schedule changes if the coach made any
+      if (data.scheduleChanges && data.scheduleChanges.length > 0) {
+        for (const change of data.scheduleChanges) {
+          const dateBlocks = loadBlocks(change.date);
+          if (change.action === 'add') {
+            dateBlocks.push(change.block);
+            saveBlocks(change.date, dateBlocks);
+          } else if (change.action === 'remove') {
+            const filtered = dateBlocks.filter(b => !b.text.toLowerCase().includes(change.matchText.toLowerCase()));
+            saveBlocks(change.date, filtered);
+          } else if (change.action === 'update') {
+            const updated = dateBlocks.map(b => {
+              if (b.text.toLowerCase().includes(change.matchText.toLowerCase())) {
+                return { ...b, ...change.updates };
+              }
+              return b;
+            });
+            saveBlocks(change.date, updated);
+          }
+        }
+        // Notify other components that data changed
+        window.dispatchEvent(new CustomEvent('daytracker-data-refreshed'));
+        toast.success(`Coach updated your schedule (${data.scheduleChanges.length} change${data.scheduleChanges.length > 1 ? 's' : ''})`);
+      }
+
       setMessages(prev => {
         const updated = [...prev, { role: 'assistant', text: data.reply }];
         saveCurrentConv(updated);
