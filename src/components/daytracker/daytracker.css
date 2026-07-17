@@ -937,6 +937,20 @@
   margin-top: 2px;
 }
 
+.day-tracker-root .cal-cell-stat {
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.day-tracker-root .cal-cell-sleep {
+  color: #6366f1;
+}
+
+.day-tracker-root .cal-cell-work {
+  color: #f97316;
+}
+
 .day-tracker-root .cal-cell-hours {
   font-size: 9px;
   color: #22c55e;

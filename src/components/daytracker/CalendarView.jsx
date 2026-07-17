@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getDateStr, getDayStats } from './storage';
+import { getDateStr, getDayStats, loadBlocks } from './storage';
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -25,7 +25,15 @@ function CalendarView({ onDaySelect }) {
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const stats = getDayStats(dateStr);
-    cells.push({ day: d, dateStr, ...stats, isToday: dateStr === today });
+    const blocks = loadBlocks(dateStr);
+    const sleepHours = blocks
+      .filter(b => /sleep|nap|rest|bed/i.test(b.text))
+      .reduce((sum, b) => sum + (b.endHour - b.startHour), 0);
+    const workHours = blocks
+      .filter(b => /work|job|office|meeting|client|business|code|coding|programming|develop/i.test(b.text))
+      .reduce((sum, b) => sum + (b.endHour - b.startHour), 0);
+    const totalLogged = blocks.reduce((sum, b) => sum + (b.endHour - b.startHour), 0);
+    cells.push({ day: d, dateStr, ...stats, isToday: dateStr === today, sleepHours, workHours, totalLogged });
   }
 
   function shiftMonth(delta) {
@@ -58,7 +66,7 @@ function CalendarView({ onDaySelect }) {
         {cells.map((cell, i) => {
           if (!cell) return <div key={`empty-${i}`} className="cal-cell empty" />;
 
-          const hasLogs = cell.logged > 0;
+          const hasLogs = cell.logged > 0 || cell.totalLogged > 0;
           const energyLevel = cell.avgEnergy > 0 ? Math.round(cell.avgEnergy) : 0;
 
           return (
@@ -70,7 +78,13 @@ function CalendarView({ onDaySelect }) {
               <span className="cal-day-num">{cell.day}</span>
               {hasLogs && (
                 <div className="cal-cell-info">
-                  <span className="cal-cell-hours">{cell.logged}h</span>
+                  {cell.sleepHours > 0 && (
+                    <span className="cal-cell-stat cal-cell-sleep">{cell.sleepHours}h sleep</span>
+                  )}
+                  {cell.workHours > 0 && (
+                    <span className="cal-cell-stat cal-cell-work">{cell.workHours}h work</span>
+                  )}
+                  <span className="cal-cell-hours">{cell.totalLogged || cell.logged}h logged</span>
                   {energyLevel > 0 && (
                     <div className="cal-cell-energy">
                       {[1,2,3,4,5].map(i => (
