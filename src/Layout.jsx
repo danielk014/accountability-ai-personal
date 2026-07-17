@@ -8,13 +8,13 @@ import { useAuth } from "@/lib/AuthContext";
 import { checkReminders, getUnreadCount, clearUnread } from "@/lib/reminderEngine";
 
 const navItems = [
+  { name: "Day Tracker", icon: Clock, page: "DayTracker" },
+  { name: "Financials", icon: DollarSign, page: "Financials" },
+  { name: "Gym", icon: Dumbbell, page: "Gym" },
   { name: "Chat", icon: MessageCircle, page: "Chat" },
   { name: "Dashboard", icon: LayoutDashboard, page: "Dashboard" },
   { name: "Calendar", icon: CalendarDays, page: "Calendar" },
-  { name: "Day Tracker", icon: Clock, page: "DayTracker" },
   { name: "Projects", icon: FolderKanban, page: "Projects" },
-  { name: "Financials", icon: DollarSign, page: "Financials" },
-  { name: "Gym", icon: Dumbbell, page: "Gym" },
   { name: "Progress", icon: BarChart3, page: "Progress" },
 ];
 
