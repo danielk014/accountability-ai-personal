@@ -50,6 +50,9 @@ function DailyView({ overrideDate }) {
   const [newBlockText, setNewBlockText] = useState('');
   const [newBlockCategory, setNewBlockCategory] = useState('other');
   const [newTaskCategory, setNewTaskCategory] = useState('other');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pickerMonth, setPickerMonth] = useState(null);
+  const datePickerRef = useRef(null);
 
   const [touchDraggingTask, setTouchDraggingTask] = useState(null);
   const [touchDragHour, setTouchDragHour] = useState(null);
@@ -162,10 +165,33 @@ function DailyView({ overrideDate }) {
     },
   });
 
+  // Close date picker on click outside
+  useEffect(() => {
+    if (!showDatePicker) return;
+    function onClickOutside(e) {
+      if (datePickerRef.current && !datePickerRef.current.contains(e.target)) {
+        setShowDatePicker(false);
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [showDatePicker]);
+
   function shiftDate(days) {
     const d = new Date(date + 'T12:00:00');
     d.setDate(d.getDate() + days);
     setDate(getDateStr(d));
+  }
+
+  function openDatePicker() {
+    const d = new Date(date + 'T12:00:00');
+    setPickerMonth({ year: d.getFullYear(), month: d.getMonth() });
+    setShowDatePicker(!showDatePicker);
+  }
+
+  function selectPickerDate(dateStr) {
+    setDate(dateStr);
+    setShowDatePicker(false);
   }
 
   function formatDate(dateStr) {
@@ -482,10 +508,64 @@ function DailyView({ overrideDate }) {
 
   return (
     <div>
-      <div className="date-nav">
+      <div className="date-nav" style={{ position: 'relative' }}>
         <button onClick={() => shiftDate(-1)}>&larr;</button>
-        <span>{formatDate(date)}</span>
+        <span className="date-nav-label" onClick={openDatePicker} style={{ cursor: 'pointer' }}>
+          {formatDate(date)} <span style={{ fontSize: 10, opacity: 0.5 }}>{showDatePicker ? '\u25B2' : '\u25BC'}</span>
+        </span>
         <button onClick={() => shiftDate(1)}>&rarr;</button>
+
+        {showDatePicker && pickerMonth && (
+          <div className="schedule-date-picker" ref={datePickerRef}>
+            <div className="sdp-header">
+              <button className="sdp-nav" onClick={() => setPickerMonth(p => {
+                const d = new Date(p.year, p.month - 1, 1);
+                return { year: d.getFullYear(), month: d.getMonth() };
+              })}>&larr;</button>
+              <span className="sdp-title">
+                {new Date(pickerMonth.year, pickerMonth.month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </span>
+              <button className="sdp-nav" onClick={() => setPickerMonth(p => {
+                const d = new Date(p.year, p.month + 1, 1);
+                return { year: d.getFullYear(), month: d.getMonth() };
+              })}>&rarr;</button>
+            </div>
+            <div className="sdp-days-header">
+              {['Mo','Tu','We','Th','Fr','Sa','Su'].map(d => <div key={d} className="sdp-day-name">{d}</div>)}
+            </div>
+            <div className="sdp-grid">
+              {(() => {
+                const yr = pickerMonth.year, mo = pickerMonth.month;
+                const firstDay = new Date(yr, mo, 1);
+                let startDow = firstDay.getDay() - 1;
+                if (startDow < 0) startDow = 6;
+                const daysInMonth = new Date(yr, mo + 1, 0).getDate();
+                const cells = [];
+                for (let i = 0; i < startDow; i++) cells.push(null);
+                for (let d = 1; d <= daysInMonth; d++) {
+                  const ds = `${yr}-${String(mo + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                  cells.push(ds);
+                }
+                return cells.map((ds, i) => {
+                  if (!ds) return <div key={`e${i}`} className="sdp-cell empty" />;
+                  const dayNum = parseInt(ds.split('-')[2]);
+                  const isSelected = ds === date;
+                  const isToday = ds === today;
+                  return (
+                    <div
+                      key={ds}
+                      className={`sdp-cell ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}`}
+                      onClick={() => selectPickerDate(ds)}
+                    >
+                      {dayNum}
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+            <button className="sdp-today-btn" onClick={() => { selectPickerDate(today); }}>Go to Today</button>
+          </div>
+        )}
       </div>
 
       {blocks.length > 0 && (sleepHours > 0 || workHours > 0) && (

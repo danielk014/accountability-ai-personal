@@ -1835,6 +1835,129 @@
   color: #cbd5e1;
 }
 
+/* Schedule Date Picker Dropdown */
+.day-tracker-root .date-nav-label:hover {
+  color: #6366f1;
+}
+
+.day-tracker-root .schedule-date-picker {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  padding: 12px;
+  width: 280px;
+  margin-top: 6px;
+}
+
+.day-tracker-root .sdp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.day-tracker-root .sdp-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.day-tracker-root .sdp-nav {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.day-tracker-root .sdp-nav:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.day-tracker-root .sdp-days-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.day-tracker-root .sdp-day-name {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  padding: 2px 0;
+}
+
+.day-tracker-root .sdp-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.day-tracker-root .sdp-cell {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  padding: 6px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.day-tracker-root .sdp-cell:hover {
+  background: #f1f5f9;
+}
+
+.day-tracker-root .sdp-cell.empty {
+  cursor: default;
+}
+
+.day-tracker-root .sdp-cell.today {
+  color: #6366f1;
+  font-weight: 700;
+}
+
+.day-tracker-root .sdp-cell.selected {
+  background: #6366f1;
+  color: #fff;
+  font-weight: 700;
+}
+
+.day-tracker-root .sdp-cell.selected:hover {
+  background: #4f46e5;
+}
+
+.day-tracker-root .sdp-today-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #6366f1;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.day-tracker-root .sdp-today-btn:hover {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+}
+
 /* Inline Block Category Buttons */
 .day-tracker-root .inline-block-row {
   display: flex;
