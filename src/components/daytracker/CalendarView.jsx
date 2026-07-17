@@ -27,10 +27,10 @@ function CalendarView({ onDaySelect }) {
     const stats = getDayStats(dateStr);
     const blocks = loadBlocks(dateStr);
     const sleepHours = blocks
-      .filter(b => /sleep|nap|rest|bed/i.test(b.text))
+      .filter(b => b.blockCategory === 'sleep')
       .reduce((sum, b) => sum + (b.endHour - b.startHour), 0);
     const workHours = blocks
-      .filter(b => /work|job|office|meeting|client|business|code|coding|programming|develop/i.test(b.text))
+      .filter(b => b.blockCategory === 'work')
       .reduce((sum, b) => sum + (b.endHour - b.startHour), 0);
     const totalLogged = blocks.reduce((sum, b) => sum + (b.endHour - b.startHour), 0);
     cells.push({ day: d, dateStr, ...stats, isToday: dateStr === today, sleepHours, workHours, totalLogged });

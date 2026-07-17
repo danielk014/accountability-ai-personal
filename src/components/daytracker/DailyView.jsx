@@ -15,6 +15,12 @@ const BLOCK_COLORS = ['#6366f1', '#22c55e', '#eab308', '#ef4444', '#a855f7', '#f
 const ACTUAL_COLOR = '#64748b';
 const ROW_HEIGHT = 48;
 const LONG_PRESS_MS = 300;
+const BLOCK_CATEGORIES = [
+  { value: 'work', label: 'Work', color: '#f97316' },
+  { value: 'sleep', label: 'Sleep', color: '#6366f1' },
+  { value: 'personal', label: 'Personal', color: '#22c55e' },
+  { value: 'other', label: 'Other', color: '#64748b' },
+];
 
 function formatHour(h) {
   if (h === 0) return '12 AM';
@@ -42,6 +48,8 @@ function DailyView({ overrideDate }) {
   const [editingBlock, setEditingBlock] = useState(null);
   const [addingAtHour, setAddingAtHour] = useState(null);
   const [newBlockText, setNewBlockText] = useState('');
+  const [newBlockCategory, setNewBlockCategory] = useState('other');
+  const [newTaskCategory, setNewTaskCategory] = useState('other');
 
   const [touchDraggingTask, setTouchDraggingTask] = useState(null);
   const [touchDragHour, setTouchDragHour] = useState(null);
@@ -172,18 +180,19 @@ function DailyView({ overrideDate }) {
   function addTask() {
     if (!newTaskText.trim()) return;
     if (newTaskRecurring) {
-      const newRecurring = { id: Date.now(), text: newTaskText.trim(), done: false, color: newTaskColor };
+      const newRecurring = { id: Date.now(), text: newTaskText.trim(), done: false, color: newTaskColor, blockCategory: newTaskCategory };
       const updated = [...recurringTasks, newRecurring];
       setRecurringTasks(updated);
       saveRecurringTasks(updated);
     } else {
-      const updated = [...tasks, { id: Date.now(), text: newTaskText.trim(), done: false, color: newTaskColor }];
+      const updated = [...tasks, { id: Date.now(), text: newTaskText.trim(), done: false, color: newTaskColor, blockCategory: newTaskCategory }];
       setTasks(updated);
       saveDailyTasks(date, updated);
     }
     setNewTaskText('');
     setNewTaskColor(TASK_COLORS[0]);
     setNewTaskRecurring(false);
+    setNewTaskCategory('other');
     setShowAddTask(false);
   }
 
@@ -240,35 +249,40 @@ function DailyView({ overrideDate }) {
     if (hasBlock) return;
     setAddingAtHour(hour);
     setNewBlockText('');
+    setNewBlockCategory('other');
     setTimeout(() => blockInputRef.current?.focus(), 50);
   }
 
   function addBlockAtHour() {
     if (!newBlockText.trim() || addingAtHour === null) return;
+    const catConfig = BLOCK_CATEGORIES.find(c => c.value === newBlockCategory);
     const newBlock = {
       id: Date.now(),
       text: newBlockText.trim(),
       startHour: addingAtHour,
       endHour: Math.min(addingAtHour + 1, 24),
-      color: ACTUAL_COLOR,
+      color: catConfig?.color || ACTUAL_COLOR,
       type: 'actual',
+      blockCategory: newBlockCategory,
     };
     updateBlocks([...blocks, newBlock]);
     setAddingAtHour(null);
     setNewBlockText('');
+    setNewBlockCategory('other');
   }
 
   function dropTaskAtHour(task, hour) {
+    const taskCat = task.blockCategory || 'other';
+    const catConfig = BLOCK_CATEGORIES.find(c => c.value === taskCat);
     const colorIdx = blocks.length % BLOCK_COLORS.length;
     const newBlock = {
       id: Date.now(),
       text: task.text,
       startHour: hour,
       endHour: Math.min(hour + 1, 24),
-      color: task.color && task.color !== '#1a1a1a'
-        ? task.color
-        : BLOCK_COLORS[colorIdx],
+      color: catConfig?.color || (task.color && task.color !== '#1a1a1a' ? task.color : BLOCK_COLORS[colorIdx]),
       type: 'planned',
+      blockCategory: taskCat,
     };
     updateBlocks([...blocks, newBlock]);
   }
@@ -451,12 +465,12 @@ function DailyView({ overrideDate }) {
   const doneCount = allTasks.filter(t => t.done).length;
   const activeDropHour = touchDragHour !== null ? touchDragHour : dropHour;
 
-  // Calculate sleep and work hours from blocks
+  // Calculate sleep and work hours from blocks using blockCategory
   const sleepHours = blocks
-    .filter(b => /sleep|nap|rest|bed/i.test(b.text))
+    .filter(b => b.blockCategory === 'sleep')
     .reduce((sum, b) => sum + (b.endHour - b.startHour), 0);
   const workHours = blocks
-    .filter(b => /work|job|office|meeting|client|business|code|coding|programming|develop/i.test(b.text))
+    .filter(b => b.blockCategory === 'work')
     .reduce((sum, b) => sum + (b.endHour - b.startHour), 0);
 
   return (
@@ -541,21 +555,34 @@ function DailyView({ overrideDate }) {
             {addingAtHour !== null && (
               <div
                 className="inline-add-block"
-                style={{ top: addingAtHour * ROW_HEIGHT, height: ROW_HEIGHT }}
+                style={{ top: addingAtHour * ROW_HEIGHT, minHeight: ROW_HEIGHT }}
               >
-                <input
-                  ref={blockInputRef}
-                  className="inline-block-input"
-                  value={newBlockText}
-                  onChange={e => setNewBlockText(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') addBlockAtHour();
-                    if (e.key === 'Escape') setAddingAtHour(null);
-                  }}
-                  onBlur={() => { if (!newBlockText.trim()) setAddingAtHour(null); }}
-                  placeholder="What did you do?"
-                />
-                <button className="inline-block-add" onClick={addBlockAtHour}>+</button>
+                <div className="inline-block-row">
+                  <input
+                    ref={blockInputRef}
+                    className="inline-block-input"
+                    value={newBlockText}
+                    onChange={e => setNewBlockText(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') addBlockAtHour();
+                      if (e.key === 'Escape') setAddingAtHour(null);
+                    }}
+                    placeholder="What did you do?"
+                  />
+                  <button className="inline-block-add" onClick={addBlockAtHour}>+</button>
+                </div>
+                <div className="inline-block-cats">
+                  {BLOCK_CATEGORIES.map(c => (
+                    <button
+                      key={c.value}
+                      className={`inline-cat-btn ${newBlockCategory === c.value ? 'active' : ''}`}
+                      style={newBlockCategory === c.value ? { background: c.color, color: '#fff', borderColor: c.color } : {}}
+                      onClick={() => setNewBlockCategory(c.value)}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -665,6 +692,18 @@ function DailyView({ overrideDate }) {
                   onKeyDown={e => { if (e.key === 'Enter') addTask(); if (e.key === 'Escape') setShowAddTask(false); }}
                   placeholder="What needs to get done?"
                 />
+                <div className="inline-block-cats" style={{ marginBottom: 6 }}>
+                  {BLOCK_CATEGORIES.map(c => (
+                    <button
+                      key={c.value}
+                      className={`inline-cat-btn ${newTaskCategory === c.value ? 'active' : ''}`}
+                      style={newTaskCategory === c.value ? { background: c.color, color: '#fff', borderColor: c.color } : {}}
+                      onClick={() => setNewTaskCategory(c.value)}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
                 <div className="daily-task-add-row">
                   <div className="daily-task-color-picks">
                     {TASK_COLORS.map(c => (
@@ -775,6 +814,20 @@ function BlockModal({ block, onClose, onDelete, onUpdate }) {
           value={text}
           onChange={e => { setText(e.target.value); onUpdate({ text: e.target.value }); }}
         />
+
+        <label>Category</label>
+        <div className="inline-block-cats" style={{ marginTop: 4, marginBottom: 8 }}>
+          {BLOCK_CATEGORIES.map(c => (
+            <button
+              key={c.value}
+              className={`inline-cat-btn ${(block.blockCategory || 'other') === c.value ? 'active' : ''}`}
+              style={(block.blockCategory || 'other') === c.value ? { background: c.color, color: '#fff', borderColor: c.color } : {}}
+              onClick={() => onUpdate({ blockCategory: c.value, color: c.color })}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
 
         <p style={{ color: '#888', fontSize: 13, margin: '12px 0 4px' }}>
           {formatHour(block.startHour)} – {formatHour(block.endHour)}

@@ -459,8 +459,8 @@
   right: 8px;
   z-index: 8;
   display: flex;
+  flex-direction: column;
   gap: 4px;
-  align-items: center;
   padding: 4px;
   background: #eef2ff;
   border: 1px solid #6366f1;
@@ -1833,6 +1833,41 @@
 
 .day-tracker-root .notes-body-input::placeholder {
   color: #cbd5e1;
+}
+
+/* Inline Block Category Buttons */
+.day-tracker-root .inline-block-row {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.day-tracker-root .inline-block-cats {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.day-tracker-root .inline-cat-btn {
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+
+.day-tracker-root .inline-cat-btn:hover {
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.day-tracker-root .inline-cat-btn.active {
+  color: #fff;
 }
 
 /* Daily Stats Row */
