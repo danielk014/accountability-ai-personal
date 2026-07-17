@@ -103,18 +103,23 @@ function DailyView({ overrideDate }) {
   const todayCompletions = completions.filter(c => c.completed_date === todayStr);
   const completedTaskIds = new Set(todayCompletions.map(c => c.task_id));
 
-  const dayOfWeek = format(new Date(), 'EEEE').toLowerCase();
-  const isWeekday = !['saturday', 'sunday'].includes(dayOfWeek);
-  const activeDashboardTasks = dashboardTasks.filter(t => t.is_active !== false);
-  const todaysDashboardTasks = activeDashboardTasks.filter(t => {
-    if (t.scheduled_date && t.scheduled_date > todayStr && t.frequency !== 'once') return false;
-    if (t.frequency === 'once') return t.scheduled_date === todayStr;
-    if (t.frequency === 'daily') return true;
-    if (t.frequency === 'weekdays') return isWeekday;
-    if (t.frequency === 'weekends') return !isWeekday;
-    if (t.frequency === dayOfWeek) return true;
-    return false;
-  }).sort((a, b) => (a.scheduled_time || '99:99').localeCompare(b.scheduled_time || '99:99'));
+  // Show ALL active dashboard tasks (not filtered by day)
+  const allDashboardTasks = dashboardTasks
+    .filter(t => t.is_active !== false)
+    .sort((a, b) => (a.scheduled_time || '99:99').localeCompare(b.scheduled_time || '99:99'));
+
+  // Also fetch to-do items
+  const { data: todoItems = [] } = useQuery({
+    queryKey: ['todos', me?.email],
+    queryFn: () => me?.email ? base44.entities.TodoItem.filter({ created_by: me.email }) : [],
+    enabled: !!me?.email,
+  });
+  const pendingTodos = todoItems.filter(t => !t.is_done);
+
+  const updateTodoMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.TodoItem.update(id, data),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['todos'] }),
+  });
 
   const toggleDashboardCompletion = useMutation({
     mutationFn: async (task) => {
@@ -583,15 +588,15 @@ function DailyView({ overrideDate }) {
         </div>
 
         <div className="daily-tasks-panel">
-          {/* Dashboard Tasks */}
-          {todaysDashboardTasks.length > 0 && date === today && (
+          {/* Dashboard Habits/Tasks */}
+          {allDashboardTasks.length > 0 && (
             <div className="dashboard-tasks-section">
               <div className="dashboard-tasks-title">
                 <span style={{ color: '#6366f1' }}>&#x2605;</span>
                 <span>Dashboard Tasks</span>
-                <span className="daily-tasks-badge">{todaysDashboardTasks.length}</span>
+                <span className="daily-tasks-badge">{allDashboardTasks.length}</span>
               </div>
-              {todaysDashboardTasks.map(task => {
+              {allDashboardTasks.map(task => {
                 const isDone = completedTaskIds.has(task.id);
                 return (
                   <div
@@ -608,6 +613,30 @@ function DailyView({ overrideDate }) {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Dashboard To-Do Items */}
+          {pendingTodos.length > 0 && (
+            <div className="dashboard-tasks-section">
+              <div className="dashboard-tasks-title">
+                <span style={{ color: '#22c55e' }}>&#x2611;</span>
+                <span>To-Do List</span>
+                <span className="daily-tasks-badge" style={{ background: '#22c55e' }}>{pendingTodos.length}</span>
+              </div>
+              {pendingTodos.map(item => (
+                <div
+                  key={item.id}
+                  className="dashboard-task-item"
+                  onClick={() => updateTodoMutation.mutate({ id: item.id, data: { is_done: true, completed_at: new Date().toISOString() } })}
+                >
+                  <div className="dashboard-task-check">
+                  </div>
+                  <span className="dashboard-task-name">{item.name}</span>
+                  {item.due_date && <span className="dashboard-task-time">{item.due_date}</span>}
+                  {item.category && <span className="dashboard-task-category">{item.category}</span>}
+                </div>
+              ))}
             </div>
           )}
 
