@@ -13,7 +13,6 @@ const navItems = [
   { name: "Gym", icon: Dumbbell, page: "Gym" },
   { name: "Chat", icon: MessageCircle, page: "Chat" },
   { name: "Dashboard", icon: LayoutDashboard, page: "Dashboard" },
-  { name: "Calendar", icon: CalendarDays, page: "Calendar" },
   { name: "Projects", icon: FolderKanban, page: "Projects" },
   { name: "Progress", icon: BarChart3, page: "Progress" },
 ];

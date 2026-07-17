@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { initStorage, cleanupStorage, migrateLocalToSupabase, pullFromSupabase, pushAllToSupabase } from '@/components/daytracker/storage';
 import DailyView from '@/components/daytracker/DailyView';
-import CalendarView from '@/components/daytracker/CalendarView';
+import CombinedCalendarView from '@/components/daytracker/CombinedCalendarView';
 import GoalsView from '@/components/daytracker/GoalsView';
 import ProjectsView from '@/components/daytracker/ProjectsView';
 import NotesView from '@/components/daytracker/NotesView';
@@ -68,7 +68,7 @@ export default function DayTracker() {
 
         <main className="content">
           {tab === 'Calendar2' && <DailyView overrideDate={selectedDate} />}
-          {tab === 'Calendar' && <CalendarView onDaySelect={handleDaySelect} />}
+          {tab === 'Calendar' && <CombinedCalendarView onDaySelect={handleDaySelect} />}
           {tab === 'Goals' && <GoalsView />}
           {tab === 'Projects' && <ProjectsView />}
           {tab === 'Notes' && <NotesView />}
