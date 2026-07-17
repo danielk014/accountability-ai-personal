@@ -211,10 +211,12 @@ export default function CombinedCalendarView({ onDaySelect }) {
   if (view === "month") {
     return (
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold text-slate-800">Calendar</h2>
           </div>
+        </div>
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center bg-slate-100 rounded-xl p-1">
             {["day", "week", "month"].map(v => (
               <button
