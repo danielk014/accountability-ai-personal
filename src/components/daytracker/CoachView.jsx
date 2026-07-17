@@ -3,6 +3,7 @@ import { sanitizeImageSrc } from '@/lib/sanitize';
 import { History, Paperclip, X, FileText } from 'lucide-react';
 import { loadLogs, loadGoals, loadLongTermGoals, loadAllDailyTasks, loadAllBlocks, loadBlocks, saveBlocks } from './storage';
 import { loadNutrition } from './NutritionView';
+import { loadLessons } from './LifeLessonsView';
 import ChatHistoryPanel from '@/components/ChatHistoryPanel';
 import { loadConversations, saveConversation, deleteConversation, newConversation } from '@/lib/chatHistory';
 import { base44 } from '@/api/base44Client';
@@ -171,6 +172,8 @@ function CoachView() {
       const scheduleBlocks = loadAllBlocks();
       const nutrition = loadNutrition();
 
+      const lifeLessons = loadLessons();
+
       const coachPersonality = profile?.model_personalities?.coach || null;
       const coachContextFiles = profile?.model_context_files?.coach || [];
 
@@ -196,6 +199,7 @@ function CoachView() {
           logs, goals, longTermGoals, dailyTasks, scheduleBlocks, nutrition,
           financials,
           gymData,
+          lifeLessons,
           coachPersonality,
           coachContextFiles,
           attachments: currentAttachments.map(a => ({ name: a.name, mediaType: a.mediaType, data: a.data })),

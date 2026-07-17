@@ -21,7 +21,7 @@ function getStorageKey() {
   return `${getUserPrefix()}${STORAGE_KEY_SUFFIX}`;
 }
 
-function loadLessons() {
+export function loadLessons() {
   try {
     const raw = supabaseStorage.getItem(getStorageKey());
     return raw ? JSON.parse(raw) : [];

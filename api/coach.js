@@ -7,6 +7,7 @@ You are given these things every time I talk to you:
 4. MY NUTRITION LOG — what I ate each day, with calories, macros, and individual foods.
 5. MY FINANCIAL DATA — income, expenses, savings deposits, and budget breakdown.
 6. MY GYM DATA — workout routines, exercises, sets/reps/weight, bodyweight tracking, and progress.
+7. MY LIFE LESSONS — personal wisdom I've collected from experiences, books, failures, and successes. These are MY OWN truths that I want to live by.
 
 YOUR JOB:
 - Judge my week against MY GOALS (both long-term and short-term), not against generic productivity. Tell me plainly if I'm on track or slipping, and cite the specific hours/days that prove it.
@@ -50,10 +51,17 @@ DIRECTION ASSESSMENT:
 - Does the daily reality match the stated long-term goals?
 - Be specific: "At this rate, in 2 years you'll be [X]. You said you wanted [Y]. The gap is [Z]."
 
+LIFE LESSONS INTEGRATION:
+- You MUST actively reference and reinforce MY LIFE LESSONS in your coaching. These are truths I've learned — remind me of them when they're relevant.
+- When I'm slipping, quote the specific lesson back to me. "You wrote this yourself: [lesson title]."
+- When giving advice, check if any of my life lessons already cover the situation. If so, lead with that — I trust my own wisdom more than generic advice.
+- If my behavior contradicts one of my own lessons, call it out directly. "You said you learned [X], but you're doing [Y]."
+- Treat my life lessons as my personal operating system. They are non-negotiable principles I chose to live by.
+
 RULES:
 - Keep replies under 200 words unless doing a full direction assessment. Talk like a coach, not a report.
 - If I've logged almost nothing, don't guess — call it out and ask me the one question that would help most.
-- Always tie advice back to MY specific goals and MY specific logs. Never be generic.`;
+- Always tie advice back to MY specific goals, MY specific logs, and MY LIFE LESSONS. Never be generic.`;
 
 function formatScheduleBlocks(scheduleBlocks) {
   if (!scheduleBlocks || typeof scheduleBlocks !== 'object' || Array.isArray(scheduleBlocks) || Object.keys(scheduleBlocks).length === 0) return '(No schedule blocks yet)';
@@ -163,6 +171,20 @@ function formatFinancials(fin) {
   return output || '(No financial data yet)';
 }
 
+function formatLifeLessons(lessons) {
+  if (!Array.isArray(lessons) || lessons.length === 0) return '(No life lessons recorded yet)';
+  let output = '';
+  for (const lesson of lessons) {
+    output += `\n[${lesson.category || 'General'}] "${lesson.title}"`;
+    output += `\n  Lesson: ${lesson.lesson}`;
+    if (lesson.context) output += `\n  Context: ${lesson.context}`;
+    if (lesson.source) output += `\n  Source: ${lesson.source}`;
+    output += `\n  Reviewed ${lesson.reviewCount || 0} times`;
+    output += '\n';
+  }
+  return output;
+}
+
 function formatGymData(gym) {
   if (!gym) return '(No gym data yet)';
   let output = '';
@@ -248,7 +270,7 @@ export default async function handler(req, res) {
 
   try {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
-    const { message, logs, dailyTasks, scheduleBlocks, nutrition, financials, gymData, coachPersonality } = body;
+    const { message, logs, dailyTasks, scheduleBlocks, nutrition, financials, gymData, coachPersonality, lifeLessons } = body;
     const longTermGoals = Array.isArray(body.longTermGoals) ? body.longTermGoals : [];
     const goals = Array.isArray(body.goals) ? body.goals : [];
     const coachContextFiles = Array.isArray(body.coachContextFiles) ? body.coachContextFiles : [];
@@ -282,6 +304,9 @@ ${formatFinancials(financials)}
 
 MY GYM DATA:
 ${formatGymData(gymData)}
+
+MY LIFE LESSONS (personal wisdom & lessons learned):
+${formatLifeLessons(lifeLessons)}
 `;
 
     // Build system prompt with optional custom personality
