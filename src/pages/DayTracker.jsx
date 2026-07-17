@@ -11,12 +11,12 @@ import NutritionView from '@/components/daytracker/NutritionView';
 import LifeLessonsView from '@/components/daytracker/LifeLessonsView';
 import '@/components/daytracker/daytracker.css';
 
-const TABS = ['Calendar2', 'Calendar', 'Goals', 'Projects', 'Notes', 'Lessons', 'Nutrition', 'Coach'];
+const TABS = ['Schedule', 'Calendar', 'Goals', 'Projects', 'Notes', 'Lessons', 'Nutrition', 'Coach'];
 
 export default function DayTracker() {
   const { user } = useAuth();
   const [dataReady, setDataReady] = useState(false);
-  const [tab, setTab] = useState('Calendar2');
+  const [tab, setTab] = useState('Schedule');
   const [selectedDate, setSelectedDate] = useState(null);
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function DayTracker() {
 
   function handleDaySelect(date) {
     setSelectedDate(date);
-    setTab('Calendar2');
+    setTab('Schedule');
   }
 
   return (
@@ -59,7 +59,7 @@ export default function DayTracker() {
             <button
               key={t}
               className={`tab ${tab === t ? 'active' : ''}`}
-              onClick={() => { setTab(t); if (t !== 'Calendar2') setSelectedDate(null); }}
+              onClick={() => { setTab(t); if (t !== 'Schedule') setSelectedDate(null); }}
             >
               {t}
             </button>
@@ -67,7 +67,7 @@ export default function DayTracker() {
         </nav>
 
         <main className="content">
-          {tab === 'Calendar2' && <DailyView overrideDate={selectedDate} />}
+          {tab === 'Schedule' && <DailyView overrideDate={selectedDate} />}
           {tab === 'Calendar' && <CombinedCalendarView onDaySelect={handleDaySelect} />}
           {tab === 'Goals' && <GoalsView />}
           {tab === 'Projects' && <ProjectsView />}

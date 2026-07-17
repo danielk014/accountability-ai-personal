@@ -111,9 +111,16 @@ function DailyView({ overrideDate }) {
   const todayCompletions = completions.filter(c => c.completed_date === todayStr);
   const completedTaskIds = new Set(todayCompletions.map(c => c.task_id));
 
-  // Show ALL active dashboard tasks (not filtered by day)
+  // Show active dashboard tasks: no date, or date within 1 week from today
+  const oneWeekFromNow = format(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
   const allDashboardTasks = dashboardTasks
-    .filter(t => t.is_active !== false)
+    .filter(t => {
+      if (t.is_active === false) return false;
+      // No scheduled date — always show
+      if (!t.scheduled_date) return true;
+      // Has a date — only show if within 1 week
+      return t.scheduled_date <= oneWeekFromNow;
+    })
     .sort((a, b) => (a.scheduled_time || '99:99').localeCompare(b.scheduled_time || '99:99'));
 
   // Also fetch to-do items
@@ -277,7 +284,7 @@ function DailyView({ overrideDate }) {
     const colorIdx = blocks.length % BLOCK_COLORS.length;
     const newBlock = {
       id: Date.now(),
-      text: task.text,
+      text: task.text || task.name || 'Task',
       startHour: hour,
       endHour: Math.min(hour + 1, 24),
       color: catConfig?.color || (task.color && task.color !== '#1a1a1a' ? task.color : BLOCK_COLORS[colorIdx]),
@@ -344,7 +351,7 @@ function DailyView({ overrideDate }) {
   function handleDragStart(e, task) {
     setDraggingTask(task);
     e.dataTransfer.effectAllowed = 'copy';
-    e.dataTransfer.setData('text/plain', task.text);
+    e.dataTransfer.setData('text/plain', task.text || task.name || '');
   }
 
   function handleDragOver(e, hour) {
@@ -629,8 +636,12 @@ function DailyView({ overrideDate }) {
                   <div
                     key={task.id}
                     className={`dashboard-task-item ${isDone ? 'completed' : ''}`}
+                    draggable
+                    onDragStart={e => handleDragStart(e, { ...task, text: task.name })}
+                    onDragEnd={handleDragEnd}
                     onClick={() => toggleDashboardCompletion.mutate(task)}
                   >
+                    <div className="daily-task-grip" style={{ fontSize: 10, opacity: 0.4 }}>&#x2802;&#x2802;</div>
                     <div className={`dashboard-task-check ${isDone ? 'checked' : ''}`}>
                       {isDone ? '\u2713' : ''}
                     </div>
@@ -655,8 +666,12 @@ function DailyView({ overrideDate }) {
                 <div
                   key={item.id}
                   className="dashboard-task-item"
+                  draggable
+                  onDragStart={e => handleDragStart(e, { ...item, text: item.name })}
+                  onDragEnd={handleDragEnd}
                   onClick={() => updateTodoMutation.mutate({ id: item.id, data: { is_done: true, completed_at: new Date().toISOString() } })}
                 >
+                  <div className="daily-task-grip" style={{ fontSize: 10, opacity: 0.4 }}>&#x2802;&#x2802;</div>
                   <div className="dashboard-task-check">
                   </div>
                   <span className="dashboard-task-name">{item.name}</span>
