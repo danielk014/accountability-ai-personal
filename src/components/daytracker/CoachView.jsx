@@ -12,6 +12,36 @@ import { toast } from 'sonner';
 import ModelSettingsPanel from '@/components/ModelSettingsPanel';
 import { supabaseStorage } from '@/api/supabaseStorage';
 import { getUserPrefix } from '@/lib/userStore';
+import DOMPurify from 'dompurify';
+
+function formatCoachText(text) {
+  if (!text) return '';
+  let html = text
+    // Escape HTML
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    // Bold **text**
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // Italic *text*
+    .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>')
+    // Headers: lines starting with ### or ## or #
+    .replace(/^### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^## (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^# (.+)$/gm, '<h3>$1</h3>')
+    // Bullet lines: - item or * item
+    .replace(/^[-*] (.+)$/gm, '<li>$1</li>')
+    // Numbered list: 1. item
+    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+    // Wrap consecutive <li> in <ul>
+    .replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>')
+    // Double newlines → paragraph break
+    .replace(/\n\n+/g, '</p><p>')
+    // Single newlines → line break
+    .replace(/\n/g, '<br>');
+  html = '<p>' + html + '</p>';
+  // Clean up empty paragraphs
+  html = html.replace(/<p>\s*<\/p>/g, '');
+  return DOMPurify.sanitize(html);
+}
 
 const DEFAULT_COACH_PERSONALITY = `You are my personal time, life, and strategic coach living inside my hour-by-hour tracker.
 
@@ -310,7 +340,7 @@ function CoachView() {
                 ))}
               </div>
             )}
-            {msg.text}
+            <div className="coach-msg-content" dangerouslySetInnerHTML={{ __html: formatCoachText(msg.text) }} />
           </div>
         ))}
         {loading && <div className="coach-loading">Coach is thinking...</div>}

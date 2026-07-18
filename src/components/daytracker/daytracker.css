@@ -715,6 +715,59 @@
   border-bottom-left-radius: 4px;
 }
 
+.day-tracker-root .coach-msg-content p {
+  margin: 0 0 8px 0;
+}
+
+.day-tracker-root .coach-msg-content p:last-child {
+  margin-bottom: 0;
+}
+
+.day-tracker-root .coach-msg-content strong {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.day-tracker-root .coach-msg-content em {
+  font-style: italic;
+}
+
+.day-tracker-root .coach-msg-content h3,
+.day-tracker-root .coach-msg-content h4 {
+  font-weight: 700;
+  color: #0f172a;
+  margin: 10px 0 4px 0;
+  font-size: 14px;
+}
+
+.day-tracker-root .coach-msg-content h3 {
+  font-size: 15px;
+}
+
+.day-tracker-root .coach-msg-content ul {
+  margin: 6px 0;
+  padding-left: 18px;
+  list-style: disc;
+}
+
+.day-tracker-root .coach-msg-content li {
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+
+.day-tracker-root .coach-msg-content br + br {
+  display: none;
+}
+
+.day-tracker-root .coach-msg.user .coach-msg-content strong {
+  color: inherit;
+}
+
+.day-tracker-root .coach-msg.user .coach-msg-content h3,
+.day-tracker-root .coach-msg.user .coach-msg-content h4 {
+  color: inherit;
+}
+
 .day-tracker-root .coach-input-bar {
   position: sticky;
   bottom: 0;
