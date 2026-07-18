@@ -90,7 +90,7 @@
 
 @media (max-width: 700px) {
   .day-tracker-root .daily-split {
-    flex-direction: column-reverse;
+    flex-direction: column;
   }
   .day-tracker-root .daily-tasks-panel {
     width: 100%;
@@ -2544,4 +2544,357 @@
 .day-tracker-root .ll-empty-start p {
   font-size: 14px;
   line-height: 1.5;
+}
+
+/* ===================== MOBILE RESPONSIVE ===================== */
+@media (max-width: 640px) {
+  /* Root & app container */
+  .day-tracker-root {
+    min-height: calc(100dvh - 56px);
+  }
+
+  .day-tracker-root .dt-app {
+    max-width: 100%;
+  }
+
+  .day-tracker-root .content {
+    padding: 10px 10px 80px;
+  }
+
+  /* Tabs — horizontally scrollable, no wrapping */
+  .day-tracker-root .tabs {
+    gap: 2px;
+    padding: 6px 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    top: 56px;
+  }
+
+  .day-tracker-root .tab {
+    flex: 0 0 auto;
+    padding: 6px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+    border-radius: 8px;
+  }
+
+  /* Date nav */
+  .day-tracker-root .date-nav {
+    margin-bottom: 8px;
+  }
+
+  .day-tracker-root .date-nav span,
+  .day-tracker-root .date-nav-label {
+    font-size: 13px;
+  }
+
+  .day-tracker-root .date-nav button {
+    width: 28px;
+    height: 28px;
+    font-size: 15px;
+  }
+
+  /* Date picker dropdown */
+  .day-tracker-root .schedule-date-picker {
+    width: calc(100vw - 40px);
+    max-width: 300px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* Stats row */
+  .day-tracker-root .daily-stats-row {
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .day-tracker-root .daily-stat-chip {
+    padding: 6px 10px;
+    font-size: 12px;
+    gap: 4px;
+  }
+
+  .day-tracker-root .daily-stat-icon {
+    font-size: 13px;
+  }
+
+  /* Schedule / Tasks split — stack vertically */
+  .day-tracker-root .daily-split {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .day-tracker-root .daily-schedule-panel {
+    width: 100%;
+  }
+
+  .day-tracker-root .daily-tasks-panel {
+    width: 100%;
+    position: static;
+    max-height: none;
+    order: -1;
+  }
+
+  /* Hour rows */
+  .day-tracker-root .hour-row {
+    min-height: 44px;
+  }
+
+  .day-tracker-root .hour-label {
+    font-size: 10px;
+    width: 40px;
+    min-width: 40px;
+  }
+
+  .day-tracker-root .hour-empty {
+    font-size: 10px;
+  }
+
+  /* Time blocks */
+  .day-tracker-root .time-block-text {
+    font-size: 11px;
+  }
+
+  .day-tracker-root .time-block-range {
+    font-size: 9px;
+  }
+
+  /* Inline add block */
+  .day-tracker-root .inline-add-block {
+    left: 40px;
+    right: 4px;
+  }
+
+  .day-tracker-root .inline-block-input {
+    font-size: 13px;
+    padding: 6px 8px;
+  }
+
+  .day-tracker-root .inline-block-cats {
+    gap: 3px;
+  }
+
+  .day-tracker-root .inline-cat-btn {
+    padding: 2px 8px;
+    font-size: 10px;
+  }
+
+  /* Dashboard tasks section */
+  .day-tracker-root .dashboard-tasks-section {
+    padding: 10px;
+  }
+
+  .day-tracker-root .dashboard-tasks-title {
+    font-size: 13px;
+  }
+
+  .day-tracker-root .dashboard-task-item {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .day-tracker-root .dashboard-task-name {
+    font-size: 12px;
+  }
+
+  /* Tasks section */
+  .day-tracker-root .daily-tasks-section {
+    padding: 10px;
+  }
+
+  .day-tracker-root .daily-tasks-title {
+    font-size: 13px;
+  }
+
+  .day-tracker-root .daily-task-item {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .day-tracker-root .daily-task-add-input {
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+
+  .day-tracker-root .daily-task-color-btn {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Calendar grid */
+  .day-tracker-root .cal-grid {
+    gap: 3px;
+  }
+
+  .day-tracker-root .cal-cell {
+    border-radius: 6px;
+    padding: 4px 2px;
+  }
+
+  .day-tracker-root .cal-day-num {
+    font-size: 12px;
+  }
+
+  .day-tracker-root .cal-cell-stat {
+    font-size: 7px;
+  }
+
+  .day-tracker-root .cal-cell-hours {
+    font-size: 7px;
+  }
+
+  .day-tracker-root .cal-header {
+    padding: 0;
+    margin-bottom: 8px;
+  }
+
+  .day-tracker-root .cal-month {
+    font-size: 18px;
+  }
+
+  .day-tracker-root .cal-year {
+    font-size: 13px;
+  }
+
+  /* Coach */
+  .day-tracker-root .coach-msg {
+    max-width: 95%;
+    padding: 10px;
+    font-size: 13px;
+  }
+
+  .day-tracker-root .coach-msg-content p {
+    margin: 0 0 6px 0;
+  }
+
+  .day-tracker-root .coach-msg-content h3 {
+    font-size: 14px;
+  }
+
+  .day-tracker-root .coach-msg-content h4 {
+    font-size: 13px;
+  }
+
+  .day-tracker-root .coach-msg-content ul {
+    padding-left: 14px;
+  }
+
+  .day-tracker-root .coach-msg-content li {
+    font-size: 13px;
+    margin-bottom: 3px;
+  }
+
+  .day-tracker-root .coach-input-bar {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .day-tracker-root .coach-input {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .day-tracker-root .coach-send {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  /* Goals / Notes / Projects / Nutrition */
+  .day-tracker-root .goal-item,
+  .day-tracker-root .project-card,
+  .day-tracker-root .note-card {
+    padding: 10px;
+  }
+
+  /* Life Lessons */
+  .day-tracker-root .ll-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .day-tracker-root .ll-add-btn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .day-tracker-root .ll-form {
+    padding: 12px;
+  }
+
+  .day-tracker-root .ll-form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .day-tracker-root .ll-form-input {
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+
+  .day-tracker-root .ll-form-title {
+    font-size: 14px;
+  }
+
+  .day-tracker-root .ll-search {
+    font-size: 13px;
+    padding: 8px 10px;
+  }
+
+  .day-tracker-root .ll-filters {
+    gap: 4px;
+  }
+
+  .day-tracker-root .ll-filter-chip {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+
+  .day-tracker-root .ll-card-content {
+    padding: 10px 12px;
+  }
+
+  .day-tracker-root .ll-card-title {
+    font-size: 14px;
+  }
+
+  .day-tracker-root .ll-card-lesson {
+    font-size: 13px;
+  }
+
+  .day-tracker-root .ll-card-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .day-tracker-root .ll-action-btn {
+    font-size: 11px;
+    padding: 4px 10px;
+  }
+
+  /* Block modal */
+  .day-tracker-root .modal {
+    width: calc(100vw - 32px);
+    max-width: 400px;
+    padding: 16px;
+  }
+
+  .day-tracker-root .modal-input,
+  .day-tracker-root .modal-select {
+    font-size: 14px;
+  }
+
+  /* Touch drag ghost */
+  .day-tracker-root .touch-drag-ghost {
+    font-size: 11px;
+    max-width: 140px;
+  }
+
+  /* Combined Calendar View (inside day tracker) */
+  .day-tracker-root .combined-cal-header h2 {
+    font-size: 16px;
+  }
 }
