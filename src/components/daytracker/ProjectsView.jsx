@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useNavigate } from 'react-router-dom';
 
@@ -19,6 +19,7 @@ const STATUS_LABELS = {
 
 function ProjectsView() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: user } = useQuery({ queryKey: ['me'], queryFn: () => base44.auth.me() });
 
   const { data: projects = [], isLoading } = useQuery({
@@ -43,10 +44,28 @@ function ProjectsView() {
   }, [allTasks]);
 
   const [filter, setFilter] = useState('All');
+  const [dragIdx, setDragIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
 
-  const filtered = filter === 'All'
+  const filtered = (filter === 'All'
     ? projects
-    : projects.filter(p => p.status === filter.toLowerCase());
+    : projects.filter(p => p.status === filter.toLowerCase())
+  ).sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999));
+
+  async function handleReorder(fromIdx, toIdx) {
+    if (fromIdx === toIdx) return;
+    const reordered = [...filtered];
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, moved);
+    const updates = reordered.map((p, i) => ({ id: p.id, sort_order: i }));
+    for (const u of updates) {
+      queryClient.setQueryData(['projects', user?.email], (old = []) =>
+        old.map(p => p.id === u.id ? { ...p, sort_order: u.sort_order } : p)
+      );
+    }
+    await Promise.all(updates.map(u => base44.entities.Project.update(u.id, { sort_order: u.sort_order })));
+    queryClient.invalidateQueries({ queryKey: ['projects'] });
+  }
 
   function openInProjectsPage(project) {
     navigate('/Projects');
@@ -84,7 +103,7 @@ function ProjectsView() {
       </div>
 
       <div className="projects-grid">
-        {filtered.map(p => {
+        {filtered.map((p, idx) => {
           const tasks = tasksByProject[p.id] || [];
           const done = tasks.filter(t => t.is_done).length;
           const total = tasks.length;
@@ -93,7 +112,22 @@ function ProjectsView() {
           const label = STATUS_LABELS[p.status] || p.status;
 
           return (
-            <div key={p.id} className="project-card" onClick={() => openInProjectsPage(p)}>
+            <div
+              key={p.id}
+              className="project-card"
+              draggable
+              onDragStart={() => setDragIdx(idx)}
+              onDragOver={(e) => { e.preventDefault(); setDragOverIdx(idx); }}
+              onDragLeave={() => setDragOverIdx(null)}
+              onDrop={(e) => { e.preventDefault(); handleReorder(dragIdx, idx); setDragIdx(null); setDragOverIdx(null); }}
+              onDragEnd={() => { setDragIdx(null); setDragOverIdx(null); }}
+              onClick={() => openInProjectsPage(p)}
+              style={{
+                opacity: dragIdx === idx ? 0.4 : 1,
+                border: dragOverIdx === idx && dragIdx !== idx ? '2px dashed #6366f1' : undefined,
+                cursor: 'grab',
+              }}
+            >
               <div className="project-card-top">
                 <span className="project-dot" style={{ background: p.color || '#6366f1' }} />
                 <span

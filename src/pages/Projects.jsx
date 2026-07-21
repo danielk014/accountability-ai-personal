@@ -884,7 +884,7 @@ export default function Projects() {
 
   const [selectedProject, setSelectedProject] = useState(null);
   const [statusFilter, setStatusFilter]         = useState("all");
-  const [sortBy, setSortBy]                     = useState("created");
+  const [sortBy, setSortBy]                     = useState("custom");
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [editingProject, setEditingProject]     = useState(null);
 
@@ -900,7 +900,9 @@ export default function Projects() {
   const visibleProjects = useMemo(() => {
     let result = projects;
     if (statusFilter !== "all") result = result.filter(p => p.status === statusFilter);
-    if (sortBy === "name") {
+    if (sortBy === "custom") {
+      result = [...result].sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999));
+    } else if (sortBy === "name") {
       result = [...result].sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortBy === "deadline") {
       result = [...result].sort((a, b) => {
@@ -956,6 +958,24 @@ export default function Projects() {
     setEditingProject(null);
   };
 
+  const handleReorder = async (fromIdx, toIdx) => {
+    if (fromIdx === toIdx) return;
+    const reordered = [...visibleProjects];
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, moved);
+    // Persist sort_order to each project
+    const updates = reordered.map((p, i) => ({ id: p.id, sort_order: i }));
+    // Optimistic update
+    for (const u of updates) {
+      queryClient.setQueryData(["projects", user?.email], (old = []) =>
+        old.map(p => p.id === u.id ? { ...p, sort_order: u.sort_order } : p)
+      );
+    }
+    // Persist to DB
+    await Promise.all(updates.map(u => base44.entities.Project.update(u.id, { sort_order: u.sort_order })));
+    queryClient.invalidateQueries({ queryKey: ["projects"] });
+  };
+
   const handleEdit = (project) => { setEditingProject(project); setShowProjectModal(true); };
 
   const handleDelete = (id) => {
@@ -965,7 +985,11 @@ export default function Projects() {
     }
   };
 
+  const [dragIdx, setDragIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
+
   const SORT_OPTIONS = [
+    { value: "custom",   label: "Custom" },
     { value: "created",  label: "Newest" },
     { value: "deadline", label: "Deadline" },
     { value: "progress", label: "Progress" },
@@ -1074,15 +1098,31 @@ export default function Projects() {
       {visibleProjects.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <AnimatePresence>
-            {visibleProjects.map(project => (
-              <ProjectCard
+            {visibleProjects.map((project, idx) => (
+              <div
                 key={project.id}
-                project={project}
-                tasks={tasksByProject[project.id] || []}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onSelect={setSelectedProject}
-              />
+                draggable={sortBy === "custom"}
+                onDragStart={() => setDragIdx(idx)}
+                onDragOver={(e) => { e.preventDefault(); setDragOverIdx(idx); }}
+                onDragLeave={() => setDragOverIdx(null)}
+                onDrop={(e) => { e.preventDefault(); handleReorder(dragIdx, idx); setDragIdx(null); setDragOverIdx(null); }}
+                onDragEnd={() => { setDragIdx(null); setDragOverIdx(null); }}
+                style={{
+                  opacity: dragIdx === idx ? 0.4 : 1,
+                  border: dragOverIdx === idx && dragIdx !== idx ? '2px dashed #6366f1' : '2px solid transparent',
+                  borderRadius: 16,
+                  transition: 'opacity 0.15s, border 0.15s',
+                  cursor: sortBy === "custom" ? 'grab' : 'default',
+                }}
+              >
+                <ProjectCard
+                  project={project}
+                  tasks={tasksByProject[project.id] || []}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onSelect={setSelectedProject}
+                />
+              </div>
             ))}
           </AnimatePresence>
         </div>
