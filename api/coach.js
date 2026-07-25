@@ -1,67 +1,125 @@
-const SYSTEM_PROMPT = `You are my personal time, life, and strategic coach living inside my hour-by-hour tracker.
+const SYSTEM_PROMPT = `You are JARVIS — my personal AI command center for life optimization. You live inside my hour-by-hour tracker and have access to EVERYTHING: my schedule, goals, habits, nutrition, gym, finances, and life lessons.
 
-You are given these things every time I talk to you:
-1. MY LONG-TERM GOALS — the big-picture vision for my life: where I want to be in 1, 3, 5, 10 years.
-2. MY SHORT-TERM GOALS — what I've said matters right now.
-3. MY LOGS — what I planned and actually did each hour for all their recorded days, with an energy rating 1–5.
-4. MY NUTRITION LOG — what I ate each day, with calories, macros, and individual foods.
-5. MY FINANCIAL DATA — income, expenses, savings deposits, and budget breakdown.
-6. MY GYM DATA — workout routines, exercises, sets/reps/weight, bodyweight tracking, and progress.
-7. MY LIFE LESSONS — personal wisdom I've collected from experiences, books, failures, and successes. These are MY OWN truths that I want to live by.
+You are NOT a generic chatbot. You are an intelligent system that LEARNS from my data, DETECTS patterns, and PROACTIVELY structures my life.
 
-YOUR JOB:
-- Judge my week against MY GOALS (both long-term and short-term), not against generic productivity. Tell me plainly if I'm on track or slipping, and cite the specific hours/days that prove it.
-- Show me the TRAJECTORY I'm on. Based on how I'm spending my hours, project where I'll actually end up vs. where I say I want to be. Be brutally honest about the gap.
-- Decide what actions I should take next. Be concrete — name the thing, not "focus more."
-- Tell me what's worth my time and what isn't, and where to set boundaries.
-- Motivate me when I've earned it. Scold me when I haven't. Read the situation.
+═══════════════════════════════════════
+CORE DATA YOU RECEIVE EVERY MESSAGE:
+═══════════════════════════════════════
+1. LONG-TERM GOALS — my 1, 3, 5, 10 year vision
+2. SHORT-TERM GOALS — what matters right now
+3. HOUR LOGS — what I planned vs. actually did, with energy ratings (1-5), across ALL recorded days
+4. DAILY TASKS — to-do items per day (done/pending)
+5. SCHEDULE BLOCKS — time blocks per day (work, sleep, personal, other)
+6. NUTRITION — food intake, calories, macros per day
+7. FINANCIALS — income, expenses, savings rate, budget
+8. GYM DATA — workouts, exercises, sets/reps/weight, bodyweight
+9. LIFE LESSONS — my personal wisdom database (my operating system)
+10. CONVERSATION HISTORY — what we've discussed before in this session
 
-YOUR PHILOSOPHICAL LENSES — advise through whichever fits the moment:
+═══════════════════════════════════════
+YOUR PRIMARY FUNCTIONS:
+═══════════════════════════════════════
 
-SUN TZU (Strategy & Positioning):
-- "The supreme art of war is to subdue the enemy without fighting." Win before fighting by setting things up right.
-- "If you know the enemy and know yourself, you need not fear the result of a hundred battles." Know your weaknesses, know the system trying to pacify you.
-- Pick battles. Don't spend force on the wrong fights. Position yourself so victory is inevitable before the engagement begins.
+**1. PATTERN INTELLIGENCE (Learn from my history)**
+Before answering ANY question, you MUST silently analyze my data for:
+- SLEEP PATTERNS: When do I actually sleep vs. when I plan to? Am I consistent? How does sleep affect next-day energy?
+- ENERGY CYCLES: When are my peak energy hours? When do I crash? What activities correlate with high/low energy?
+- TASK COMPLETION RATE: What % of tasks do I actually complete? Which types do I skip? Which days am I most productive?
+- PLAN vs. REALITY GAP: How often does my actual schedule match my planned schedule? Where do I consistently deviate?
+- NUTRITION IMPACT: How does what I eat affect my energy the next day? Am I hitting my macros consistently?
+- GYM CONSISTENCY: Am I going regularly? Are my lifts progressing? Is my bodyweight trending the right direction?
+- FINANCIAL TRAJECTORY: Am I saving more over time? Are expenses creeping up?
+- RECURRING FAILURES: What tasks/habits do I keep failing at? What's the root cause pattern?
+- RECURRING WINS: What am I consistently good at? What conditions enable success?
 
-MARCUS AURELIUS (Discipline & Self-Command) — THIS IS YOUR DEFAULT TONE:
-- "You have power over your mind — not outside events. Realize this, and you will find strength."
-- "The object of life is not to be on the side of the majority, but to escape finding oneself in the ranks of the insane."
-- Control what you can, ignore what you can't. Do the duty in front of you. Check the ego.
-- Embrace hardship — pain leads to growth, courage, and wisdom. Do not seek the path of least resistance.
+When you detect a pattern, STATE IT EXPLICITLY: "I notice that over the last X days, you [pattern]. This means [implication]."
+
+**2. PROACTIVE DAY STRUCTURING**
+When I ask you to plan my day/week, you MUST:
+- Study my BEST previous days (highest energy, most tasks completed, good nutrition) and use them as templates
+- Study my WORST days and actively avoid those patterns
+- Place high-priority work during MY peak energy hours (learn these from my data)
+- Schedule meals at times I actually eat (learn from nutrition logs)
+- Include gym at times I've historically gone (learn from gym data)
+- Add buffer/transition time between blocks (I'm human, not a machine)
+- Front-load the hardest tasks when energy is highest
+- Include specific tasks for each block, not vague labels
+- Plan recovery/wind-down based on what actually works for me
+- If I have incomplete tasks from previous days, carry them forward intelligently
+
+**3. TRAJECTORY PROJECTION**
+For any area of life, project where I'm headed:
+- "At your current rate of [X hours/week on Y], in 6 months you'll be at [Z]. Your goal requires [A]. The gap is [B]."
+- Use ACTUAL data, not assumptions. Count the hours. Do the math.
+- Compare week-over-week and month-over-month trends
+- Flag if trajectory is improving, declining, or stagnant
+
+**4. CROSS-DOMAIN INTELLIGENCE**
+Connect the dots across ALL data domains:
+- "Your gym performance dropped this week. Looking at your nutrition, you only hit 1800 calories on Tuesday and Wednesday. You need fuel to perform."
+- "Your energy crashed at 14:00 three days in a row. Each time you had a high-carb lunch. Consider protein-heavy lunches instead."
+- "You're spending 2 hours/day on [low-value activity]. That's 14 hours/week. Your financial goal requires building [X]. Redirect those hours."
+- "Your best work days this month all had one thing in common: you slept before 23:00 and trained in the morning."
+
+**5. ACCOUNTABILITY ENGINE**
+- Track promises I make to you. If I said "I'll do X tomorrow" and didn't, call it out.
+- Keep a running mental model of my commitments and follow up on them.
+- Grade my weeks: A (exceeded goals), B (met most), C (mediocre), D (slipping), F (falling apart).
+- When grading, cite specific evidence from the data.
+
+═══════════════════════════════════════
+YOUR PHILOSOPHICAL LENSES:
+═══════════════════════════════════════
+Use whichever fits the moment. Blend them when needed.
+
+**MARCUS AURELIUS (Default Tone)** — Discipline & Self-Command:
+- Control what you can, ignore what you can't. Do the duty in front of you.
+- Embrace hardship — pain leads to growth. Do not seek the path of least resistance.
 - Firm, never contemptuous. Disciplined, never cruel.
 
-ALEX HORMOZI (Brutal Prioritization & Leverage):
-- Always ask: "Is this the highest-value action available right now?" If not, cut it.
-- Time is the only non-renewable resource. Every hour spent on low-leverage activity is an hour stolen from your future self.
+**SUN TZU** — Strategy & Positioning:
+- Win before fighting by setting things up right. Position yourself so victory is inevitable.
+- Pick battles. Don't spend force on the wrong fights.
+
+**ALEX HORMOZI** — Brutal Prioritization & Leverage:
+- "Is this the highest-value action available right now?" If not, cut it.
 - Focus creates wealth. Scattered attention creates poverty.
 
-DAVE RAMSEY (Financial Discipline & Building Wealth):
-- "Live like no one else now, so later you can live like no one else." Sacrifice comfort now for freedom later.
-- Debt is slavery. Attack it with intensity.
+**DAVE RAMSEY** — Financial Discipline:
+- "Live like no one else now, so later you can live like no one else."
 - Budget every dollar. If you don't tell your money where to go, it leaves.
 
-THE SOVEREIGN INDIVIDUAL FRAMEWORK:
-1. THE CHARIOTEER PRINCIPLE: The prefrontal cortex is the Charioteer — reason, delayed gratification, moral agency. Modern culture exhausts it. Your job is to keep it in control.
-2. CHEMICAL SOVEREIGNTY: Zero tolerance for chemical sabotage of the Charioteer.
-3. DIGITAL SOVEREIGNTY: Social media algorithms are dopamine delivery systems. Replace them with deep reading, creation, and sustained focus.
-4. ENVIRONMENTAL DESIGN > WILLPOWER: Reshape the choice environment. Don't rely on willpower.
+**SOVEREIGN INDIVIDUAL**:
+- Charioteer Principle: Keep the prefrontal cortex in control. Modern culture exhausts it.
+- Chemical/Digital Sovereignty: Zero tolerance for chemical sabotage. Social media = dopamine slavery.
+- Environmental Design > Willpower: Reshape the choice environment.
 
-DIRECTION ASSESSMENT:
-- Based on how hours are actually being spent, what life is being built?
-- Does the daily reality match the stated long-term goals?
-- Be specific: "At this rate, in 2 years you'll be [X]. You said you wanted [Y]. The gap is [Z]."
-
+═══════════════════════════════════════
 LIFE LESSONS INTEGRATION:
-- You MUST actively reference and reinforce MY LIFE LESSONS in your coaching. These are truths I've learned — remind me of them when they're relevant.
-- When I'm slipping, quote the specific lesson back to me. "You wrote this yourself: [lesson title]."
-- When giving advice, check if any of my life lessons already cover the situation. If so, lead with that — I trust my own wisdom more than generic advice.
-- If my behavior contradicts one of my own lessons, call it out directly. "You said you learned [X], but you're doing [Y]."
-- Treat my life lessons as my personal operating system. They are non-negotiable principles I chose to live by.
+═══════════════════════════════════════
+- My life lessons are my personal operating system. They are NON-NEGOTIABLE principles.
+- ALWAYS check if a situation connects to one of my lessons. If so, lead with it.
+- When I'm slipping: "You wrote this yourself: [lesson title] — [lesson]. But you're doing the opposite."
+- When I'm winning: "This is your lesson in action: [lesson title]. Keep building on it."
 
-RULES:
-- Keep replies under 200 words unless doing a full direction assessment. Talk like a coach, not a report.
-- If I've logged almost nothing, don't guess — call it out and ask me the one question that would help most.
-- Always tie advice back to MY specific goals, MY specific logs, and MY LIFE LESSONS. Never be generic.`;
+═══════════════════════════════════════
+RESPONSE STYLE:
+═══════════════════════════════════════
+- Talk like JARVIS — intelligent, precise, slightly dry wit. Not robotic, not overly emotional.
+- Lead with the most important insight. Don't bury the lead.
+- Use data and numbers when available. "You completed 7/10 tasks" not "you did most tasks."
+- Keep replies CONCISE (under 250 words) for quick questions. Go deeper only for full assessments.
+- When I ask "plan my day" or "what should I do", TAKE ACTION — use the tools to build my schedule. Don't just describe it.
+- When you detect something important in my data that I didn't ask about, MENTION IT. Be proactive.
+- If I've logged almost nothing, don't guess — call it out. "I have [X] days of data. I need more to give you real patterns."
+
+═══════════════════════════════════════
+ADVANCED BEHAVIORS:
+═══════════════════════════════════════
+- MORNING BRIEFING: When I say "good morning", "morning", or "start my day": Give me a status report — what's on my plate today, any carryover tasks from yesterday, my recent trajectory, and what I should prioritize. Then build my schedule if I don't have one.
+- EVENING DEBRIEF: When I say "end of day", "wrap up", or "how did today go": Score my day, note what I completed vs. missed, identify wins and losses, and suggest what to carry to tomorrow.
+- WEEKLY REVIEW: When I ask for a review: Full analysis across all domains — hours logged, task completion rate, nutrition averages, gym consistency, financial moves, and trajectory vs. goals.
+- EMERGENCY MODE: If my data shows a clear downward spiral (multiple days of missed tasks, no gym, bad nutrition), escalate your tone. Don't be gentle. Sound the alarm.`;
 
 function formatScheduleBlocks(scheduleBlocks) {
   if (!scheduleBlocks || typeof scheduleBlocks !== 'object' || Array.isArray(scheduleBlocks) || Object.keys(scheduleBlocks).length === 0) return '(No schedule blocks yet)';
@@ -77,7 +135,7 @@ function formatScheduleBlocks(scheduleBlocks) {
       const endH = block.endHour;
       const hours = endH - startH;
       const type = block.type === 'actual' ? 'DID' : 'PLANNED';
-      output += `  ${pad(startH)}:00-${pad(endH)}:00 (${hours}h) [${type}] ${block.text}\n`;
+      output += `  ${pad(startH)}:00-${pad(endH)}:00 (${hours}h) [${type}] ${block.text} [${block.blockCategory || 'other'}]\n`;
     }
   }
   return output || '(No schedule blocks yet)';
@@ -95,7 +153,7 @@ function formatDailyTasks(dailyTasks) {
     output += `\n${date}:\n`;
     for (const task of tasks) {
       const status = task.done ? '[DONE]' : '[TODO]';
-      output += `  ${status} ${task.text}\n`;
+      output += `  ${status} ${task.text} [${task.blockCategory || 'other'}]\n`;
     }
   }
   return output || '(No daily tasks yet)';
@@ -104,7 +162,6 @@ function formatDailyTasks(dailyTasks) {
 function formatNutrition(nutrition) {
   if (!nutrition || typeof nutrition !== 'object' || !Array.isArray(nutrition.logs) || nutrition.logs.length === 0) return '(No nutrition data yet)';
   const sorted = [...nutrition.logs].sort((a, b) => a.date.localeCompare(b.date));
-  // Only include recent days to keep context manageable
   const recent = sorted.slice(-14);
   let output = '';
   for (const day of recent) {
@@ -191,28 +248,152 @@ function formatGymData(gym) {
 
   if (gym.weight_unit) output += `Weight unit: ${gym.weight_unit}\n`;
 
-  // Workout days & exercises
   for (const day of (gym.workout_days || [])) {
     output += `\n${day.name} Day:\n`;
     if ((day.exercises || []).length === 0) {
       output += '  No exercises yet\n';
     } else {
       for (const ex of day.exercises) {
-        const sets = (ex.sets || []).map((s, i) => `Set ${i + 1}: ${s.weight}${gym.weight_unit} × ${s.reps}`).join(', ');
+        const sets = (ex.sets || []).map((s, i) => `Set ${i + 1}: ${s.weight}${gym.weight_unit} x ${s.reps}`).join(', ');
         const lastLog = (ex.weight_log || []).slice(-1)[0];
-        const lastStr = lastLog ? ` | Last: ${lastLog.weight}${gym.weight_unit} × ${lastLog.reps} on ${lastLog.date}` : '';
+        const lastStr = lastLog ? ` | Last: ${lastLog.weight}${gym.weight_unit} x ${lastLog.reps} on ${lastLog.date}` : '';
         output += `  - ${ex.name}: ${sets || 'no sets'}${lastStr}\n`;
       }
     }
   }
 
-  // Bodyweight
   const bw = (Array.isArray(gym.bodyweight_log) ? gym.bodyweight_log : []).slice(-14);
   if (bw.length > 0) {
     output += '\nRecent bodyweight: ' + bw.map(e => `${e.date}: ${e.weight}${gym.weight_unit}`).join(', ') + '\n';
   }
 
   return output || '(No gym data yet)';
+}
+
+// Compute pattern analysis summary from raw data
+function computePatternAnalysis(logs, dailyTasks, scheduleBlocks, nutrition) {
+  const analysis = [];
+
+  // Task completion rate analysis
+  if (dailyTasks && typeof dailyTasks === 'object' && !Array.isArray(dailyTasks)) {
+    const dates = Object.keys(dailyTasks).sort();
+    const recentDates = dates.slice(-14);
+    let totalTasks = 0, completedTasks = 0;
+    const dailyRates = [];
+    for (const date of recentDates) {
+      const tasks = dailyTasks[date];
+      if (!Array.isArray(tasks) || tasks.length === 0) continue;
+      const done = tasks.filter(t => t.done).length;
+      totalTasks += tasks.length;
+      completedTasks += done;
+      dailyRates.push({ date, rate: Math.round((done / tasks.length) * 100), done, total: tasks.length });
+    }
+    if (totalTasks > 0) {
+      const overallRate = Math.round((completedTasks / totalTasks) * 100);
+      analysis.push(`TASK COMPLETION (last ${recentDates.length} days): ${completedTasks}/${totalTasks} tasks completed (${overallRate}%)`);
+      const worst = dailyRates.filter(d => d.rate < 50).map(d => `${d.date} (${d.done}/${d.total})`);
+      if (worst.length > 0) analysis.push(`  Low completion days: ${worst.join(', ')}`);
+      const best = dailyRates.filter(d => d.rate === 100 && d.total >= 2).map(d => d.date);
+      if (best.length > 0) analysis.push(`  Perfect days: ${best.join(', ')}`);
+      // Incomplete tasks to carry forward
+      const lastDate = dates[dates.length - 1];
+      if (lastDate && Array.isArray(dailyTasks[lastDate])) {
+        const incomplete = dailyTasks[lastDate].filter(t => !t.done);
+        if (incomplete.length > 0) {
+          analysis.push(`  CARRYOVER from ${lastDate}: ${incomplete.map(t => t.text).join(', ')}`);
+        }
+      }
+    }
+  }
+
+  // Energy pattern analysis
+  if (logs && typeof logs === 'object') {
+    const dates = Object.keys(logs).sort().slice(-14);
+    const hourlyEnergy = {};
+    let totalEntries = 0;
+    for (const date of dates) {
+      const dayLogs = logs[date];
+      for (let h = 0; h < 24; h++) {
+        const log = dayLogs[h];
+        if (log && log.energy && log.energy > 0) {
+          if (!hourlyEnergy[h]) hourlyEnergy[h] = [];
+          hourlyEnergy[h].push(log.energy);
+          totalEntries++;
+        }
+      }
+    }
+    if (totalEntries > 5) {
+      const avgByHour = Object.entries(hourlyEnergy)
+        .map(([h, vals]) => ({ hour: parseInt(h), avg: vals.reduce((a, b) => a + b, 0) / vals.length, count: vals.length }))
+        .filter(e => e.count >= 2)
+        .sort((a, b) => b.avg - a.avg);
+      if (avgByHour.length > 0) {
+        const peak = avgByHour.slice(0, 3).map(e => `${pad(e.hour)}:00 (avg ${e.avg.toFixed(1)})`);
+        const low = avgByHour.slice(-3).map(e => `${pad(e.hour)}:00 (avg ${e.avg.toFixed(1)})`);
+        analysis.push(`ENERGY PEAKS: ${peak.join(', ')}`);
+        analysis.push(`ENERGY LOWS: ${low.join(', ')}`);
+      }
+    }
+
+    // Plan vs Reality gap
+    let matchCount = 0, mismatchCount = 0;
+    for (const date of dates) {
+      const dayLogs = logs[date];
+      for (let h = 0; h < 24; h++) {
+        const log = dayLogs[h];
+        if (log && log.planned && log.actual) {
+          if (log.planned.toLowerCase().trim() === log.actual.toLowerCase().trim()) matchCount++;
+          else mismatchCount++;
+        }
+      }
+    }
+    const total = matchCount + mismatchCount;
+    if (total > 5) {
+      const adherence = Math.round((matchCount / total) * 100);
+      analysis.push(`PLAN ADHERENCE: ${adherence}% of planned hours matched actual (${matchCount}/${total})`);
+    }
+
+    // Sleep pattern detection
+    const sleepData = [];
+    for (const date of dates) {
+      const dayLogs = logs[date];
+      let sleepStart = -1, sleepEnd = -1;
+      for (let h = 0; h < 24; h++) {
+        const log = dayLogs[h];
+        const activity = (log?.actual || log?.planned || '').toLowerCase();
+        if (activity.includes('sleep') || activity.includes('bed')) {
+          if (sleepStart === -1) sleepStart = h;
+          sleepEnd = h + 1;
+        }
+      }
+      if (sleepStart >= 0) sleepData.push({ date, start: sleepStart, end: sleepEnd, hours: sleepEnd - sleepStart });
+    }
+    if (sleepData.length >= 3) {
+      const avgSleep = sleepData.reduce((a, b) => a + b.hours, 0) / sleepData.length;
+      const avgBedtime = sleepData.filter(s => s.start >= 20).reduce((a, b) => a + b.start, 0) / sleepData.filter(s => s.start >= 20).length;
+      analysis.push(`SLEEP PATTERN: Avg ${avgSleep.toFixed(1)}h/night${avgBedtime ? `, avg bedtime ~${pad(Math.round(avgBedtime))}:00` : ''}`);
+    }
+  }
+
+  // Nutrition consistency
+  if (nutrition && Array.isArray(nutrition.logs) && nutrition.logs.length > 0) {
+    const recent = nutrition.logs.slice(-14);
+    const cals = recent.filter(d => d.foods && d.foods.length > 0).map(d =>
+      d.foods.reduce((acc, f) => acc + (f.calories || 0), 0)
+    );
+    const proteins = recent.filter(d => d.foods && d.foods.length > 0).map(d =>
+      d.foods.reduce((acc, f) => acc + (f.protein || 0), 0)
+    );
+    if (cals.length >= 3) {
+      const avgCal = Math.round(cals.reduce((a, b) => a + b, 0) / cals.length);
+      const avgPro = Math.round(proteins.reduce((a, b) => a + b, 0) / proteins.length);
+      const daysLogged = cals.length;
+      const daysInRange = recent.length;
+      analysis.push(`NUTRITION (${daysLogged}/${daysInRange} days logged): Avg ${avgCal} kcal/day, ${avgPro}g protein/day`);
+    }
+  }
+
+  return analysis.length > 0 ? analysis.join('\n') : '(Not enough data for pattern analysis yet)';
 }
 
 const CATEGORY_COLORS = {
@@ -230,7 +411,7 @@ const SCHEDULE_TOOLS = [
       type: 'object',
       properties: {
         date: { type: 'string', description: 'The date in YYYY-MM-DD format. Use today\'s date if not specified.' },
-        text: { type: 'string', description: 'What the block is for (e.g. "Deep work", "Sleep", "Gym", "Lunch break")' },
+        text: { type: 'string', description: 'What the block is for (e.g. "Deep work - build API endpoints", "Sleep", "Gym - Push day", "Lunch break")' },
         startHour: { type: 'integer', minimum: 0, maximum: 23, description: 'Start hour (0-23)' },
         endHour: { type: 'integer', minimum: 1, maximum: 24, description: 'End hour (1-24)' },
         type: { type: 'string', enum: ['planned', 'actual'], description: 'Whether this is planned or actually happened. Default: planned' },
@@ -281,7 +462,6 @@ const SCHEDULE_TOOLS = [
   },
 ];
 
-const BLOCK_COLORS = ['#6366f1', '#22c55e', '#eab308', '#ef4444', '#a855f7', '#f97316'];
 const ACTUAL_COLOR = '#64748b';
 
 export default async function handler(req, res) {
@@ -296,58 +476,89 @@ export default async function handler(req, res) {
     const goals = Array.isArray(body.goals) ? body.goals : [];
     const coachContextFiles = Array.isArray(body.coachContextFiles) ? body.coachContextFiles : [];
     const attachments = Array.isArray(body.attachments) ? body.attachments : [];
+    const conversationHistory = Array.isArray(body.conversationHistory) ? body.conversationHistory : [];
 
     const today = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const currentHour = now.getHours();
+    const dayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()];
+
+    // Compute pattern analysis
+    const patternAnalysis = computePatternAnalysis(logs, dailyTasks, scheduleBlocks, nutrition);
 
     const context = `
-TODAY'S DATE: ${today}
+═══ CURRENT STATUS ═══
+DATE: ${today} (${dayOfWeek})
+TIME: ${pad(currentHour)}:00
+DAYS OF DATA: ${logs ? Object.keys(logs).length : 0} days logged
 
-MY LONG-TERM GOALS (life vision):
+═══ PATTERN ANALYSIS (auto-computed from your data) ═══
+${patternAnalysis}
+
+═══ LONG-TERM GOALS (life vision) ═══
 ${longTermGoals.length > 0 ? longTermGoals.map((g, i) => `${i + 1}. ${g}`).join('\n') : '(No long-term goals set yet)'}
 
-MY SHORT-TERM GOALS (current focus):
+═══ SHORT-TERM GOALS (current focus) ═══
 ${goals.length > 0 ? goals.map((g, i) => `${i + 1}. ${g}`).join('\n') : '(No short-term goals set yet)'}
 
-MY DAILY TASKS (to-do items per day):
+═══ DAILY TASKS (to-do items per day) ═══
 ${formatDailyTasks(dailyTasks)}
 
-MY SCHEDULE (time blocks per day):
+═══ SCHEDULE BLOCKS (time blocks per day) ═══
 ${formatScheduleBlocks(scheduleBlocks)}
 
-MY HOUR LOGS (all recorded days):
+═══ HOUR LOGS (all recorded days) ═══
 ${formatLogs(logs)}
 
-MY NUTRITION LOG (food intake per day):
+═══ NUTRITION LOG (food intake per day) ═══
 ${formatNutrition(nutrition)}
 
-MY FINANCIAL DATA:
+═══ FINANCIAL DATA ═══
 ${formatFinancials(financials)}
 
-MY GYM DATA:
+═══ GYM DATA ═══
 ${formatGymData(gymData)}
 
-MY LIFE LESSONS (personal wisdom & lessons learned):
+═══ LIFE LESSONS (personal operating system) ═══
 ${formatLifeLessons(lifeLessons)}
 `;
 
     // Build system prompt with optional custom personality
     let systemPrompt = SYSTEM_PROMPT;
-    systemPrompt += `\n\nYou have tools to modify the user's day tracker schedule and add tasks. Use them when the user asks you to add, adjust, remove, or plan schedule blocks or tasks.
+    systemPrompt += `\n\nYou have tools to modify the user's day tracker schedule and add tasks. Use them PROACTIVELY — when the user asks to plan, or when you see they need structure, BUILD IT for them.
 
 SCHEDULE PLANNING RULES:
-- Today's date is ${today}. You can plan ANY day — today, tomorrow, next week, etc.
-- When the user asks you to "plan my day" or "plan my week", create a COMPLETE schedule with ALL blocks including: sleep, wake up routine, meals/lunch breaks, work blocks, gym, personal time, and wind-down.
-- For sleep that crosses midnight (e.g. 22:00 to 07:00), create TWO separate blocks: one from 22:00-24:00 on the current day, and one from 0:00-7:00 on the NEXT day. Calculate the next day's date correctly.
-- Always include lunch breaks (usually 12:00-13:00) and dinner in full-day plans.
+- Today's date is ${today} (${dayOfWeek}). Current time: ${pad(currentHour)}:00.
+- You can plan ANY day — today, tomorrow, next week, etc.
+- When planning today, only schedule blocks AFTER the current hour (${pad(currentHour)}:00). Don't schedule the past.
+- When the user asks to "plan my day" or "plan my week", create a COMPLETE schedule based on their ACTUAL patterns from previous days.
+- For sleep that crosses midnight (e.g. 22:00 to 07:00), create TWO separate blocks: one from 22:00-24:00 on the current day, and one from 0:00-7:00 on the NEXT day.
+- Always include meals, breaks, and transitions. Humans need rest.
 - Always set the correct category: "work" for work/meetings/coding/business, "sleep" for sleep/rest/nap, "personal" for gym/errands/social/meals/breaks, "other" for anything else.
-- You can also add tasks to specific days using the add_task tool.
-- When planning multiple days, plan each day individually with appropriate blocks.
-- Be realistic with time — don't overschedule. Include buffer time between activities.`;
+- Make block descriptions SPECIFIC, not vague. "Deep work - build dashboard feature" not just "Work".
+- If the user has incomplete tasks from previous days, include them in today's plan.
+- Use their energy pattern data to place demanding tasks during peak hours.
+- When planning multiple days, plan each day individually.
+- Be realistic — don't overschedule. Include buffer time.`;
     if (coachPersonality) {
       systemPrompt += `\n\n--- USER'S CUSTOM INSTRUCTIONS ---\n${coachPersonality}`;
     }
 
-    // Build user message content with context files and attachments
+    // Build conversation messages with history
+    let messages = [];
+
+    // Add previous conversation messages (for memory within the session)
+    if (conversationHistory.length > 0) {
+      for (const msg of conversationHistory) {
+        if (msg.role === 'user') {
+          messages.push({ role: 'user', content: [{ type: 'text', text: msg.text }] });
+        } else if (msg.role === 'assistant') {
+          messages.push({ role: 'assistant', content: [{ type: 'text', text: msg.text }] });
+        }
+      }
+    }
+
+    // Build current user message content with context files and attachments
     const userContent = [];
 
     // Add persistent context files
@@ -372,12 +583,12 @@ SCHEDULE PLANNING RULES:
       }
     }
 
-    userContent.push({ type: 'text', text: context + '\n\nMy question: ' + message });
+    userContent.push({ type: 'text', text: context + '\n\nMy message: ' + message });
 
     const hasPdf = userContent.some(b => b.type === 'document');
 
-    // First API call - may include tool use
-    let messages = [{ role: 'user', content: userContent }];
+    messages.push({ role: 'user', content: userContent });
+
     const scheduleChanges = [];
     let replyText = '';
     let maxIterations = 15;
@@ -393,7 +604,7 @@ SCHEDULE PLANNING RULES:
         },
         body: JSON.stringify({
           model: 'claude-opus-4-6',
-          max_tokens: 4096,
+          max_tokens: 8192,
           system: systemPrompt,
           messages,
           tools: SCHEDULE_TOOLS,

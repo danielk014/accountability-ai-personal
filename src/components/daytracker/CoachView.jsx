@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { sanitizeImageSrc } from '@/lib/sanitize';
-import { History, Paperclip, X, FileText } from 'lucide-react';
+import { History, Paperclip, X, FileText, Zap, Sun, Moon, BarChart3, Calendar, Target } from 'lucide-react';
 import { loadLogs, loadGoals, loadLongTermGoals, loadAllDailyTasks, loadAllBlocks, loadBlocks, saveBlocks, loadDailyTasks, saveDailyTasks } from './storage';
 import { loadNutrition } from './NutritionView';
 import { loadLessons } from './LifeLessonsView';
@@ -33,9 +33,9 @@ function formatCoachText(text) {
     .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
     // Wrap consecutive <li> in <ul>
     .replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>')
-    // Double newlines → paragraph break
+    // Double newlines -> paragraph break
     .replace(/\n\n+/g, '</p><p>')
-    // Single newlines → line break
+    // Single newlines -> line break
     .replace(/\n/g, '<br>');
   html = '<p>' + html + '</p>';
   // Clean up empty paragraphs
@@ -43,23 +43,35 @@ function formatCoachText(text) {
   return DOMPurify.sanitize(html);
 }
 
-const DEFAULT_COACH_PERSONALITY = `You are my personal time, life, and strategic coach living inside my hour-by-hour tracker.
+const DEFAULT_COACH_PERSONALITY = `You are JARVIS — my personal AI command center for life optimization.
 
 YOUR JOB:
-- Judge my week against MY GOALS (both long-term and short-term), not against generic productivity. Tell me plainly if I'm on track or slipping.
-- Show me the TRAJECTORY I'm on. Based on how I'm spending my hours, project where I'll actually end up vs. where I say I want to be.
-- Decide what actions I should take next. Be concrete — name the thing, not "focus more."
-- Motivate me when I've earned it. Scold me when I haven't.
+- Analyze ALL my data (schedule, goals, nutrition, gym, finances, lessons) as one connected system
+- Learn from my previous days — detect patterns, peak hours, recurring failures and wins
+- Judge my progress against MY GOALS with specific data, not generic advice
+- Proactively structure my days ahead based on what actually works for me
+- Be brutally honest about my trajectory — show me the math
 
-YOUR PHILOSOPHICAL LENSES — advise through whichever fits the moment:
-- MARCUS AURELIUS (default tone): Discipline, self-command, control what you can, do the duty in front of you.
-- SUN TZU: Strategy & positioning. Pick battles. Position yourself so victory is inevitable.
-- ALEX HORMOZI: Brutal prioritization & leverage. "Is this the highest-value action available right now?"
-- DAVE RAMSEY: Financial discipline. "Live like no one else now, so later you can live like no one else."
+YOUR PHILOSOPHICAL LENSES (use whichever fits):
+- MARCUS AURELIUS (default): Discipline, self-command, do the duty in front of you
+- SUN TZU: Strategy & positioning. Win before fighting
+- ALEX HORMOZI: Brutal prioritization. "Is this the highest-value action right now?"
+- DAVE RAMSEY: Financial discipline. Budget every dollar
 
 RULES:
-- Keep replies under 200 words unless doing a full direction assessment. Talk like a coach, not a report.
-- Always tie advice back to MY specific goals and MY specific logs. Never be generic.`;
+- Talk like JARVIS — intelligent, precise, slightly dry wit
+- Lead with data and numbers. "You completed 7/10 tasks" not "you did most tasks"
+- Keep replies concise unless doing a full assessment
+- When I say "plan my day" — USE THE TOOLS to build my schedule, don't just describe it`;
+
+const QUICK_ACTIONS = [
+  { label: 'Morning Briefing', icon: Sun, prompt: 'Good morning. Give me my status report and plan my day.' },
+  { label: 'Plan My Day', icon: Calendar, prompt: 'Plan my day. Build me a full schedule based on my patterns, goals, and pending tasks.' },
+  { label: 'Evening Debrief', icon: Moon, prompt: 'End of day. Score my day, what did I complete vs miss, and what should I carry to tomorrow?' },
+  { label: 'Weekly Review', icon: BarChart3, prompt: 'Give me a full weekly review — hours logged, task completion, nutrition, gym, finances, and trajectory vs goals.' },
+  { label: 'Am I On Track?', icon: Target, prompt: 'Based on all my data, am I on track for my goals? Show me the trajectory and the gap.' },
+  { label: 'Plan My Week', icon: Zap, prompt: 'Plan my entire week ahead. Build schedules for each day based on my patterns, goals, and what needs to get done.' },
+];
 
 function readFileAsBase64(file) {
   return new Promise((resolve, reject) => {
@@ -173,12 +185,12 @@ function CoachView() {
     e.target.value = '';
   }
 
-  async function send() {
-    if ((!input.trim() && attachments.length === 0) || loading) return;
+  async function send(overrideMessage) {
+    const userMsg = overrideMessage || input.trim();
+    if ((!userMsg && attachments.length === 0) || loading) return;
 
-    const userMsg = input.trim();
     const currentAttachments = [...attachments];
-    setInput('');
+    if (!overrideMessage) setInput('');
     setAttachments([]);
     setError(null);
 
@@ -187,11 +199,9 @@ function CoachView() {
       text: userMsg,
       ...(currentAttachments.length > 0 && { _attachments: currentAttachments.map(a => ({ name: a.name, mediaType: a.mediaType })) }),
     };
-    setMessages(prev => {
-      const updated = [...prev, displayMsg];
-      saveCurrentConv(updated);
-      return updated;
-    });
+    const updatedMessages = [...messages, displayMsg];
+    setMessages(updatedMessages);
+    saveCurrentConv(updatedMessages);
     setLoading(true);
 
     try {
@@ -201,7 +211,6 @@ function CoachView() {
       const dailyTasks = loadAllDailyTasks();
       const scheduleBlocks = loadAllBlocks();
       const nutrition = loadNutrition();
-
       const lifeLessons = loadLessons();
 
       const coachPersonality = profile?.model_personalities?.coach || null;
@@ -221,6 +230,12 @@ function CoachView() {
         if (gymRaw) gymData = JSON.parse(gymRaw);
       } catch {}
 
+      // Build conversation history for context (last 10 messages to stay within token limits)
+      const conversationHistory = messages.slice(-10).map(m => ({
+        role: m.role,
+        text: m.text,
+      }));
+
       const res = await fetch('/api/coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -232,6 +247,7 @@ function CoachView() {
           lifeLessons,
           coachPersonality,
           coachContextFiles,
+          conversationHistory,
           attachments: currentAttachments.map(a => ({ name: a.name, mediaType: a.mediaType, data: a.data })),
         })
       });
@@ -279,7 +295,7 @@ function CoachView() {
         const parts = [];
         if (blockCount > 0) parts.push(`${blockCount} block${blockCount > 1 ? 's' : ''}`);
         if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
-        toast.success(`Coach updated your schedule (${parts.join(', ')})`);
+        toast.success(`JARVIS updated your schedule (${parts.join(', ')})`);
       }
 
       setMessages(prev => {
@@ -299,6 +315,10 @@ function CoachView() {
       e.preventDefault();
       send();
     }
+  }
+
+  function handleQuickAction(prompt) {
+    send(prompt);
   }
 
   return (
@@ -331,14 +351,36 @@ function CoachView() {
 
       {messages.length === 0 && !loading && (
         <div className="coach-empty">
-          <h3>Your AI Coach</h3>
-          <p>
-            Ask anything about your week, your goals, or what to do next.
-            The coach sees all your logged days, your current goals, and your long-term vision.
+          <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>JARVIS</h3>
+          <p style={{ color: '#64748b', fontSize: 13, marginBottom: 16 }}>
+            Your AI command center. I see your schedule, goals, nutrition, gym, finances, and life lessons.
+            I learn from your patterns and structure your days for maximum impact.
           </p>
-          <p style={{ marginTop: 12, color: '#555' }}>
-            Try: "Am I on track?", "What direction am I headed?", or "What should I do today?"
-          </p>
+
+          {/* Quick action buttons */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, maxWidth: 500 }}>
+            {QUICK_ACTIONS.map((action) => {
+              const Icon = action.icon;
+              return (
+                <button
+                  key={action.label}
+                  onClick={() => handleQuickAction(action.prompt)}
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-left transition font-medium"
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    color: '#334155',
+                    cursor: 'pointer',
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.borderColor = '#cbd5e1'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                >
+                  <Icon style={{ width: 16, height: 16, color: '#6366f1', flexShrink: 0 }} />
+                  <span>{action.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -357,7 +399,12 @@ function CoachView() {
             <div className="coach-msg-content" dangerouslySetInnerHTML={{ __html: formatCoachText(msg.text) }} />
           </div>
         ))}
-        {loading && <div className="coach-loading">Coach is thinking...</div>}
+        {loading && (
+          <div className="coach-loading" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#6366f1', animation: 'pulse 1.5s infinite' }} />
+            JARVIS is analyzing...
+          </div>
+        )}
         {error && <div className="coach-error">Error: {error}</div>}
         <div ref={bottomRef} />
       </div>
@@ -399,12 +446,12 @@ function CoachView() {
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask your coach..."
+          placeholder="Talk to JARVIS..."
           disabled={loading}
         />
         <button
           className="coach-send"
-          onClick={send}
+          onClick={() => send()}
           disabled={loading || (!input.trim() && attachments.length === 0)}
         >
           &uarr;
