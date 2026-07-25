@@ -838,7 +838,7 @@ export async function sendOneOffPrompt(prompt) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-opus-4-6',
+      model: 'claude-sonnet-5',
       max_tokens: 2048,
       messages: [{ role: 'user', content: prompt }],
     }),
@@ -869,7 +869,7 @@ async function _agenticLoop(history, systemPrompt) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-opus-4-6',
+        model: 'claude-sonnet-5',
         max_tokens: 2048,
         system: systemPrompt,
         tools: TOOLS,
@@ -1177,7 +1177,7 @@ ${gymContext}`;
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-opus-4-6',
+        model: 'claude-sonnet-5',
         max_tokens: 2048,
         system: systemPrompt,
         tools: GYM_TOOLS,
@@ -1247,7 +1247,7 @@ Micronutrients: sodium_mg, potassium_mg, calcium_mg, iron_mg in milligrams. vita
   const response = await fetch('/api/claude', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 600, messages: [{ role: 'user', content }] }),
+    body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 600, messages: [{ role: 'user', content }] }),
   });
   if (!response.ok) throw new Error(`AI error ${response.status}`);
   const data = await response.json();
