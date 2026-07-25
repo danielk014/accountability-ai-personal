@@ -523,7 +523,7 @@ async function financialAgenticLoop(history, fin, update, selectedMonth) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-0-20250514',
         max_tokens: 2048,
         system: systemPrompt,
         tools: FINANCIAL_TOOLS,
