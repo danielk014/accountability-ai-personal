@@ -296,7 +296,7 @@ function buildFinancialSystemPrompt(fin, selectedMonth) {
   const wishlist  = sum(byMonth(fin.wishlist_expenses));
   const oneTimeItems = byMonth(fin.one_time_expenses);
   const oneTime   = sum(oneTimeItems);
-  const totalExpenses = recurring + wishlist + oneTime;
+  const totalExpenses = recurring + oneTime;
   const savings = income - totalExpenses;
   const rate = income > 0 ? ((savings / income) * 100).toFixed(1) : '0.0';
   const fmtItem = (i) => `${i.name}: $${fmt(i.amount)}${i.day ? ` (due ${ordinal(i.day)})` : ""}`;
@@ -927,11 +927,11 @@ function OverviewTab({ fin, selectedMonth }) {
   const recurring    = yearly ? sum(byMonth(fin.recurring_expenses)) * 12 : sum(byMonth(fin.recurring_expenses));
   const wishlist     = yearly ? sum(byYear(fin.wishlist_expenses))  : sum(byMonth(fin.wishlist_expenses));
   const oneTime      = yearly ? sum(byYear(fin.one_time_expenses || [])) : sum(byMonth(fin.one_time_expenses));
-  const totalExp     = recurring + wishlist + oneTime;
+  const totalExp     = recurring + oneTime;
   const savings      = income - totalExp;
   const baseIncome   = sum(incomeItems);
   const rate = baseIncome > 0
-    ? (((baseIncome - sum(byMonth(fin.recurring_expenses)) - sum(byMonth(fin.wishlist_expenses)) - sum(byMonth(fin.one_time_expenses))) / baseIncome) * 100).toFixed(1)
+    ? (((baseIncome - sum(byMonth(fin.recurring_expenses)) - sum(byMonth(fin.one_time_expenses))) / baseIncome) * 100).toFixed(1)
     : 0;
 
   return (

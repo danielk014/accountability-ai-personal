@@ -218,7 +218,7 @@ function formatFinancials(fin) {
 
   const sum = (arr) => arr.reduce((t, i) => t + (parseFloat(i.amount) || 0), 0);
   const totalIncome = sum(income);
-  const totalExpenses = sum(recurring) + sum(wishlist) + sum(oneTime);
+  const totalExpenses = sum(recurring) + sum(oneTime); // wishlist is optional/not spent
   const totalSaved = sum(savings);
   const allTimeSaved = sum(fin.savings_deposits || []);
   const surplus = totalIncome - totalExpenses;
@@ -226,7 +226,7 @@ function formatFinancials(fin) {
   output += `Month: ${currentMonth}\n`;
   if (income.length > 0) output += `Income ($${totalIncome.toFixed(0)}): ${income.map(i => `${i.name} $${i.amount}`).join(', ')}\n`;
   if (recurring.length > 0) output += `Recurring expenses ($${sum(recurring).toFixed(0)}): ${recurring.map(i => `${i.name} $${i.amount}`).join(', ')}\n`;
-  if (wishlist.length > 0) output += `Optional spending ($${sum(wishlist).toFixed(0)}): ${wishlist.map(i => `${i.name} $${i.amount}`).join(', ')}\n`;
+  if (wishlist.length > 0) output += `Wishlist/optional (NOT spent, considering): ${wishlist.map(i => `${i.name} $${i.amount}`).join(', ')}\n`;
   if (oneTime.length > 0) output += `One-time payments ($${sum(oneTime).toFixed(0)}): ${oneTime.map(i => `${i.name} $${i.amount}`).join(', ')}\n`;
   if (savings.length > 0) output += `Savings deposits this month ($${totalSaved.toFixed(0)}): ${savings.map(i => `${i.name} $${i.amount}`).join(', ')}\n`;
   output += `Monthly surplus: $${surplus.toFixed(0)} | Savings rate: ${totalIncome > 0 ? ((surplus / totalIncome) * 100).toFixed(0) : 0}%\n`;

@@ -23,10 +23,12 @@ const BLOCK_CATEGORIES = [
 ];
 
 function formatHour(h) {
-  if (h === 0) return '12 AM';
-  if (h < 12) return `${h} AM`;
-  if (h === 12) return '12 PM';
-  return `${h - 12} PM`;
+  const hour = Math.floor(h);
+  const min = h % 1 >= 0.5 ? ':30' : ':00';
+  if (hour === 0) return `12${min} AM`;
+  if (hour < 12) return `${hour}${min} AM`;
+  if (hour === 12) return `12${min} PM`;
+  return `${hour - 12}${min} PM`;
 }
 
 function getY(e) {
@@ -343,11 +345,12 @@ function DailyView({ overrideDate }) {
     const taskCat = task.blockCategory || 'other';
     const catConfig = BLOCK_CATEGORIES.find(c => c.value === taskCat);
     const colorIdx = blocks.length % BLOCK_COLORS.length;
+    // Default to 30-min block; hour can be fractional (e.g. 9.5 = 9:30)
     const newBlock = {
       id: Date.now(),
       text: task.text || task.name || 'Task',
       startHour: hour,
-      endHour: Math.min(hour + 1, 24),
+      endHour: Math.min(hour + 0.5, 24),
       color: catConfig?.color || (task.color && task.color !== '#1a1a1a' ? task.color : BLOCK_COLORS[colorIdx]),
       type: 'planned',
       blockCategory: taskCat,
@@ -359,8 +362,9 @@ function DailyView({ overrideDate }) {
     if (!scheduleRef.current) return null;
     const rect = scheduleRef.current.getBoundingClientRect();
     const y = clientY - rect.top + scheduleRef.current.scrollTop;
-    const hour = Math.floor(y / ROW_HEIGHT);
-    return Math.max(0, Math.min(23, hour));
+    // Snap to half-hour increments (0, 0.5, 1, 1.5, ...)
+    const halfHour = Math.floor(y / (ROW_HEIGHT / 2)) * 0.5;
+    return Math.max(0, Math.min(23.5, halfHour));
   }
 
   function handleTaskTouchStart(e, task) {
@@ -415,21 +419,23 @@ function DailyView({ overrideDate }) {
     e.dataTransfer.setData('text/plain', task.text || task.name || '');
   }
 
-  function handleDragOver(e, hour) {
+  function handleDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
-    setDropHour(hour);
+    const halfHour = getHourFromY(e.clientY);
+    setDropHour(halfHour);
   }
 
   function handleDragLeave() {
     setDropHour(null);
   }
 
-  function handleDrop(e, hour) {
+  function handleDrop(e) {
     e.preventDefault();
+    const halfHour = getHourFromY(e.clientY);
     setDropHour(null);
     if (draggingTask) {
-      dropTaskAtHour(draggingTask, hour);
+      dropTaskAtHour(draggingTask, halfHour);
       setDraggingTask(null);
     }
   }
@@ -448,8 +454,8 @@ function DailyView({ overrideDate }) {
     function onMove(ev) {
       ev.preventDefault();
       const dy = getY(ev) - startY;
-      const hourDelta = Math.round(dy / ROW_HEIGHT);
-      const newEnd = Math.max(block.startHour + 1, Math.min(24, origEnd + hourDelta));
+      const halfHourDelta = Math.round(dy / (ROW_HEIGHT / 2)) * 0.5;
+      const newEnd = Math.max(block.startHour + 0.5, Math.min(24, origEnd + halfHourDelta));
       setBlocks(prev => prev.map(b => b.id === block.id ? { ...b, endHour: newEnd } : b));
     }
 
@@ -476,8 +482,8 @@ function DailyView({ overrideDate }) {
     function onMove(ev) {
       ev.preventDefault();
       const dy = getY(ev) - startY;
-      const hourDelta = Math.round(dy / ROW_HEIGHT);
-      const newStart = Math.max(0, Math.min(block.endHour - 1, origStart + hourDelta));
+      const halfHourDelta = Math.round(dy / (ROW_HEIGHT / 2)) * 0.5;
+      const newStart = Math.max(0, Math.min(block.endHour - 0.5, origStart + halfHourDelta));
       setBlocks(prev => prev.map(b => b.id === block.id ? { ...b, startHour: newStart } : b));
     }
 
@@ -507,8 +513,8 @@ function DailyView({ overrideDate }) {
       ev.preventDefault();
       moved = true;
       const dy = getY(ev) - startY;
-      const hourDelta = Math.round(dy / ROW_HEIGHT);
-      let newStart = origStart + hourDelta;
+      const halfHourDelta = Math.round(dy / (ROW_HEIGHT / 2)) * 0.5;
+      let newStart = origStart + halfHourDelta;
       newStart = Math.max(0, Math.min(24 - duration, newStart));
       setBlocks(prev => prev.map(b => b.id === block.id ? { ...b, startHour: newStart, endHour: newStart + duration } : b));
     }
@@ -647,59 +653,14 @@ function DailyView({ overrideDate }) {
           <p className="section-header" style={{ marginBottom: 8 }}>Schedule</p>
 
           <div className="schedule-grid" ref={scheduleRef}>
-            {(() => {
-              // Compute overlap columns so blocks side-by-side instead of stacking
-              const sorted = [...blocks].sort((a, b) => a.startHour - b.startHour || a.endHour - b.endHour);
-              const layout = new Map(); // block.id -> { col, totalCols }
-              const columns = []; // each column is the endHour of the last block placed there
-
-              for (const block of sorted) {
-                // Find first column where this block doesn't overlap
-                let placed = false;
-                for (let c = 0; c < columns.length; c++) {
-                  if (block.startHour >= columns[c]) {
-                    columns[c] = block.endHour;
-                    layout.set(block.id, { col: c });
-                    placed = true;
-                    break;
-                  }
-                }
-                if (!placed) {
-                  layout.set(block.id, { col: columns.length });
-                  columns.push(block.endHour);
-                }
-              }
-
-              // Second pass: determine totalCols for each group of overlapping blocks
-              for (const block of sorted) {
-                const info = layout.get(block.id);
-                // Count how many columns overlap with this block's time range
-                let maxCol = info.col;
-                for (const other of sorted) {
-                  if (other.startHour < block.endHour && other.endHour > block.startHour) {
-                    const otherInfo = layout.get(other.id);
-                    if (otherInfo.col > maxCol) maxCol = otherInfo.col;
-                  }
-                }
-                info.totalCols = maxCol + 1;
-              }
-
-              return blocks.map(block => {
-                const top = block.startHour * ROW_HEIGHT;
-                const height = (block.endHour - block.startHour) * ROW_HEIGHT;
-                const info = layout.get(block.id) || { col: 0, totalCols: 1 };
-                const widthPercent = 100 / info.totalCols;
-                const leftPercent = info.col * widthPercent;
-
-                const overlapStyle = info.totalCols > 1
-                  ? { left: `calc(52px + (100% - 60px) * ${leftPercent / 100})`, width: `calc((100% - 60px) * ${widthPercent / 100})`, right: 'auto' }
-                  : {};
-
-                return (
+            {blocks.map(block => {
+              const top = block.startHour * ROW_HEIGHT;
+              const height = (block.endHour - block.startHour) * ROW_HEIGHT;
+              return (
                 <div
                   key={block.id}
                   className={`time-block ${block.type === 'actual' ? 'actual' : ''}`}
-                  style={{ top, height, background: block.color || BLOCK_COLORS[0], ...overlapStyle }}
+                  style={{ top, height, background: block.color || BLOCK_COLORS[0] }}
                 >
                   <div
                     className="time-block-resize top"
@@ -715,10 +676,10 @@ function DailyView({ overrideDate }) {
                     onTouchStart={e => handleBlockMove(e, block)}
                   >
                     <div className="time-block-text">{block.text}</div>
-                    {height >= 40 && (
+                    {height >= 20 && (
                       <div className="time-block-range">
                         {formatHour(block.startHour)} – {formatHour(block.endHour)}
-                        {' '}({block.endHour - block.startHour}h)
+                        {' '}({(block.endHour - block.startHour) >= 1 ? `${block.endHour - block.startHour}h` : `${(block.endHour - block.startHour) * 60}m`})
                       </div>
                     )}
                   </div>
@@ -732,8 +693,7 @@ function DailyView({ overrideDate }) {
                   </div>
                 </div>
               );
-            });
-            })()}
+            })}
 
             {addingAtHour !== null && (
               <div
@@ -771,7 +731,10 @@ function DailyView({ overrideDate }) {
 
             {HOURS.map(h => {
               const isCurrent = h === currentHour;
-              const isDropTarget = activeDropHour === h;
+              // Drop target highlights the specific half-hour being hovered
+              const isTopHalf = activeDropHour === h;
+              const isBottomHalf = activeDropHour === h + 0.5;
+              const isDropTarget = isTopHalf || isBottomHalf;
               const hasBlock = blocks.some(b => h >= b.startHour && h < b.endHour);
 
               return (
@@ -781,14 +744,29 @@ function DailyView({ overrideDate }) {
                   className={`hour-row ${isCurrent ? 'current' : ''} ${isDropTarget ? 'drop-target' : ''}`}
                   style={{ height: ROW_HEIGHT }}
                   onClick={() => { if (!hasBlock) handleHourClick(h); }}
-                  onDragOver={e => handleDragOver(e, h)}
+                  onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
-                  onDrop={e => handleDrop(e, h)}
+                  onDrop={handleDrop}
                 >
                   <div className="hour-label">{formatHour(h)}</div>
-                  <div className="hour-content">
+                  <div className="hour-content" style={{ position: 'relative' }}>
+                    {isDropTarget && (
+                      <div style={{
+                        position: 'absolute',
+                        left: 0, right: 0,
+                        top: isBottomHalf ? '50%' : 0,
+                        height: '50%',
+                        background: 'rgba(99, 102, 241, 0.12)',
+                        borderRadius: 4,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 11, color: '#6366f1', fontWeight: 600,
+                        pointerEvents: 'none',
+                      }}>
+                        {formatHour(activeDropHour)}
+                      </div>
+                    )}
                     <div className="hour-empty">
-                      {isDropTarget ? 'Drop here' : !hasBlock ? 'tap to log' : ''}
+                      {!isDropTarget && !hasBlock ? 'tap to log' : ''}
                     </div>
                   </div>
                 </div>
