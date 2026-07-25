@@ -6,6 +6,7 @@ import {
   Plus, Trash2, Send, Loader2, Sparkles,
   AlertCircle, Pencil, Check, X, CheckSquare, Square,
   ChevronLeft, ChevronRight, Calendar, Repeat, History,
+  Paperclip, FileText, Image,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getUserPrefix } from "@/lib/userStore";
@@ -307,7 +308,14 @@ function buildFinancialSystemPrompt(fin, selectedMonth) {
 
   return `You are a sharp financial advisor who blends the wisdom of Warren Buffett, Charlie Munger, and Dave Ramsey. From Buffett and Munger: long-term thinking, compounding, only buy what you understand, patience over speculation, moats, and rational decision-making. From Ramsey: zero debt, baby steps, gazelle intensity on paying off debt, emergency fund first, live below your means, and no debt is good debt except maybe a mortgage. When the user has debt, channel Ramsey's urgency. When talking about investing and wealth building, bring in Buffett and Munger's principles. Be direct and specific — use the user's real numbers when you respond. Talk like a smart, no-nonsense person, not a report. No markdown headers, no bullet lists, no bold text. Just straight talk in natural sentences. Use the tools immediately when asked to change financial data.
 
-Viewing month: ${monthLabel(m)}. User's finances for this month: income $${fmt(income)} (${byMonth(fin.income_sources).map(fmtItem).join(", ") || "none"}), recurring expenses $${fmt(recurring)} (${byMonth(fin.recurring_expenses).map(fmtItem).join(", ") || "none"}), optional spending $${fmt(wishlist)} (${byMonth(fin.wishlist_expenses).map(fmtItem).join(", ") || "none"}), one-time payments $${fmt(oneTime)} (${oneTimeItems.map(fmtItem).join(", ") || "none"}), net surplus $${fmt(savings)} (${rate}% savings rate). Savings deposits this month: $${fmt(savedTotal)} (${savedItems.map(fmtItem).join(", ") || "none"}). Total saved all time: $${fmt(allTimeSaved)}.
+SCREENSHOT/IMAGE HANDLING: When the user uploads a screenshot or photo (receipt, bank statement, transaction list, bill, invoice, etc.), you MUST:
+1. Read and extract ALL expenses/transactions visible in the image
+2. For each one, immediately use the add_expense tool to add it to their finances
+3. Choose the right category: "recurring" for monthly bills, "one_time" for individual purchases, "wishlist" for optional items they're considering
+4. Confirm what you added with the amounts
+5. If you can't read something clearly, ask for clarification rather than guessing
+
+Viewing month: ${monthLabel(m)}. User's finances for this month: income $${fmt(income)} (${byMonth(fin.income_sources).map(fmtItem).join(", ") || "none"}), recurring expenses $${fmt(recurring)} (${byMonth(fin.recurring_expenses).map(fmtItem).join(", ") || "none"}), optional/wishlist (NOT spent, considering) $${fmt(wishlist)} (${byMonth(fin.wishlist_expenses).map(fmtItem).join(", ") || "none"}), one-time payments $${fmt(oneTime)} (${oneTimeItems.map(fmtItem).join(", ") || "none"}), net surplus $${fmt(savings)} (${rate}% savings rate). Savings deposits this month: $${fmt(savedTotal)} (${savedItems.map(fmtItem).join(", ") || "none"}). Total saved all time: $${fmt(allTimeSaved)}.
 
 Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
 }
@@ -495,13 +503,27 @@ function executeFinancialTool(name, input, update, selectedMonth) {
 async function financialAgenticLoop(history, fin, update, selectedMonth) {
   const systemPrompt = buildFinancialSystemPrompt(fin, selectedMonth);
 
-  let messages = history.map(m => ({ role: m.role, content: m.content }));
+  // Build messages, supporting image attachments in user messages
+  let messages = history.map(m => {
+    if (m.role === 'user' && m._attachments && m._attachments.length > 0) {
+      const content = [];
+      for (const att of m._attachments) {
+        if (att.mediaType?.startsWith('image/') && att.data) {
+          content.push({ type: 'image', source: { type: 'base64', media_type: att.mediaType, data: att.data } });
+        }
+      }
+      content.push({ type: 'text', text: m.content });
+      return { role: 'user', content };
+    }
+    return { role: m.role, content: m.content };
+  });
+
   for (let turn = 0; turn < 8; turn++) {
     const response = await fetch('/api/claude', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-opus-4-6',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 2048,
         system: systemPrompt,
         tools: FINANCIAL_TOOLS,
@@ -1021,6 +1043,15 @@ function OverviewTab({ fin, selectedMonth }) {
 }
 
 // ── AI ADVISOR TAB ────────────────────────────────────────────────────────────
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function AdvisorTab({ fin, update, selectedMonth }) {
   const [messages, setMessages] = useState(loadChat);
   const [input, setInput] = useState("");
@@ -1030,8 +1061,10 @@ function AdvisorTab({ fin, update, selectedMonth }) {
   const [showHistory, setShowHistory] = useState(false);
   const [currentConvId, setCurrentConvId] = useState(null);
   const [conversations, setConversations] = useState([]);
+  const [attachments, setAttachments] = useState([]);
   const bottomRef = useRef(null);
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const oldMsgs = loadChat();
@@ -1092,12 +1125,35 @@ function AdvisorTab({ fin, update, selectedMonth }) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const handleFileSelect = async (e) => {
+    for (const file of Array.from(e.target.files || [])) {
+      const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowed.includes(file.type)) continue;
+      if (file.size > 10 * 1024 * 1024) continue;
+      try {
+        const data = await readFileAsBase64(file);
+        const preview = URL.createObjectURL(file);
+        setAttachments(prev => [...prev, { name: file.name, mediaType: file.type, data, preview }]);
+      } catch {}
+    }
+    e.target.value = '';
+  };
+
   const send = async (text) => {
-    if (!text.trim() || loading) return;
+    if ((!text.trim() && attachments.length === 0) || loading) return;
     setInput("");
+    const currentAttachments = [...attachments];
+    setAttachments([]);
     if (textareaRef.current) { textareaRef.current.style.height = "44px"; }
 
-    const userMsg = { role: "user", content: text.trim() };
+    const userMsg = {
+      role: "user",
+      content: text.trim() || (currentAttachments.length > 0 ? "I uploaded a screenshot. Extract and add the expenses from it." : ""),
+      ...(currentAttachments.length > 0 && {
+        _attachments: currentAttachments.map(a => ({ name: a.name, mediaType: a.mediaType, data: a.data })),
+        _attachmentPreviews: currentAttachments.map(a => a.preview),
+      }),
+    };
     const updated = [...messages, userMsg];
     setMessages(updated);
     saveCurrentConv(updated);
@@ -1257,6 +1313,22 @@ function AdvisorTab({ fin, update, selectedMonth }) {
                 : "bg-slate-100 text-slate-800 rounded-tl-sm",
               selectedIds.has(i) && "ring-2 ring-indigo-400 ring-offset-1"
             )}>
+              {msg._attachmentPreviews && msg._attachmentPreviews.length > 0 && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                  {msg._attachmentPreviews.map((src, j) => (
+                    <img key={j} src={src} alt="" style={{ width: 120, borderRadius: 8, border: '2px solid rgba(255,255,255,0.3)' }} />
+                  ))}
+                </div>
+              )}
+              {msg._attachments && !msg._attachmentPreviews && msg._attachments.length > 0 && (
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
+                  {msg._attachments.map((att, j) => (
+                    <span key={j} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(255,255,255,0.15)', borderRadius: 6, padding: '2px 8px', fontSize: 11 }}>
+                      <Image style={{ width: 12, height: 12 }} /> {att.name}
+                    </span>
+                  ))}
+                </div>
+              )}
               {msg.content}
             </div>
           </div>
@@ -1279,15 +1351,43 @@ function AdvisorTab({ fin, update, selectedMonth }) {
         <div ref={bottomRef} />
       </div>
 
+      {/* Attachment preview */}
+      {attachments.length > 0 && (
+        <div className="flex gap-2 flex-wrap px-6 py-2 border-t border-slate-50">
+          {attachments.map((att, i) => (
+            <div key={i} className="relative">
+              <img src={att.preview} alt="" style={{ width: 56, height: 56, borderRadius: 8, objectFit: 'cover', border: '2px solid #e2e8f0' }} />
+              <button
+                onClick={() => setAttachments(prev => prev.filter((_, j) => j !== i))}
+                style={{ position: 'absolute', top: -6, right: -6, background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: 18, height: 18, fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <X style={{ width: 10, height: 10 }} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <input type="file" ref={fileInputRef} onChange={handleFileSelect} multiple
+        accept="image/jpeg,image/png,image/gif,image/webp" style={{ display: 'none' }} />
+
       {/* Input */}
       <div className="flex gap-3 px-6 py-4 border-t border-slate-100 flex-shrink-0">
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={loading}
+          className="flex items-center justify-center px-2 rounded-xl text-slate-400 hover:text-slate-600 transition"
+          title="Attach screenshot"
+        >
+          <Paperclip className="w-5 h-5" />
+        </button>
         <textarea
           ref={textareaRef}
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); } }}
           onInput={e => { e.target.style.height = "44px"; e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px"; }}
-          placeholder="Ask your financial advisor..."
+          placeholder="Ask your advisor or upload a receipt/screenshot..."
           rows={1}
           disabled={loading}
           className="flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-300 placeholder:text-slate-400 transition"
@@ -1295,7 +1395,7 @@ function AdvisorTab({ fin, update, selectedMonth }) {
         />
         <button
           onClick={() => send(input)}
-          disabled={!input.trim() || loading}
+          disabled={(!input.trim() && attachments.length === 0) || loading}
           className="px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-30 transition flex items-center justify-center"
         >
           {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
