@@ -304,6 +304,41 @@ function DailyView({ overrideDate }) {
     setNewBlockCategory('other');
   }
 
+  // Add a sleep block that spans midnight — splits across two days
+  function addSleepBlock(startHour, endHourNextDay) {
+    const sleepCat = BLOCK_CATEGORIES.find(c => c.value === 'sleep');
+    // Evening portion on current day
+    if (startHour < 24) {
+      const eveningBlock = {
+        id: Date.now(),
+        text: 'Sleep',
+        startHour: startHour,
+        endHour: 24,
+        color: sleepCat?.color || '#6366f1',
+        type: 'actual',
+        blockCategory: 'sleep',
+      };
+      updateBlocks([...blocks, eveningBlock]);
+    }
+    // Morning portion on next day
+    if (endHourNextDay > 0) {
+      const nextDate = new Date(date + 'T12:00:00');
+      nextDate.setDate(nextDate.getDate() + 1);
+      const nextDateStr = getDateStr(nextDate);
+      const nextBlocks = loadBlocks(nextDateStr);
+      const morningBlock = {
+        id: Date.now() + 1,
+        text: 'Sleep',
+        startHour: 0,
+        endHour: endHourNextDay,
+        color: sleepCat?.color || '#6366f1',
+        type: 'actual',
+        blockCategory: 'sleep',
+      };
+      saveBlocks(nextDateStr, [...nextBlocks, morningBlock]);
+    }
+  }
+
   function dropTaskAtHour(task, hour) {
     const taskCat = task.blockCategory || 'other';
     const catConfig = BLOCK_CATEGORIES.find(c => c.value === taskCat);

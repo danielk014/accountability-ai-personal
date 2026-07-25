@@ -215,18 +215,26 @@ function formatGymData(gym) {
   return output || '(No gym data yet)';
 }
 
+const CATEGORY_COLORS = {
+  work: '#f97316',
+  sleep: '#6366f1',
+  personal: '#22c55e',
+  other: '#64748b',
+};
+
 const SCHEDULE_TOOLS = [
   {
     name: 'add_schedule_block',
-    description: 'Add a time block to the user\'s day tracker schedule. Use this when the user asks you to add, schedule, or plan something on their schedule.',
+    description: 'Add a time block to the user\'s day tracker schedule. Use this when the user asks you to add, schedule, or plan something on their schedule. For sleep that crosses midnight, create TWO blocks: one ending at hour 24 on the current day and one starting at hour 0 on the next day.',
     input_schema: {
       type: 'object',
       properties: {
         date: { type: 'string', description: 'The date in YYYY-MM-DD format. Use today\'s date if not specified.' },
-        text: { type: 'string', description: 'What the block is for (e.g. "Deep work", "Sleep", "Gym")' },
+        text: { type: 'string', description: 'What the block is for (e.g. "Deep work", "Sleep", "Gym", "Lunch break")' },
         startHour: { type: 'integer', minimum: 0, maximum: 23, description: 'Start hour (0-23)' },
         endHour: { type: 'integer', minimum: 1, maximum: 24, description: 'End hour (1-24)' },
         type: { type: 'string', enum: ['planned', 'actual'], description: 'Whether this is planned or actually happened. Default: planned' },
+        category: { type: 'string', enum: ['work', 'sleep', 'personal', 'other'], description: 'Category of the block. Use "work" for work/meetings/business, "sleep" for sleep/nap/rest, "personal" for gym/errands/social, "other" for everything else.' },
       },
       required: ['date', 'text', 'startHour', 'endHour'],
     },
@@ -256,6 +264,19 @@ const SCHEDULE_TOOLS = [
         newEndHour: { type: 'integer', minimum: 1, maximum: 24, description: 'New end hour (optional)' },
       },
       required: ['date', 'matchText'],
+    },
+  },
+  {
+    name: 'add_task',
+    description: 'Add a task to the user\'s day tracker task list for a specific day. Tasks appear in the sidebar and can be dragged onto the schedule.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'The date in YYYY-MM-DD format.' },
+        text: { type: 'string', description: 'The task description.' },
+        category: { type: 'string', enum: ['work', 'sleep', 'personal', 'other'], description: 'Category of the task.' },
+      },
+      required: ['date', 'text'],
     },
   },
 ];
@@ -311,7 +332,17 @@ ${formatLifeLessons(lifeLessons)}
 
     // Build system prompt with optional custom personality
     let systemPrompt = SYSTEM_PROMPT;
-    systemPrompt += `\n\nYou have tools to modify the user's day tracker schedule. Use them when the user asks you to add, adjust, remove, or plan schedule blocks. You can add blocks for sleep, work, gym, study, etc. When adding blocks, use today's date (${today}) unless the user specifies a different date.`;
+    systemPrompt += `\n\nYou have tools to modify the user's day tracker schedule and add tasks. Use them when the user asks you to add, adjust, remove, or plan schedule blocks or tasks.
+
+SCHEDULE PLANNING RULES:
+- Today's date is ${today}. You can plan ANY day — today, tomorrow, next week, etc.
+- When the user asks you to "plan my day" or "plan my week", create a COMPLETE schedule with ALL blocks including: sleep, wake up routine, meals/lunch breaks, work blocks, gym, personal time, and wind-down.
+- For sleep that crosses midnight (e.g. 22:00 to 07:00), create TWO separate blocks: one from 22:00-24:00 on the current day, and one from 0:00-7:00 on the NEXT day. Calculate the next day's date correctly.
+- Always include lunch breaks (usually 12:00-13:00) and dinner in full-day plans.
+- Always set the correct category: "work" for work/meetings/coding/business, "sleep" for sleep/rest/nap, "personal" for gym/errands/social/meals/breaks, "other" for anything else.
+- You can also add tasks to specific days using the add_task tool.
+- When planning multiple days, plan each day individually with appropriate blocks.
+- Be realistic with time — don't overschedule. Include buffer time between activities.`;
     if (coachPersonality) {
       systemPrompt += `\n\n--- USER'S CUSTOM INSTRUCTIONS ---\n${coachPersonality}`;
     }
@@ -349,7 +380,7 @@ ${formatLifeLessons(lifeLessons)}
     let messages = [{ role: 'user', content: userContent }];
     const scheduleChanges = [];
     let replyText = '';
-    let maxIterations = 5;
+    let maxIterations = 15;
 
     while (maxIterations-- > 0) {
       const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -362,7 +393,7 @@ ${formatLifeLessons(lifeLessons)}
         },
         body: JSON.stringify({
           model: 'claude-opus-4-6',
-          max_tokens: 1024,
+          max_tokens: 4096,
           system: systemPrompt,
           messages,
           tools: SCHEDULE_TOOLS,
@@ -397,17 +428,26 @@ ${formatLifeLessons(lifeLessons)}
         let result = '';
 
         if (name === 'add_schedule_block') {
-          const colorIdx = scheduleChanges.length % BLOCK_COLORS.length;
+          const cat = input.category || 'other';
           const block = {
             id: Date.now() + Math.random(),
             text: input.text,
             startHour: input.startHour,
             endHour: input.endHour,
-            color: input.type === 'actual' ? ACTUAL_COLOR : BLOCK_COLORS[colorIdx],
+            color: CATEGORY_COLORS[cat] || ACTUAL_COLOR,
             type: input.type || 'planned',
+            blockCategory: cat,
           };
           scheduleChanges.push({ action: 'add', date: input.date, block });
-          result = `Added "${input.text}" from ${pad(input.startHour)}:00 to ${pad(input.endHour)}:00 on ${input.date}`;
+          result = `Added "${input.text}" (${cat}) from ${pad(input.startHour)}:00 to ${pad(input.endHour)}:00 on ${input.date}`;
+        } else if (name === 'add_task') {
+          const cat = input.category || 'other';
+          scheduleChanges.push({
+            action: 'add_task',
+            date: input.date,
+            task: { id: Date.now() + Math.random(), text: input.text, done: false, color: '#f1f5f9', blockCategory: cat },
+          });
+          result = `Added task "${input.text}" for ${input.date}`;
         } else if (name === 'remove_schedule_block') {
           scheduleChanges.push({ action: 'remove', date: input.date, matchText: input.text });
           result = `Removed block matching "${input.text}" on ${input.date}`;

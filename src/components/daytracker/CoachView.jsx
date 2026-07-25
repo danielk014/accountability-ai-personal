@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { sanitizeImageSrc } from '@/lib/sanitize';
 import { History, Paperclip, X, FileText } from 'lucide-react';
-import { loadLogs, loadGoals, loadLongTermGoals, loadAllDailyTasks, loadAllBlocks, loadBlocks, saveBlocks } from './storage';
+import { loadLogs, loadGoals, loadLongTermGoals, loadAllDailyTasks, loadAllBlocks, loadBlocks, saveBlocks, loadDailyTasks, saveDailyTasks } from './storage';
 import { loadNutrition } from './NutritionView';
 import { loadLessons } from './LifeLessonsView';
 import ChatHistoryPanel from '@/components/ChatHistoryPanel';
@@ -245,15 +245,26 @@ function CoachView() {
 
       // Apply schedule changes if the coach made any
       if (data.scheduleChanges && data.scheduleChanges.length > 0) {
+        let blockCount = 0;
+        let taskCount = 0;
         for (const change of data.scheduleChanges) {
-          const dateBlocks = loadBlocks(change.date);
           if (change.action === 'add') {
+            const dateBlocks = loadBlocks(change.date);
             dateBlocks.push(change.block);
             saveBlocks(change.date, dateBlocks);
+            blockCount++;
+          } else if (change.action === 'add_task') {
+            const dateTasks = loadDailyTasks(change.date);
+            dateTasks.push(change.task);
+            saveDailyTasks(change.date, dateTasks);
+            taskCount++;
           } else if (change.action === 'remove') {
+            const dateBlocks = loadBlocks(change.date);
             const filtered = dateBlocks.filter(b => !b.text.toLowerCase().includes(change.matchText.toLowerCase()));
             saveBlocks(change.date, filtered);
+            blockCount++;
           } else if (change.action === 'update') {
+            const dateBlocks = loadBlocks(change.date);
             const updated = dateBlocks.map(b => {
               if (b.text.toLowerCase().includes(change.matchText.toLowerCase())) {
                 return { ...b, ...change.updates };
@@ -261,11 +272,14 @@ function CoachView() {
               return b;
             });
             saveBlocks(change.date, updated);
+            blockCount++;
           }
         }
-        // Notify other components that data changed
         window.dispatchEvent(new CustomEvent('daytracker-data-refreshed'));
-        toast.success(`Coach updated your schedule (${data.scheduleChanges.length} change${data.scheduleChanges.length > 1 ? 's' : ''})`);
+        const parts = [];
+        if (blockCount > 0) parts.push(`${blockCount} block${blockCount > 1 ? 's' : ''}`);
+        if (taskCount > 0) parts.push(`${taskCount} task${taskCount > 1 ? 's' : ''}`);
+        toast.success(`Coach updated your schedule (${parts.join(', ')})`);
       }
 
       setMessages(prev => {
