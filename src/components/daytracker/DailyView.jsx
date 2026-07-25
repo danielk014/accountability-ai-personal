@@ -533,8 +533,10 @@ function DailyView({ overrideDate }) {
   const doneCount = allTasks.filter(t => t.done).length;
   const activeDropHour = touchDragHour !== null ? touchDragHour : dropHour;
 
-  // Calculate sleep hours including last night's sleep from the previous day
-  // If yesterday has a sleep block ending at 24 (midnight), that sleep connects to today
+  // Calculate sleep hours for this "night":
+  // - Yesterday's sleep blocks starting at 18:00+ (evening/night sleep belongs to today's count)
+  // - Today's sleep blocks starting before 18:00 (morning sleep, naps before evening)
+  // Sleep blocks at 18:00+ today count toward TOMORROW's sleep, not today's
   const prevDate = (() => {
     const d = new Date(date + 'T12:00:00');
     d.setDate(d.getDate() - 1);
@@ -542,11 +544,11 @@ function DailyView({ overrideDate }) {
   })();
   const prevBlocks = loadBlocks(prevDate);
   const prevNightSleep = prevBlocks
-    .filter(b => b.blockCategory === 'sleep' && b.endHour === 24)
+    .filter(b => b.blockCategory === 'sleep' && b.startHour >= 18)
     .reduce((sum, b) => sum + (b.endHour - b.startHour), 0);
 
   const todaySleep = blocks
-    .filter(b => b.blockCategory === 'sleep')
+    .filter(b => b.blockCategory === 'sleep' && b.startHour < 18)
     .reduce((sum, b) => sum + (b.endHour - b.startHour), 0);
   const sleepHours = todaySleep + prevNightSleep;
 
@@ -645,14 +647,59 @@ function DailyView({ overrideDate }) {
           <p className="section-header" style={{ marginBottom: 8 }}>Schedule</p>
 
           <div className="schedule-grid" ref={scheduleRef}>
-            {blocks.map(block => {
-              const top = block.startHour * ROW_HEIGHT;
-              const height = (block.endHour - block.startHour) * ROW_HEIGHT;
-              return (
+            {(() => {
+              // Compute overlap columns so blocks side-by-side instead of stacking
+              const sorted = [...blocks].sort((a, b) => a.startHour - b.startHour || a.endHour - b.endHour);
+              const layout = new Map(); // block.id -> { col, totalCols }
+              const columns = []; // each column is the endHour of the last block placed there
+
+              for (const block of sorted) {
+                // Find first column where this block doesn't overlap
+                let placed = false;
+                for (let c = 0; c < columns.length; c++) {
+                  if (block.startHour >= columns[c]) {
+                    columns[c] = block.endHour;
+                    layout.set(block.id, { col: c });
+                    placed = true;
+                    break;
+                  }
+                }
+                if (!placed) {
+                  layout.set(block.id, { col: columns.length });
+                  columns.push(block.endHour);
+                }
+              }
+
+              // Second pass: determine totalCols for each group of overlapping blocks
+              for (const block of sorted) {
+                const info = layout.get(block.id);
+                // Count how many columns overlap with this block's time range
+                let maxCol = info.col;
+                for (const other of sorted) {
+                  if (other.startHour < block.endHour && other.endHour > block.startHour) {
+                    const otherInfo = layout.get(other.id);
+                    if (otherInfo.col > maxCol) maxCol = otherInfo.col;
+                  }
+                }
+                info.totalCols = maxCol + 1;
+              }
+
+              return blocks.map(block => {
+                const top = block.startHour * ROW_HEIGHT;
+                const height = (block.endHour - block.startHour) * ROW_HEIGHT;
+                const info = layout.get(block.id) || { col: 0, totalCols: 1 };
+                const widthPercent = 100 / info.totalCols;
+                const leftPercent = info.col * widthPercent;
+
+                const overlapStyle = info.totalCols > 1
+                  ? { left: `calc(52px + (100% - 60px) * ${leftPercent / 100})`, width: `calc((100% - 60px) * ${widthPercent / 100})`, right: 'auto' }
+                  : {};
+
+                return (
                 <div
                   key={block.id}
                   className={`time-block ${block.type === 'actual' ? 'actual' : ''}`}
-                  style={{ top, height, background: block.color || BLOCK_COLORS[0] }}
+                  style={{ top, height, background: block.color || BLOCK_COLORS[0], ...overlapStyle }}
                 >
                   <div
                     className="time-block-resize top"
@@ -685,7 +732,8 @@ function DailyView({ overrideDate }) {
                   </div>
                 </div>
               );
-            })}
+            });
+            })()}
 
             {addingAtHour !== null && (
               <div

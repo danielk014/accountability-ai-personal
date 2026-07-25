@@ -124,8 +124,10 @@ ADVANCED BEHAVIORS:
 function formatScheduleBlocks(scheduleBlocks) {
   if (!scheduleBlocks || typeof scheduleBlocks !== 'object' || Array.isArray(scheduleBlocks) || Object.keys(scheduleBlocks).length === 0) return '(No schedule blocks yet)';
   const sorted = Object.keys(scheduleBlocks).sort();
+  const recent = sorted.slice(-14);
   let output = '';
-  for (const date of sorted) {
+  if (sorted.length > 14) output += `(Showing last 14 of ${sorted.length} days)\n`;
+  for (const date of recent) {
     const blocks = scheduleBlocks[date];
     if (!Array.isArray(blocks) || blocks.length === 0) continue;
     output += `\n${date}:\n`;
@@ -146,8 +148,10 @@ function pad(n) { return n.toString().padStart(2, '0'); }
 function formatDailyTasks(dailyTasks) {
   if (!dailyTasks || typeof dailyTasks !== 'object' || Array.isArray(dailyTasks) || Object.keys(dailyTasks).length === 0) return '(No daily tasks yet)';
   const sorted = Object.keys(dailyTasks).sort();
+  const recent = sorted.slice(-14);
   let output = '';
-  for (const date of sorted) {
+  if (sorted.length > 14) output += `(Showing last 14 of ${sorted.length} days)\n`;
+  for (const date of recent) {
     const tasks = dailyTasks[date];
     if (!Array.isArray(tasks) || tasks.length === 0) continue;
     output += `\n${date}:\n`;
@@ -182,8 +186,11 @@ function formatNutrition(nutrition) {
 function formatLogs(logs) {
   if (!logs || Object.keys(logs).length === 0) return '(No logs yet)';
   const sorted = Object.keys(logs).sort();
+  // Only send last 14 days to keep context manageable and reduce cost
+  const recent = sorted.slice(-14);
   let output = '';
-  for (const date of sorted) {
+  if (sorted.length > 14) output += `(Showing last 14 of ${sorted.length} days)\n`;
+  for (const date of recent) {
     output += `\n${date}:\n`;
     const dayLogs = logs[date];
     for (let h = 0; h < 24; h++) {
@@ -405,57 +412,106 @@ const CATEGORY_COLORS = {
 
 const SCHEDULE_TOOLS = [
   {
-    name: 'add_schedule_block',
-    description: 'Add a time block to the user\'s day tracker schedule. Use this when the user asks you to add, schedule, or plan something on their schedule. For sleep that crosses midnight, create TWO blocks: one ending at hour 24 on the current day and one starting at hour 0 on the next day.',
+    name: 'batch_add_schedule_blocks',
+    description: 'Add MULTIPLE time blocks at once. ALWAYS prefer this over add_schedule_block when adding more than one block. This is much faster. For sleep that crosses midnight, create TWO entries: one ending at hour 24 on the current day and one starting at hour 0 on the next day.',
     input_schema: {
       type: 'object',
       properties: {
-        date: { type: 'string', description: 'The date in YYYY-MM-DD format. Use today\'s date if not specified.' },
-        text: { type: 'string', description: 'What the block is for (e.g. "Deep work - build API endpoints", "Sleep", "Gym - Push day", "Lunch break")' },
-        startHour: { type: 'integer', minimum: 0, maximum: 23, description: 'Start hour (0-23)' },
-        endHour: { type: 'integer', minimum: 1, maximum: 24, description: 'End hour (1-24)' },
-        type: { type: 'string', enum: ['planned', 'actual'], description: 'Whether this is planned or actually happened. Default: planned' },
-        category: { type: 'string', enum: ['work', 'sleep', 'personal', 'other'], description: 'Category of the block. Use "work" for work/meetings/business, "sleep" for sleep/nap/rest, "personal" for gym/errands/social, "other" for everything else.' },
+        blocks: {
+          type: 'array',
+          description: 'Array of blocks to add',
+          items: {
+            type: 'object',
+            properties: {
+              date: { type: 'string', description: 'YYYY-MM-DD' },
+              text: { type: 'string', description: 'Block label' },
+              startHour: { type: 'integer', minimum: 0, maximum: 23 },
+              endHour: { type: 'integer', minimum: 1, maximum: 24 },
+              type: { type: 'string', enum: ['planned', 'actual'] },
+              category: { type: 'string', enum: ['work', 'sleep', 'personal', 'other'] },
+            },
+            required: ['date', 'text', 'startHour', 'endHour'],
+          },
+        },
+      },
+      required: ['blocks'],
+    },
+  },
+  {
+    name: 'add_schedule_block',
+    description: 'Add a single time block. Use batch_add_schedule_blocks instead when adding multiple blocks.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'YYYY-MM-DD format.' },
+        text: { type: 'string', description: 'Block label' },
+        startHour: { type: 'integer', minimum: 0, maximum: 23 },
+        endHour: { type: 'integer', minimum: 1, maximum: 24 },
+        type: { type: 'string', enum: ['planned', 'actual'] },
+        category: { type: 'string', enum: ['work', 'sleep', 'personal', 'other'] },
       },
       required: ['date', 'text', 'startHour', 'endHour'],
     },
   },
   {
     name: 'remove_schedule_block',
-    description: 'Remove a time block from the user\'s schedule by matching the text and date.',
+    description: 'Remove a time block from the schedule by matching text and date.',
     input_schema: {
       type: 'object',
       properties: {
-        date: { type: 'string', description: 'The date in YYYY-MM-DD format' },
-        text: { type: 'string', description: 'The text of the block to remove (partial match is fine)' },
+        date: { type: 'string', description: 'YYYY-MM-DD' },
+        text: { type: 'string', description: 'Text to match (partial match)' },
       },
       required: ['date', 'text'],
     },
   },
   {
     name: 'update_schedule_block',
-    description: 'Update an existing time block on the user\'s schedule (change time, text, etc).',
+    description: 'Update an existing time block.',
     input_schema: {
       type: 'object',
       properties: {
-        date: { type: 'string', description: 'The date in YYYY-MM-DD format' },
-        matchText: { type: 'string', description: 'Text of the existing block to find (partial match)' },
-        newText: { type: 'string', description: 'New text for the block (optional)' },
-        newStartHour: { type: 'integer', minimum: 0, maximum: 23, description: 'New start hour (optional)' },
-        newEndHour: { type: 'integer', minimum: 1, maximum: 24, description: 'New end hour (optional)' },
+        date: { type: 'string', description: 'YYYY-MM-DD' },
+        matchText: { type: 'string', description: 'Text to find (partial match)' },
+        newText: { type: 'string' },
+        newStartHour: { type: 'integer', minimum: 0, maximum: 23 },
+        newEndHour: { type: 'integer', minimum: 1, maximum: 24 },
       },
       required: ['date', 'matchText'],
     },
   },
   {
-    name: 'add_task',
-    description: 'Add a task to the user\'s day tracker task list for a specific day. Tasks appear in the sidebar and can be dragged onto the schedule.',
+    name: 'batch_add_tasks',
+    description: 'Add MULTIPLE tasks at once. ALWAYS prefer this over add_task when adding more than one task.',
     input_schema: {
       type: 'object',
       properties: {
-        date: { type: 'string', description: 'The date in YYYY-MM-DD format.' },
-        text: { type: 'string', description: 'The task description.' },
-        category: { type: 'string', enum: ['work', 'sleep', 'personal', 'other'], description: 'Category of the task.' },
+        tasks: {
+          type: 'array',
+          description: 'Array of tasks to add',
+          items: {
+            type: 'object',
+            properties: {
+              date: { type: 'string', description: 'YYYY-MM-DD' },
+              text: { type: 'string', description: 'Task description' },
+              category: { type: 'string', enum: ['work', 'sleep', 'personal', 'other'] },
+            },
+            required: ['date', 'text'],
+          },
+        },
+      },
+      required: ['tasks'],
+    },
+  },
+  {
+    name: 'add_task',
+    description: 'Add a single task. Use batch_add_tasks instead when adding multiple.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        date: { type: 'string', description: 'YYYY-MM-DD' },
+        text: { type: 'string', description: 'Task description' },
+        category: { type: 'string', enum: ['work', 'sleep', 'personal', 'other'] },
       },
       required: ['date', 'text'],
     },
@@ -526,6 +582,8 @@ ${formatLifeLessons(lifeLessons)}
     // Build system prompt with optional custom personality
     let systemPrompt = SYSTEM_PROMPT;
     systemPrompt += `\n\nYou have tools to modify the user's day tracker schedule and add tasks. Use them PROACTIVELY — when the user asks to plan, or when you see they need structure, BUILD IT for them.
+
+CRITICAL: When adding multiple blocks or tasks (like planning a day or week), ALWAYS use batch_add_schedule_blocks and batch_add_tasks. These let you add everything in ONE tool call instead of many individual calls, which is MUCH faster. NEVER use add_schedule_block in a loop — put all blocks in one batch_add_schedule_blocks call.
 
 SCHEDULE PLANNING RULES:
 - Today's date is ${today} (${dayOfWeek}). Current time: ${pad(currentHour)}:00.
@@ -603,8 +661,8 @@ SCHEDULE PLANNING RULES:
           ...(hasPdf && { 'anthropic-beta': 'pdfs-2024-09-25' }),
         },
         body: JSON.stringify({
-          model: 'claude-opus-4-6',
-          max_tokens: 8192,
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 4096,
           system: systemPrompt,
           messages,
           tools: SCHEDULE_TOOLS,
@@ -638,7 +696,34 @@ SCHEDULE PLANNING RULES:
         const { name, input, id } = toolBlock;
         let result = '';
 
-        if (name === 'add_schedule_block') {
+        if (name === 'batch_add_schedule_blocks') {
+          const blockEntries = Array.isArray(input.blocks) ? input.blocks : [];
+          for (const b of blockEntries) {
+            const cat = b.category || 'other';
+            const block = {
+              id: Date.now() + Math.random() + Math.random(),
+              text: b.text,
+              startHour: b.startHour,
+              endHour: b.endHour,
+              color: CATEGORY_COLORS[cat] || ACTUAL_COLOR,
+              type: b.type || 'planned',
+              blockCategory: cat,
+            };
+            scheduleChanges.push({ action: 'add', date: b.date, block });
+          }
+          result = `Added ${blockEntries.length} schedule blocks`;
+        } else if (name === 'batch_add_tasks') {
+          const taskEntries = Array.isArray(input.tasks) ? input.tasks : [];
+          for (const t of taskEntries) {
+            const cat = t.category || 'other';
+            scheduleChanges.push({
+              action: 'add_task',
+              date: t.date,
+              task: { id: Date.now() + Math.random() + Math.random(), text: t.text, done: false, color: '#f1f5f9', blockCategory: cat },
+            });
+          }
+          result = `Added ${taskEntries.length} tasks`;
+        } else if (name === 'add_schedule_block') {
           const cat = input.category || 'other';
           const block = {
             id: Date.now() + Math.random(),
