@@ -674,12 +674,12 @@ function DailyView({ overrideDate }) {
                     className="time-block-body"
                     onMouseDown={e => handleBlockMove(e, block)}
                     onTouchStart={e => handleBlockMove(e, block)}
+                    style={height <= 28 ? { padding: '0 6px', flexDirection: 'row', alignItems: 'center', gap: 6 } : undefined}
                   >
-                    <div className="time-block-text">{block.text}</div>
-                    {height >= 20 && (
-                      <div className="time-block-range">
-                        {formatHour(block.startHour)} – {formatHour(block.endHour)}
-                        {' '}({(block.endHour - block.startHour) >= 1 ? `${block.endHour - block.startHour}h` : `${(block.endHour - block.startHour) * 60}m`})
+                    <div className="time-block-text" style={height <= 28 ? { fontSize: 11 } : undefined}>{block.text}</div>
+                    {height >= 24 && (
+                      <div className="time-block-range" style={height <= 28 ? { marginTop: 0, whiteSpace: 'nowrap' } : undefined}>
+                        {(block.endHour - block.startHour) >= 1 ? `${block.endHour - block.startHour}h` : `${(block.endHour - block.startHour) * 60}m`}
                       </div>
                     )}
                   </div>
