@@ -533,10 +533,23 @@ function DailyView({ overrideDate }) {
   const doneCount = allTasks.filter(t => t.done).length;
   const activeDropHour = touchDragHour !== null ? touchDragHour : dropHour;
 
-  // Calculate sleep and work hours from blocks using blockCategory
-  const sleepHours = blocks
+  // Calculate sleep hours including last night's sleep from the previous day
+  // If yesterday has a sleep block ending at 24 (midnight), that sleep connects to today
+  const prevDate = (() => {
+    const d = new Date(date + 'T12:00:00');
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 10);
+  })();
+  const prevBlocks = loadBlocks(prevDate);
+  const prevNightSleep = prevBlocks
+    .filter(b => b.blockCategory === 'sleep' && b.endHour === 24)
+    .reduce((sum, b) => sum + (b.endHour - b.startHour), 0);
+
+  const todaySleep = blocks
     .filter(b => b.blockCategory === 'sleep')
     .reduce((sum, b) => sum + (b.endHour - b.startHour), 0);
+  const sleepHours = todaySleep + prevNightSleep;
+
   const workHours = blocks
     .filter(b => b.blockCategory === 'work')
     .reduce((sum, b) => sum + (b.endHour - b.startHour), 0);
@@ -603,7 +616,7 @@ function DailyView({ overrideDate }) {
         )}
       </div>
 
-      {blocks.length > 0 && (sleepHours > 0 || workHours > 0) && (
+      {(blocks.length > 0 || sleepHours > 0) && (sleepHours > 0 || workHours > 0) && (
         <div className="daily-stats-row">
           {sleepHours > 0 && (
             <div className="daily-stat-chip sleep">
