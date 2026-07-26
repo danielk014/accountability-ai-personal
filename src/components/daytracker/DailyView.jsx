@@ -646,7 +646,7 @@ function DailyView({ overrideDate }) {
   const prevDate = (() => {
     const d = new Date(date + 'T12:00:00');
     d.setDate(d.getDate() - 1);
-    return d.toISOString().slice(0, 10);
+    return getDateStr(d);
   })();
   const prevBlocks = loadBlocks(prevDate);
   const prevNightSleep = prevBlocks
