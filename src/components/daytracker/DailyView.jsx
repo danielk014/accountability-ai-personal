@@ -10,6 +10,102 @@ import {
 } from './storage';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+// ─── Auto-sync sleep blocks → Progress sleep tracker ─────────────────────────
+
+// Debounce timer for sleep sync
+let _sleepSyncTimer = null;
+
+async function syncSleepToProgress(dateStr) {
+  // Debounce to avoid rapid-fire during block editing
+  clearTimeout(_sleepSyncTimer);
+  _sleepSyncTimer = setTimeout(() => _doSyncSleep(dateStr), 800);
+}
+
+async function _doSyncSleep(dateStr) {
+  try {
+    const blocks = loadBlocks(dateStr);
+    const prevDate = new Date(dateStr + 'T12:00:00');
+    prevDate.setDate(prevDate.getDate() - 1);
+    const prevDateStr = getDateStr(prevDate);
+    const prevBlocks = loadBlocks(prevDateStr);
+
+    const nextDate = new Date(dateStr + 'T12:00:00');
+    nextDate.setDate(nextDate.getDate() + 1);
+    const nextDateStr = getDateStr(nextDate);
+    const nextBlocks = loadBlocks(nextDateStr);
+
+    // Collect all sync candidates:
+    // 1. Previous evening + this morning → logged on prevDate
+    // 2. This evening + next morning → logged on dateStr
+
+    const syncs = [];
+
+    // Check: prev evening + this morning
+    const prevEveningBlocks = prevBlocks
+      .filter(b => b.blockCategory === 'sleep' && b.startHour >= 12)
+      .sort((a, b) => a.startHour - b.startHour);
+    const thisMorningBlocks = blocks
+      .filter(b => b.blockCategory === 'sleep' && b.startHour < 12)
+      .sort((a, b) => a.startHour - b.startHour);
+
+    if (prevEveningBlocks.length > 0 && thisMorningBlocks.length > 0) {
+      const startH = prevEveningBlocks[0].startHour;
+      const endH = thisMorningBlocks[thisMorningBlocks.length - 1].endHour;
+      syncs.push({
+        date: prevDateStr,
+        sleep_time: `${String(Math.floor(startH)).padStart(2, '0')}:${startH % 1 >= 0.5 ? '30' : '00'}`,
+        wake_time: `${String(Math.floor(endH)).padStart(2, '0')}:${endH % 1 >= 0.5 ? '30' : '00'}`,
+      });
+    }
+
+    // Check: this evening + next morning
+    const thisEveningBlocks = blocks
+      .filter(b => b.blockCategory === 'sleep' && b.startHour >= 12)
+      .sort((a, b) => a.startHour - b.startHour);
+    const nextMorningBlocks = nextBlocks
+      .filter(b => b.blockCategory === 'sleep' && b.startHour < 12)
+      .sort((a, b) => a.startHour - b.startHour);
+
+    if (thisEveningBlocks.length > 0 && nextMorningBlocks.length > 0) {
+      const startH = thisEveningBlocks[0].startHour;
+      const endH = nextMorningBlocks[nextMorningBlocks.length - 1].endHour;
+      syncs.push({
+        date: dateStr,
+        sleep_time: `${String(Math.floor(startH)).padStart(2, '0')}:${startH % 1 >= 0.5 ? '30' : '00'}`,
+        wake_time: `${String(Math.floor(endH)).padStart(2, '0')}:${endH % 1 >= 0.5 ? '30' : '00'}`,
+      });
+    }
+
+    for (const sync of syncs) {
+      // Calculate hours
+      const [sh, sm] = sync.sleep_time.split(':').map(Number);
+      const [wh, wm] = sync.wake_time.split(':').map(Number);
+      let sleepMins = sh * 60 + sm;
+      let wakeMins = wh * 60 + wm;
+      if (wakeMins <= sleepMins) wakeMins += 24 * 60;
+      const hours = parseFloat(((wakeMins - sleepMins) / 60).toFixed(2));
+
+      if (hours <= 0 || hours > 20) continue;
+
+      const data = { date: sync.date, sleep_time: sync.sleep_time, wake_time: sync.wake_time, hours };
+
+      // Check if entry exists for this date
+      const existing = await base44.entities.Sleep.filter({ date: sync.date });
+      const match = existing.find(e => e.date === sync.date);
+
+      if (match) {
+        if (match.sleep_time !== sync.sleep_time || match.wake_time !== sync.wake_time || match.hours !== hours) {
+          await base44.entities.Sleep.update(match.id, data);
+        }
+      } else {
+        await base44.entities.Sleep.create(data);
+      }
+    }
+  } catch (err) {
+    console.warn('[sleep-sync] Error syncing sleep to progress:', err);
+  }
+}
 const TASK_COLORS = ['#f1f5f9', '#d4edda', '#cce5ff', '#fff3cd', '#f8d7da', '#e2d9f3'];
 const BLOCK_COLORS = ['#6366f1', '#22c55e', '#eab308', '#ef4444', '#a855f7', '#f97316'];
 const ACTUAL_COLOR = '#64748b';
@@ -271,6 +367,8 @@ function DailyView({ overrideDate }) {
   function updateBlocks(newBlocks) {
     setBlocks(newBlocks);
     saveBlocks(date, newBlocks);
+    // Auto-sync sleep blocks to the Progress sleep tracker
+    syncSleepToProgress(date);
   }
 
   function removeBlock(blockId) {
@@ -338,6 +436,8 @@ function DailyView({ overrideDate }) {
         blockCategory: 'sleep',
       };
       saveBlocks(nextDateStr, [...nextBlocks, morningBlock]);
+      // Sync sleep for the next day (which now has morning blocks)
+      syncSleepToProgress(nextDateStr);
     }
   }
 
