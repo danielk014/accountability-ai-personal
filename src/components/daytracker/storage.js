@@ -103,8 +103,32 @@ export function setHourLog(date, hour, data) {
   return logs;
 }
 
+// Migrate legacy string[] goals → object[] format
+function _migrateGoals(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((g, i) => {
+    if (typeof g === 'string') {
+      return { id: `g_${Date.now()}_${i}`, text: g, status: 'in_progress', category: 'personal', deadline: null, notes: '' };
+    }
+    return g;
+  });
+}
+
+function _migrateLongTermGoals(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((g, i) => {
+    if (typeof g === 'string') {
+      return { id: `lt_${Date.now()}_${i}`, text: g, timeframe: '5year', category: 'personal' };
+    }
+    return g;
+  });
+}
+
 export function loadGoals() {
-  try { return JSON.parse(localStorage.getItem(GOALS_KEY)) || []; } catch { return []; }
+  try {
+    const raw = JSON.parse(localStorage.getItem(GOALS_KEY)) || [];
+    return _migrateGoals(raw);
+  } catch { return []; }
 }
 
 export function saveGoals(goals) {
@@ -113,7 +137,10 @@ export function saveGoals(goals) {
 }
 
 export function loadLongTermGoals() {
-  try { return JSON.parse(localStorage.getItem(LONG_TERM_GOALS_KEY)) || []; } catch { return []; }
+  try {
+    const raw = JSON.parse(localStorage.getItem(LONG_TERM_GOALS_KEY)) || [];
+    return _migrateLongTermGoals(raw);
+  } catch { return []; }
 }
 
 export function saveLongTermGoals(goals) {

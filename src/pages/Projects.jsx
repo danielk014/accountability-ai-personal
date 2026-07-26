@@ -14,7 +14,8 @@ import {
   Sparkles, FolderKanban, MessageCircle,
   ChevronDown, CheckSquare, ArrowLeft,
   ChevronLeft, ChevronRight, Calendar as CalendarIcon,
-  GraduationCap,
+  GraduationCap, StickyNote, FileText, Clock,
+  Target, ListTodo, BookOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -461,6 +462,112 @@ function ProjectTaskItem({ task, onToggle, onDelete }) {
   );
 }
 
+// ─── ProjectNotes helpers ─────────────────────────────────────────────────────
+
+const getNotesStorageKey = (projectId) => `${getUserPrefix()}project_notes_${projectId}`;
+
+function loadProjectNotes(projectId) {
+  const key = getNotesStorageKey(projectId);
+  try {
+    const raw = supabaseStorage.getItem(key) || localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function saveProjectNotes(projectId, notes) {
+  const key = getNotesStorageKey(projectId);
+  const json = JSON.stringify(notes);
+  supabaseStorage.setItem(key, json);
+  localStorage.setItem(key, json);
+}
+
+// ─── ProjectNoteItem ──────────────────────────────────────────────────────────
+
+function ProjectNoteItem({ note, onUpdate, onDelete }) {
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(note.title);
+  const [editContent, setEditContent] = useState(note.content);
+  const titleRef = useRef(null);
+
+  useEffect(() => {
+    if (editing && titleRef.current) titleRef.current.focus();
+  }, [editing]);
+
+  const save = () => {
+    onUpdate({ ...note, title: editTitle, content: editContent });
+    setEditing(false);
+  };
+
+  const dateStr = note.created_at
+    ? new Date(note.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : '';
+
+  const PIN_COLORS = ['#6366f1', '#ec4899', '#f59e0b', '#22c55e', '#3b82f6', '#8b5cf6'];
+  const noteColor = PIN_COLORS[Math.abs(note.id?.charCodeAt(0) || 0) % PIN_COLORS.length];
+
+  return (
+    <motion.div layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -16 }}
+      className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all group overflow-hidden"
+    >
+      <div className="h-1 w-full" style={{ backgroundColor: noteColor }} />
+      <div className="p-4">
+        {editing ? (
+          <div className="space-y-2">
+            <input
+              ref={titleRef}
+              value={editTitle}
+              onChange={e => setEditTitle(e.target.value)}
+              placeholder="Note title"
+              className="w-full text-sm font-semibold rounded-lg border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            />
+            <textarea
+              value={editContent}
+              onChange={e => setEditContent(e.target.value)}
+              placeholder="Write your note..."
+              rows={4}
+              className="w-full text-sm rounded-lg border border-slate-200 px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-200"
+            />
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => { setEditing(false); setEditTitle(note.title); setEditContent(note.content); }}
+                className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50">Cancel</button>
+              <button onClick={save}
+                className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Save</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                {note.title && (
+                  <h4 className="text-sm font-semibold text-slate-800 mb-1">{note.title}</h4>
+                )}
+                <p className="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed">{note.content}</p>
+              </div>
+              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                <button onClick={() => setEditing(true)}
+                  className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition">
+                  <Pencil className="w-3 h-3" />
+                </button>
+                <button onClick={() => onDelete(note.id)}
+                  className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-400 transition">
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <Clock className="w-3 h-3 text-slate-300" />
+              <span className="text-xs text-slate-400">{dateStr}</span>
+              {note.tag && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium">{note.tag}</span>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── ProjectDetail (full-page view) ──────────────────────────────────────────
 
 function ProjectDetail({ project, tasks, onBack, queryClient, onEdit, onDelete }) {
@@ -468,6 +575,14 @@ function ProjectDetail({ project, tasks, onBack, queryClient, onEdit, onDelete }
   const [newTaskDue, setNewTaskDue]           = useState("");
   const [newTaskPriority, setNewTaskPriority] = useState("medium");
   const [activeSection, setActiveSection]     = useState("tasks");
+
+  // Notes state
+  const [notes, setNotes] = useState([]);
+  const [newNoteTitle, setNewNoteTitle] = useState("");
+  const [newNoteContent, setNewNoteContent] = useState("");
+  const [newNoteTag, setNewNoteTag] = useState("");
+  const [showAddNote, setShowAddNote] = useState(false);
+  const noteInputRef = useRef(null);
 
   const chatKey = getChatStorageKey(project?.id);
   const [chatMessages, setChatMessages] = useState(() => {
@@ -478,9 +593,14 @@ function ProjectDetail({ project, tasks, onBack, queryClient, onEdit, onDelete }
   });
   const [chatInput, setChatInput]     = useState("");
   const [chatLoading, setChatLoading] = useState(false);
-  const [contextMenu, setContextMenu] = useState(null); // { x, y, index }
+  const [contextMenu, setContextMenu] = useState(null);
   const bottomRef    = useRef(null);
   const taskInputRef = useRef(null);
+
+  // Load notes
+  useEffect(() => {
+    setNotes(loadProjectNotes(project.id));
+  }, [project?.id]);
 
   useEffect(() => {
     try {
@@ -493,13 +613,47 @@ function ProjectDetail({ project, tasks, onBack, queryClient, onEdit, onDelete }
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  // Close context menu on outside click
   useEffect(() => {
     if (!contextMenu) return;
     const handler = () => setContextMenu(null);
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
   }, [contextMenu]);
+
+  useEffect(() => {
+    if (showAddNote && noteInputRef.current) noteInputRef.current.focus();
+  }, [showAddNote]);
+
+  // Note CRUD
+  const addNote = () => {
+    if (!newNoteContent.trim()) return;
+    const note = {
+      id: `note_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      title: newNoteTitle.trim(),
+      content: newNoteContent.trim(),
+      tag: newNoteTag.trim() || null,
+      created_at: new Date().toISOString(),
+    };
+    const updated = [note, ...notes];
+    setNotes(updated);
+    saveProjectNotes(project.id, updated);
+    setNewNoteTitle("");
+    setNewNoteContent("");
+    setNewNoteTag("");
+    setShowAddNote(false);
+  };
+
+  const updateNote = (updatedNote) => {
+    const updated = notes.map(n => n.id === updatedNote.id ? updatedNote : n);
+    setNotes(updated);
+    saveProjectNotes(project.id, updated);
+  };
+
+  const deleteNote = (id) => {
+    const updated = notes.filter(n => n.id !== id);
+    setNotes(updated);
+    saveProjectNotes(project.id, updated);
+  };
 
   const addTask = async () => {
     if (!newTaskName.trim()) return;
@@ -559,6 +713,8 @@ function ProjectDetail({ project, tasks, onBack, queryClient, onEdit, onDelete }
   const pendingTasks = tasks.filter(t => !t.is_done);
   const doneTasks    = tasks.filter(t =>  t.is_done);
 
+  const highPriorityCount = pendingTasks.filter(t => t.priority === 'high').length;
+
   const quickPrompts = [
     "What should I work on first?",
     "Help me break this into smaller steps",
@@ -566,203 +722,306 @@ function ProjectDetail({ project, tasks, onBack, queryClient, onEdit, onDelete }
     "Add tasks for this project based on the description",
   ];
 
+  const NOTE_TAGS = ['idea', 'update', 'decision', 'research', 'blocker', 'meeting'];
+
+  const sections = [
+    { id: "tasks", label: "Tasks", icon: ListTodo, count: pendingTasks.length },
+    { id: "notes", label: "Notes", icon: StickyNote, count: notes.length },
+    { id: "chat",  label: "AI Advisor", icon: Sparkles, count: null },
+  ];
+
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] bg-slate-50">
 
       {/* Header */}
-      <div className="bg-white border-b border-slate-100 px-6 py-4 flex items-center gap-4 flex-shrink-0">
-        <button onClick={onBack}
-          className="p-2 rounded-xl hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition flex-shrink-0">
-          <ArrowLeft className="w-4 h-4" />
-        </button>
+      <div className="bg-white border-b border-slate-100 px-6 py-4 flex-shrink-0">
+        <div className="flex items-center gap-4">
+          <button onClick={onBack}
+            className="p-2 rounded-xl hover:bg-slate-100 text-slate-500 hover:text-slate-700 transition flex-shrink-0">
+            <ArrowLeft className="w-4 h-4" />
+          </button>
 
-        <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: project.color || PROJECT_COLORS[0] }} />
+          <div className="w-4 h-4 rounded-full flex-shrink-0" style={{ backgroundColor: project.color || PROJECT_COLORS[0] }} />
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-lg font-bold text-slate-800 truncate">{project.name}</h2>
-            <span className={cn("text-xs px-2 py-0.5 rounded-full border font-medium", tc.bg)}>{tc.label}</span>
-            <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", sc.bg)}>{sc.label}</span>
-          </div>
-          <div className="flex items-center gap-4 mt-1.5">
-            <div className="flex items-center gap-2 flex-1 max-w-xs">
-              <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                <div className="h-full rounded-full transition-all duration-500"
-                  style={{ width: `${prog.pct}%`, backgroundColor: project.color || "#6366f1" }} />
-              </div>
-              <span className="text-xs text-slate-500 font-medium whitespace-nowrap">{prog.done}/{prog.total} tasks</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg font-bold text-slate-800 truncate">{project.name}</h2>
+              <span className={cn("text-xs px-2 py-0.5 rounded-full border font-medium", tc.bg)}>{tc.label}</span>
+              <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", sc.bg)}>{sc.label}</span>
             </div>
-            {dl && <span className={cn("text-xs font-medium", dl.cls)}>{dl.text}</span>}
+            <div className="flex items-center gap-4 mt-1.5">
+              <div className="flex items-center gap-2 flex-1 max-w-xs">
+                <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${prog.pct}%`, backgroundColor: project.color || "#6366f1" }} />
+                </div>
+                <span className="text-xs text-slate-500 font-medium whitespace-nowrap">{prog.done}/{prog.total} tasks</span>
+              </div>
+              {dl && <span className={cn("text-xs font-medium", dl.cls)}>{dl.text}</span>}
+            </div>
+          </div>
+
+          <div className="flex gap-2 flex-shrink-0">
+            <button onClick={() => onEdit(project)}
+              className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition">
+              <Pencil className="w-4 h-4" />
+            </button>
+            <button onClick={() => { onDelete(project.id); onBack(); }}
+              className="p-2 rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-400 transition">
+              <Trash2 className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
-        <div className="flex gap-2 flex-shrink-0">
-          <button onClick={() => onEdit(project)}
-            className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition">
-            <Pencil className="w-4 h-4" />
-          </button>
-          <button onClick={() => { onDelete(project.id); onBack(); }}
-            className="p-2 rounded-xl hover:bg-red-50 text-slate-400 hover:text-red-400 transition">
-            <Trash2 className="w-4 h-4" />
-          </button>
+        {/* Description */}
+        {project.description && (
+          <div className="mt-3 ml-12 p-3 bg-slate-50 rounded-xl border border-slate-100">
+            <p className="text-sm text-slate-600 leading-relaxed">{project.description}</p>
+          </div>
+        )}
+
+        {/* Quick stats */}
+        <div className="mt-3 ml-12 flex gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg">
+            <Target className="w-3 h-3" />
+            <span className="font-semibold text-slate-700">{prog.pct}%</span> complete
+          </div>
+          {highPriorityCount > 0 && (
+            <div className="flex items-center gap-1.5 text-xs text-rose-500 bg-rose-50 px-3 py-1.5 rounded-lg">
+              <span className="font-semibold">{highPriorityCount}</span> high priority
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-3 py-1.5 rounded-lg">
+            <StickyNote className="w-3 h-3" />
+            <span className="font-semibold text-slate-700">{notes.length}</span> notes
+          </div>
         </div>
       </div>
 
-      {/* Mobile tab switcher */}
-      <div className="flex md:hidden border-b border-slate-100 bg-white flex-shrink-0">
-        {[["tasks", "Tasks"], ["chat", "AI Advisor"]].map(([s, label]) => (
-          <button key={s} onClick={() => setActiveSection(s)}
-            className={cn("flex-1 py-2.5 text-sm font-medium transition-all",
-              activeSection === s ? "text-indigo-600 border-b-2 border-indigo-600" : "text-slate-500")}>
+      {/* Tab switcher */}
+      <div className="flex border-b border-slate-100 bg-white flex-shrink-0 px-6">
+        {sections.map(({ id, label, icon: Icon, count }) => (
+          <button key={id} onClick={() => setActiveSection(id)}
+            className={cn("flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-all border-b-2",
+              activeSection === id
+                ? "text-indigo-600 border-indigo-600"
+                : "text-slate-500 border-transparent hover:text-slate-700")}>
+            <Icon className="w-3.5 h-3.5" />
             {label}
+            {count !== null && count > 0 && (
+              <span className={cn("text-xs px-1.5 py-0.5 rounded-full font-semibold",
+                activeSection === id ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-500")}>
+                {count}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
-      {/* Two-column body */}
-      <div className="flex flex-1 overflow-hidden">
+      {/* Body */}
+      <div className="flex-1 overflow-hidden">
 
-        {/* LEFT — Tasks */}
-        <div className={cn("flex flex-col w-full md:w-1/2 bg-white border-r border-slate-100", activeSection !== "tasks" && "hidden md:flex")}>
-          {/* Add task row */}
-          <div className="px-4 pt-4 pb-3 border-b border-slate-100 flex-shrink-0 space-y-2">
-            <input ref={taskInputRef} value={newTaskName} onChange={e => setNewTaskName(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && addTask()}
-              placeholder="Add a task or milestone… (Enter to add)"
-              className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
-            <div className="flex gap-2 items-center">
-              <TaskDatePicker value={newTaskDue} onChange={setNewTaskDue} />
-              <Select value={newTaskPriority} onValueChange={setNewTaskPriority}>
-                <SelectTrigger className="flex-1 rounded-xl text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(PRIORITY_CONFIG).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Button onClick={addTask} disabled={!newTaskName.trim()} size="sm"
+        {/* Tasks section */}
+        {activeSection === "tasks" && (
+          <div className="flex flex-col h-full bg-white">
+            <div className="px-4 pt-4 pb-3 border-b border-slate-100 flex-shrink-0 space-y-2">
+              <input ref={taskInputRef} value={newTaskName} onChange={e => setNewTaskName(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && addTask()}
+                placeholder="Add a task or milestone… (Enter to add)"
+                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
+              <div className="flex gap-2 items-center">
+                <TaskDatePicker value={newTaskDue} onChange={setNewTaskDue} />
+                <Select value={newTaskPriority} onValueChange={setNewTaskPriority}>
+                  <SelectTrigger className="flex-1 rounded-xl text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PRIORITY_CONFIG).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button onClick={addTask} disabled={!newTaskName.trim()} size="sm"
+                  className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-3">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+              <AnimatePresence>
+                {pendingTasks.map(task => (
+                  <ProjectTaskItem key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} />
+                ))}
+              </AnimatePresence>
+
+              {doneTasks.length > 0 && (
+                <details className="group mt-2">
+                  <summary className="text-xs text-slate-400 font-medium cursor-pointer py-2 hover:text-slate-600 list-none flex items-center gap-1 select-none">
+                    <ChevronDown className="w-3 h-3 transition-transform group-open:rotate-180" />
+                    Completed ({doneTasks.length})
+                  </summary>
+                  <div className="space-y-2 mt-1">
+                    <AnimatePresence>
+                      {doneTasks.map(task => (
+                        <ProjectTaskItem key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} />
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                </details>
+              )}
+
+              {tasks.length === 0 && (
+                <div className="text-center py-12 text-slate-400">
+                  <CheckSquare className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm font-medium">No tasks yet</p>
+                  <p className="text-xs mt-1">Add your first task above or ask the AI advisor</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Notes section */}
+        {activeSection === "notes" && (
+          <div className="flex flex-col h-full bg-slate-50">
+            <div className="px-5 pt-4 pb-3 flex-shrink-0">
+              {!showAddNote ? (
+                <button onClick={() => setShowAddNote(true)}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/50 transition text-sm font-medium">
+                  <Plus className="w-4 h-4" />
+                  Add a note
+                </button>
+              ) : (
+                <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+                  className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3">
+                  <input
+                    ref={noteInputRef}
+                    value={newNoteTitle}
+                    onChange={e => setNewNoteTitle(e.target.value)}
+                    placeholder="Note title (optional)"
+                    className="w-full text-sm font-semibold rounded-lg border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  />
+                  <textarea
+                    value={newNoteContent}
+                    onChange={e => setNewNoteContent(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) addNote(); }}
+                    placeholder="Write your note... (Cmd+Enter to save)"
+                    rows={4}
+                    className="w-full text-sm rounded-lg border border-slate-200 px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  />
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1.5 flex-1 flex-wrap">
+                      {NOTE_TAGS.map(tag => (
+                        <button key={tag} onClick={() => setNewNoteTag(newNoteTag === tag ? '' : tag)}
+                          className={cn("text-xs px-2.5 py-1 rounded-lg border transition font-medium",
+                            newNoteTag === tag
+                              ? "bg-indigo-50 border-indigo-300 text-indigo-600"
+                              : "bg-white border-slate-200 text-slate-500 hover:border-slate-300")}>
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                    <button onClick={() => { setShowAddNote(false); setNewNoteTitle(''); setNewNoteContent(''); setNewNoteTag(''); }}
+                      className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50">Cancel</button>
+                    <button onClick={addNote} disabled={!newNoteContent.trim()}
+                      className="text-xs px-4 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 font-medium">
+                      Save
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 pb-4 space-y-3">
+              {notes.length === 0 && !showAddNote && (
+                <div className="text-center py-16 text-slate-400">
+                  <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm font-medium text-slate-500">No notes yet</p>
+                  <p className="text-xs mt-1">Add notes, ideas, decisions, research, or anything related to this project</p>
+                </div>
+              )}
+              <AnimatePresence>
+                {notes.map(note => (
+                  <ProjectNoteItem key={note.id} note={note} onUpdate={updateNote} onDelete={deleteNote} />
+                ))}
+              </AnimatePresence>
+            </div>
+          </div>
+        )}
+
+        {/* AI Advisor section */}
+        {activeSection === "chat" && (
+          <div className="flex flex-col h-full bg-slate-50">
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+              {chatMessages.length === 0 && (
+                <div className="space-y-3">
+                  <div className="text-center py-6">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-2">
+                      <Sparkles className="w-6 h-6 text-indigo-400" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-700">Your Project Advisor</p>
+                    <p className="text-xs text-slate-400 mt-1">Ask anything — I can also add tasks for you</p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {quickPrompts.map(q => (
+                      <button key={q} onClick={() => sendChat(q)}
+                        className="text-left text-xs px-3 py-2.5 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 transition bg-white">
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {chatMessages.map((msg, i) => (
+                <div key={i}
+                  className={cn("flex gap-2", msg.role === "user" ? "justify-end" : "justify-start")}
+                  onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, index: i }); }}
+                >
+                  {msg.role === "assistant" && (
+                    <div className="w-7 h-7 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-1">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                    </div>
+                  )}
+                  <div className={cn(
+                    "max-w-[80%] rounded-2xl px-3 py-2.5 text-sm leading-relaxed whitespace-pre-wrap",
+                    msg.role === "user"
+                      ? "bg-indigo-600 text-white rounded-tr-sm"
+                      : "bg-white text-slate-800 rounded-tl-sm shadow-sm border border-slate-100"
+                  )}>
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+
+              {chatLoading && (
+                <div className="flex gap-2">
+                  <div className="w-7 h-7 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                  </div>
+                  <div className="bg-white rounded-2xl rounded-tl-sm px-3 py-3 shadow-sm border border-slate-100">
+                    <div className="flex gap-1.5">
+                      {[0, 150, 300].map(d => (
+                        <div key={d} className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: `${d}ms` }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={bottomRef} />
+            </div>
+
+            <div className="flex gap-2 px-5 py-4 border-t border-slate-100 bg-white flex-shrink-0">
+              <textarea value={chatInput} onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(chatInput); } }}
+                placeholder="Ask your advisor or say 'add a task for…'"
+                rows={1} disabled={chatLoading}
+                className="flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 placeholder:text-slate-400"
+                style={{ minHeight: "40px", maxHeight: "100px" }} />
+              <Button onClick={() => sendChat(chatInput)} disabled={!chatInput.trim() || chatLoading}
                 className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-3">
-                <Plus className="w-4 h-4" />
+                {chatLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
               </Button>
             </div>
           </div>
-
-          {/* Task list */}
-          <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-            <AnimatePresence>
-              {pendingTasks.map(task => (
-                <ProjectTaskItem key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} />
-              ))}
-            </AnimatePresence>
-
-            {doneTasks.length > 0 && (
-              <details className="group mt-2">
-                <summary className="text-xs text-slate-400 font-medium cursor-pointer py-2 hover:text-slate-600 list-none flex items-center gap-1 select-none">
-                  <ChevronDown className="w-3 h-3 transition-transform group-open:rotate-180" />
-                  Completed ({doneTasks.length})
-                </summary>
-                <div className="space-y-2 mt-1">
-                  <AnimatePresence>
-                    {doneTasks.map(task => (
-                      <ProjectTaskItem key={task.id} task={task} onToggle={toggleTask} onDelete={deleteTask} />
-                    ))}
-                  </AnimatePresence>
-                </div>
-              </details>
-            )}
-
-            {tasks.length === 0 && (
-              <div className="text-center py-12 text-slate-400">
-                <CheckSquare className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                <p className="text-sm font-medium">No tasks yet</p>
-                <p className="text-xs mt-1">Add your first task above or ask the AI advisor</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* RIGHT — AI Advisor */}
-        <div className={cn("flex flex-col w-full md:w-1/2 bg-slate-50", activeSection !== "chat" && "hidden md:flex")}>
-          <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 bg-white flex-shrink-0">
-            <div className="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center">
-              <Sparkles className="w-4 h-4 text-indigo-600" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-800">Project Advisor</p>
-              <p className="text-xs text-slate-400">Can add tasks and manage this project</p>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-            {chatMessages.length === 0 && (
-              <div className="space-y-3">
-                <div className="text-center py-6">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center mx-auto mb-2">
-                    <Sparkles className="w-6 h-6 text-indigo-400" />
-                  </div>
-                  <p className="text-sm font-medium text-slate-700">Your Project Advisor</p>
-                  <p className="text-xs text-slate-400 mt-1">Ask anything — I can also add tasks for you</p>
-                </div>
-                <div className="grid grid-cols-1 gap-2">
-                  {quickPrompts.map(q => (
-                    <button key={q} onClick={() => sendChat(q)}
-                      className="text-left text-xs px-3 py-2.5 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 transition bg-white">
-                      {q}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {chatMessages.map((msg, i) => (
-              <div key={i}
-                className={cn("flex gap-2", msg.role === "user" ? "justify-end" : "justify-start")}
-                onContextMenu={e => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, index: i }); }}
-              >
-                {msg.role === "assistant" && (
-                  <div className="w-7 h-7 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-1">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                  </div>
-                )}
-                <div className={cn(
-                  "max-w-[80%] rounded-2xl px-3 py-2.5 text-sm leading-relaxed whitespace-pre-wrap",
-                  msg.role === "user"
-                    ? "bg-indigo-600 text-white rounded-tr-sm"
-                    : "bg-white text-slate-800 rounded-tl-sm shadow-sm border border-slate-100"
-                )}>
-                  {msg.content}
-                </div>
-              </div>
-            ))}
-
-            {chatLoading && (
-              <div className="flex gap-2">
-                <div className="w-7 h-7 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                </div>
-                <div className="bg-white rounded-2xl rounded-tl-sm px-3 py-3 shadow-sm border border-slate-100">
-                  <div className="flex gap-1.5">
-                    {[0, 150, 300].map(d => (
-                      <div key={d} className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: `${d}ms` }} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            <div ref={bottomRef} />
-          </div>
-
-          <div className="flex gap-2 px-5 py-4 border-t border-slate-100 bg-white flex-shrink-0">
-            <textarea value={chatInput} onChange={e => setChatInput(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(chatInput); } }}
-              placeholder="Ask your advisor or say 'add a task for…'"
-              rows={1} disabled={chatLoading}
-              className="flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 placeholder:text-slate-400"
-              style={{ minHeight: "40px", maxHeight: "100px" }} />
-            <Button onClick={() => sendChat(chatInput)} disabled={!chatInput.trim() || chatLoading}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 px-3">
-              {chatLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-            </Button>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Right-click context menu */}

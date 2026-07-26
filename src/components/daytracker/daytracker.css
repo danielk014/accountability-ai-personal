@@ -624,50 +624,679 @@
   text-align: right;
 }
 
-/* Goals */
-.day-tracker-root .goal-item {
+/* ── Goals View ─────────────────────────────────────────────────────────── */
+
+.day-tracker-root .goals-view {
+  padding-bottom: 20px;
+}
+
+/* Stats bar */
+.day-tracker-root .goals-stats-bar {
+  display: flex;
+  gap: 2px;
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 12px 8px;
+  margin-bottom: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.day-tracker-root .goals-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.day-tracker-root .goals-stat-num {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.day-tracker-root .goals-stat-label {
+  font-size: 10px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-weight: 600;
+}
+
+/* Tabs */
+.day-tracker-root .goals-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 3px;
+}
+
+.day-tracker-root .goals-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.day-tracker-root .goals-tab:hover {
+  color: #334155;
+}
+
+.day-tracker-root .goals-tab-active {
+  background: #fff;
+  color: #1e293b;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.day-tracker-root .goals-tab-count {
+  font-size: 11px;
+  background: #e2e8f0;
+  color: #64748b;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.day-tracker-root .goals-tab-active .goals-tab-count {
+  background: #6366f1;
+  color: #fff;
+}
+
+/* Filters */
+.day-tracker-root .goals-filters {
   display: flex;
   gap: 8px;
-  align-items: flex-start;
-  padding: 10px 0;
-  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 14px;
 }
 
-.day-tracker-root .goal-input {
+.day-tracker-root .goals-filter-select {
   flex: 1;
-  background: transparent;
-  border: none;
-  color: #1e293b;
-  font-size: 14px;
+  padding: 6px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #475569;
+  background: #fff;
+  cursor: pointer;
   font-family: inherit;
-  padding: 4px 0;
 }
 
-.day-tracker-root .goal-input:focus {
+.day-tracker-root .goals-filter-select:focus {
   outline: none;
+  border-color: #6366f1;
 }
 
-.day-tracker-root .goal-num {
-  font-size: 13px;
+/* Goal card */
+.day-tracker-root .goal-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  background: #fff;
+  transition: all 0.15s;
+  overflow: hidden;
+}
+
+.day-tracker-root .goal-card:hover {
+  border-color: #c7d2fe;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.06);
+}
+
+.day-tracker-root .goal-card-achieved {
+  opacity: 0.7;
+  background: #fafafa;
+}
+
+.day-tracker-root .goal-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.day-tracker-root .goal-status-btn {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 1px;
+}
+
+.day-tracker-root .goal-status-btn:hover {
+  transform: scale(1.1);
+}
+
+.day-tracker-root .goal-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.day-tracker-root .goal-card-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  display: block;
+  line-height: 1.4;
+}
+
+.day-tracker-root .goal-text-achieved {
+  text-decoration: line-through;
   color: #94a3b8;
-  font-weight: 600;
-  min-width: 20px;
-  padding-top: 5px;
 }
 
-.day-tracker-root .goal-delete {
+.day-tracker-root .goal-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.day-tracker-root .goal-category-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+.day-tracker-root .goal-deadline-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.day-tracker-root .goal-deadline-overdue {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+.day-tracker-root .goal-deadline-today {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+.day-tracker-root .goal-deadline-soon {
+  color: #f59e0b;
+  background: #fffbeb;
+}
+
+.day-tracker-root .goal-deadline-normal {
+  color: #64748b;
+  background: #f1f5f9;
+}
+
+.day-tracker-root .goal-card-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.day-tracker-root .goal-card:hover .goal-card-actions,
+.day-tracker-root .vision-card:hover .goal-card-actions {
+  opacity: 1;
+}
+
+.day-tracker-root .goal-action-btn {
   background: none;
   border: none;
   color: #94a3b8;
-  font-size: 16px;
   cursor: pointer;
-  padding: 4px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 15px;
+  transition: all 0.15s;
 }
 
-.day-tracker-root .goal-delete:hover {
-  color: #e74c3c;
+.day-tracker-root .goal-action-btn:hover {
+  background: #f1f5f9;
+  color: #475569;
 }
 
+.day-tracker-root .goal-action-delete:hover {
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+.day-tracker-root .goal-edit-input {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #1e293b;
+  background: #f8fafc;
+}
+
+.day-tracker-root .goal-edit-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  background: #fff;
+}
+
+/* Expanded goal card */
+.day-tracker-root .goal-card-expanded {
+  padding: 0 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 12px;
+}
+
+.day-tracker-root .goal-expanded-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.day-tracker-root .goal-expanded-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  min-width: 60px;
+}
+
+.day-tracker-root .goal-category-picker {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.day-tracker-root .goal-cat-option {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.day-tracker-root .goal-cat-option:hover {
+  border-color: #94a3b8;
+  transform: scale(1.08);
+}
+
+.day-tracker-root .goal-cat-active {
+  transform: scale(1.08);
+}
+
+.day-tracker-root .goal-status-picker {
+  display: flex;
+  gap: 4px;
+}
+
+.day-tracker-root .goal-status-option {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.day-tracker-root .goal-status-option:hover {
+  border-color: #94a3b8;
+}
+
+.day-tracker-root .goal-date-input {
+  padding: 4px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #475569;
+  background: #fff;
+}
+
+.day-tracker-root .goal-date-input:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.day-tracker-root .goal-clear-date {
+  font-size: 11px;
+  color: #94a3b8;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.day-tracker-root .goal-clear-date:hover {
+  color: #ef4444;
+}
+
+.day-tracker-root .goal-notes-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #475569;
+  resize: vertical;
+  min-height: 60px;
+  background: #fafafa;
+}
+
+.day-tracker-root .goal-notes-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  background: #fff;
+}
+
+/* Vision card */
+.day-tracker-root .vision-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  margin-bottom: 6px;
+  background: #fff;
+  transition: all 0.15s;
+}
+
+.day-tracker-root .vision-card:hover {
+  border-color: #c7d2fe;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.06);
+}
+
+.day-tracker-root .vision-card-left {
+  flex-shrink: 0;
+}
+
+.day-tracker-root .vision-timeframe {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid;
+  min-width: 32px;
+}
+
+.day-tracker-root .vision-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.day-tracker-root .vision-card-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1e293b;
+  display: block;
+  line-height: 1.4;
+  cursor: text;
+}
+
+.day-tracker-root .vision-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.day-tracker-root .vision-meta-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.day-tracker-root .vision-tf-select,
+.day-tracker-root .vision-cat-select {
+  padding: 2px 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #64748b;
+  background: #fafafa;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.day-tracker-root .vision-tf-select:focus,
+.day-tracker-root .vision-cat-select:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+/* Vision groups */
+.day-tracker-root .vision-group {
+  margin-bottom: 16px;
+}
+
+.day-tracker-root .vision-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+
+.day-tracker-root .vision-group-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.day-tracker-root .vision-group-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.day-tracker-root .vision-group-count {
+  font-size: 11px;
+  color: #94a3b8;
+  background: #f1f5f9;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+/* Add goal button & form */
+.day-tracker-root .goal-add-btn {
+  margin-top: 10px;
+  background: #fafafa;
+  border: 1px dashed #d1d5db;
+  color: #64748b;
+  padding: 12px 16px;
+  border-radius: 12px;
+  width: 100%;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.day-tracker-root .goal-add-btn:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+  background: #eef2ff;
+}
+
+.day-tracker-root .goal-add-icon {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.day-tracker-root .goal-add-form {
+  margin-top: 10px;
+  padding: 14px;
+  border: 1px solid #c7d2fe;
+  border-radius: 12px;
+  background: #fafbff;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.day-tracker-root .goal-add-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #1e293b;
+  background: #fff;
+}
+
+.day-tracker-root .goal-add-input:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.day-tracker-root .goal-add-options {
+  display: flex;
+  gap: 8px;
+}
+
+.day-tracker-root .goal-add-select {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #475569;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.day-tracker-root .goal-add-select:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.day-tracker-root .goal-add-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.day-tracker-root .goal-add-cancel {
+  padding: 6px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.day-tracker-root .goal-add-cancel:hover {
+  background: #f1f5f9;
+}
+
+.day-tracker-root .goal-add-submit {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #6366f1;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.day-tracker-root .goal-add-submit:hover {
+  background: #4f46e5;
+}
+
+.day-tracker-root .goal-add-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Empty states */
+.day-tracker-root .goals-empty {
+  text-align: center;
+  padding: 24px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.day-tracker-root .goals-empty-state {
+  text-align: center;
+  padding: 32px 16px;
+}
+
+.day-tracker-root .goals-empty-icon {
+  font-size: 36px;
+  margin-bottom: 8px;
+}
+
+.day-tracker-root .goals-empty-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 4px;
+}
+
+.day-tracker-root .goals-empty-desc {
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.5;
+  max-width: 280px;
+  margin: 0 auto;
+}
+
+/* Goals list */
+.day-tracker-root .goals-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Legacy (keep for backwards compat) */
 .day-tracker-root .add-goal {
   margin-top: 12px;
   background: #f1f5f9;
@@ -2802,10 +3431,45 @@
   }
 
   /* Goals / Notes / Projects / Nutrition */
-  .day-tracker-root .goal-item,
+  .day-tracker-root .goal-card,
+  .day-tracker-root .vision-card,
   .day-tracker-root .project-card,
   .day-tracker-root .note-card {
     padding: 10px;
+  }
+
+  .day-tracker-root .goal-card-header {
+    padding: 10px;
+  }
+
+  .day-tracker-root .goal-card-expanded {
+    padding: 0 10px 10px;
+  }
+
+  .day-tracker-root .goal-category-picker {
+    gap: 3px;
+  }
+
+  .day-tracker-root .goal-status-picker {
+    flex-wrap: wrap;
+  }
+
+  .day-tracker-root .goals-stats-bar {
+    padding: 10px 6px;
+  }
+
+  .day-tracker-root .goals-stat-num {
+    font-size: 16px;
+  }
+
+  .day-tracker-root .vision-meta-actions {
+    margin-left: 0;
+    margin-top: 4px;
+  }
+
+  .day-tracker-root .vision-card-meta {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   /* Life Lessons */
