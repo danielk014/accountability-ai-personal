@@ -109,7 +109,7 @@ function GoalCard({ goal, onUpdate, onDelete }) {
 
         <div className="goal-card-actions" onClick={e => e.stopPropagation()}>
           <button className="goal-action-btn" onClick={() => setEditing(true)} title="Edit">✎</button>
-          <button className="goal-action-btn goal-action-delete" onClick={() => onDelete(goal.id)} title="Delete">&times;</button>
+          <button className="goal-action-btn goal-action-delete" onClick={() => { if (window.confirm('Are you sure you want to delete this goal?')) onDelete(goal.id); }} title="Delete">&times;</button>
         </div>
       </div>
 
@@ -247,7 +247,7 @@ function VisionCard({ goal, onUpdate, onDelete }) {
       </div>
       <div className="goal-card-actions">
         <button className="goal-action-btn" onClick={() => setEditing(true)} title="Edit">✎</button>
-        <button className="goal-action-btn goal-action-delete" onClick={() => onDelete(goal.id)} title="Delete">&times;</button>
+        <button className="goal-action-btn goal-action-delete" onClick={() => { if (window.confirm('Are you sure you want to delete this goal?')) onDelete(goal.id); }} title="Delete">&times;</button>
       </div>
     </div>
   );

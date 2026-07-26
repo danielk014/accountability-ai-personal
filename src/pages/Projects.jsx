@@ -454,7 +454,7 @@ function ProjectTaskItem({ task, onToggle, onDelete }) {
           {dl && <span className={cn("text-xs", dl.cls)}>{dl.text}</span>}
         </div>
       </div>
-      <button onClick={() => onDelete(task.id)}
+      <button onClick={() => { if (window.confirm('Are you sure you want to delete this task?')) onDelete(task.id); }}
         className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-400 transition-all">
         <Trash2 className="w-3.5 h-3.5" />
       </button>
@@ -548,7 +548,7 @@ function ProjectNoteItem({ note, onUpdate, onDelete }) {
                   className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition">
                   <Pencil className="w-3 h-3" />
                 </button>
-                <button onClick={() => onDelete(note.id)}
+                <button onClick={() => { if (window.confirm('Are you sure you want to delete this note?')) onDelete(note.id); }}
                   className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-400 transition">
                   <Trash2 className="w-3 h-3" />
                 </button>
