@@ -22,6 +22,36 @@ async function syncSleepToProgress(dateStr) {
   _sleepSyncTimer = setTimeout(() => _doSyncSleep(dateStr), 800);
 }
 
+function _hourToTime(h) {
+  return `${String(Math.floor(h)).padStart(2, '0')}:${h % 1 >= 0.5 ? '30' : '00'}`;
+}
+
+function _calcSleepHours(sleepTime, wakeTime) {
+  const [sh, sm] = sleepTime.split(':').map(Number);
+  const [wh, wm] = wakeTime.split(':').map(Number);
+  let sleepMins = sh * 60 + sm;
+  let wakeMins = wh * 60 + wm;
+  if (wakeMins <= sleepMins) wakeMins += 24 * 60;
+  return parseFloat(((wakeMins - sleepMins) / 60).toFixed(2));
+}
+
+async function _upsertSleep(sync) {
+  const hours = _calcSleepHours(sync.sleep_time, sync.wake_time);
+  if (hours <= 0 || hours > 20) return;
+
+  const data = { date: sync.date, sleep_time: sync.sleep_time, wake_time: sync.wake_time, hours };
+  const existing = await base44.entities.Sleep.filter({ date: sync.date });
+  const match = existing.find(e => e.date === sync.date);
+
+  if (match) {
+    if (match.sleep_time !== sync.sleep_time || match.wake_time !== sync.wake_time || match.hours !== hours) {
+      await base44.entities.Sleep.update(match.id, data);
+    }
+  } else {
+    await base44.entities.Sleep.create(data);
+  }
+}
+
 async function _doSyncSleep(dateStr) {
   try {
     const blocks = loadBlocks(dateStr);
@@ -35,31 +65,13 @@ async function _doSyncSleep(dateStr) {
     const nextDateStr = getDateStr(nextDate);
     const nextBlocks = loadBlocks(nextDateStr);
 
-    // Collect all sync candidates:
-    // 1. Previous evening + this morning → logged on prevDate
-    // 2. This evening + next morning → logged on dateStr
-
-    const syncs = [];
-
-    // Check: prev evening + this morning
+    // Sleep blocks by position
     const prevEveningBlocks = prevBlocks
       .filter(b => b.blockCategory === 'sleep' && b.startHour >= 12)
       .sort((a, b) => a.startHour - b.startHour);
     const thisMorningBlocks = blocks
       .filter(b => b.blockCategory === 'sleep' && b.startHour < 12)
       .sort((a, b) => a.startHour - b.startHour);
-
-    if (prevEveningBlocks.length > 0 && thisMorningBlocks.length > 0) {
-      const startH = prevEveningBlocks[0].startHour;
-      const endH = thisMorningBlocks[thisMorningBlocks.length - 1].endHour;
-      syncs.push({
-        date: prevDateStr,
-        sleep_time: `${String(Math.floor(startH)).padStart(2, '0')}:${startH % 1 >= 0.5 ? '30' : '00'}`,
-        wake_time: `${String(Math.floor(endH)).padStart(2, '0')}:${endH % 1 >= 0.5 ? '30' : '00'}`,
-      });
-    }
-
-    // Check: this evening + next morning
     const thisEveningBlocks = blocks
       .filter(b => b.blockCategory === 'sleep' && b.startHour >= 12)
       .sort((a, b) => a.startHour - b.startHour);
@@ -67,39 +79,45 @@ async function _doSyncSleep(dateStr) {
       .filter(b => b.blockCategory === 'sleep' && b.startHour < 12)
       .sort((a, b) => a.startHour - b.startHour);
 
-    if (thisEveningBlocks.length > 0 && nextMorningBlocks.length > 0) {
-      const startH = thisEveningBlocks[0].startHour;
-      const endH = nextMorningBlocks[nextMorningBlocks.length - 1].endHour;
-      syncs.push({
-        date: dateStr,
-        sleep_time: `${String(Math.floor(startH)).padStart(2, '0')}:${startH % 1 >= 0.5 ? '30' : '00'}`,
-        wake_time: `${String(Math.floor(endH)).padStart(2, '0')}:${endH % 1 >= 0.5 ? '30' : '00'}`,
+    // Case 1: Previous evening + this morning → overnight sleep, logged on prevDate
+    if (prevEveningBlocks.length > 0 && thisMorningBlocks.length > 0) {
+      await _upsertSleep({
+        date: prevDateStr,
+        sleep_time: _hourToTime(prevEveningBlocks[0].startHour),
+        wake_time: _hourToTime(thisMorningBlocks[thisMorningBlocks.length - 1].endHour),
+      });
+    }
+    // Case 2: Morning blocks only (no prev evening) → user logged sleep as e.g. 0:00-7:00
+    // This is overnight sleep from the previous night, logged on prevDate
+    else if (thisMorningBlocks.length > 0 && prevEveningBlocks.length === 0) {
+      const startH = thisMorningBlocks[0].startHour;
+      const endH = thisMorningBlocks[thisMorningBlocks.length - 1].endHour;
+      await _upsertSleep({
+        date: prevDateStr,
+        sleep_time: _hourToTime(startH),
+        wake_time: _hourToTime(endH),
       });
     }
 
-    for (const sync of syncs) {
-      // Calculate hours
-      const [sh, sm] = sync.sleep_time.split(':').map(Number);
-      const [wh, wm] = sync.wake_time.split(':').map(Number);
-      let sleepMins = sh * 60 + sm;
-      let wakeMins = wh * 60 + wm;
-      if (wakeMins <= sleepMins) wakeMins += 24 * 60;
-      const hours = parseFloat(((wakeMins - sleepMins) / 60).toFixed(2));
-
-      if (hours <= 0 || hours > 20) continue;
-
-      const data = { date: sync.date, sleep_time: sync.sleep_time, wake_time: sync.wake_time, hours };
-
-      // Check if entry exists for this date
-      const existing = await base44.entities.Sleep.filter({ date: sync.date });
-      const match = existing.find(e => e.date === sync.date);
-
-      if (match) {
-        if (match.sleep_time !== sync.sleep_time || match.wake_time !== sync.wake_time || match.hours !== hours) {
-          await base44.entities.Sleep.update(match.id, data);
-        }
-      } else {
-        await base44.entities.Sleep.create(data);
+    // Case 3: This evening + next morning → overnight sleep, logged on dateStr
+    if (thisEveningBlocks.length > 0 && nextMorningBlocks.length > 0) {
+      await _upsertSleep({
+        date: dateStr,
+        sleep_time: _hourToTime(thisEveningBlocks[0].startHour),
+        wake_time: _hourToTime(nextMorningBlocks[nextMorningBlocks.length - 1].endHour),
+      });
+    }
+    // Case 4: Evening blocks only (no next morning yet) → partial, log with end at midnight
+    // so it at least shows up; will be updated when morning blocks are added
+    else if (thisEveningBlocks.length > 0 && nextMorningBlocks.length === 0) {
+      const startH = thisEveningBlocks[0].startHour;
+      const endH = thisEveningBlocks[thisEveningBlocks.length - 1].endHour;
+      if (endH > startH) {
+        await _upsertSleep({
+          date: dateStr,
+          sleep_time: _hourToTime(startH),
+          wake_time: _hourToTime(endH),
+        });
       }
     }
   } catch (err) {
@@ -173,6 +191,8 @@ function DailyView({ overrideDate }) {
     setTasks(loadDailyTasks(date));
     setRecurringTasks(loadRecurringTasks());
     setBlocks(loadBlocks(date));
+    // Sync any existing sleep blocks to progress tracker on load
+    syncSleepToProgress(date);
   }, [date]);
 
   // Re-load data when another device syncs changes via Supabase realtime
