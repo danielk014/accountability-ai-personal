@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  Plus, Trash2, X, Loader2, Bot, Camera, ChevronLeft, ChevronRight,
+  Plus, Minus, Trash2, X, Loader2, Bot, Camera, ChevronLeft, ChevronRight,
   AlertTriangle, Shield, Droplets,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -31,7 +31,7 @@ const CH_PROTECTIVE = [
   { category: "Omega-3", keywords: ["salmon","sardines","sardine","walnuts","walnut","flaxseed","flax","mackerel","tuna","chia","herring","anchovies"] },
 ];
 
-function analyzeCHTriggersForFoods(foods) {
+function analyzeCHTriggersForFoods(foods, dayWaterMl = 0) {
   const matched = [];
   const protective = [];
   let totalWeight = 0;
@@ -89,8 +89,8 @@ function analyzeCHTriggersForFoods(foods) {
   });
   const caffeineWithdrawalRisk = currentHour >= 14 && !hasCaffeine && foods.length > 0;
 
-  // Dehydration check: no water/hydration logged
-  const hasWater = foods.some(f => {
+  // Dehydration check: uses waterMl from day log if available, falls back to food name check
+  const hasWater = dayWaterMl > 500 || foods.some(f => {
     const n = (f.name || "").toLowerCase();
     return n.includes("water") || n.includes("electrolyte") || n.includes("hydra");
   });
@@ -240,8 +240,20 @@ export default function NutritionView() {
   }, []);
 
   const logs = nutrition.logs || [];
-  const dayLog = logs.find(l => l.date === selectedDate) || { date: selectedDate, foods: [] };
+  const dayLog = logs.find(l => l.date === selectedDate) || { date: selectedDate, foods: [], waterMl: 0 };
   const foods = dayLog.foods || [];
+  const waterMl = dayLog.waterMl || 0;
+  const WATER_GOAL_ML = 2500;
+
+  const updateWater = (delta) => {
+    const updated = [...logs];
+    const idx = updated.findIndex(l => l.date === selectedDate);
+    const current = idx >= 0 ? (updated[idx].waterMl || 0) : 0;
+    const newVal = Math.max(0, current + delta);
+    const entry = idx >= 0 ? { ...updated[idx], waterMl: newVal } : { date: selectedDate, foods: [], waterMl: newVal };
+    if (idx >= 0) updated[idx] = entry; else updated.push(entry);
+    onUpdate({ logs: updated });
+  };
 
   const totals = foods.reduce(
     (acc, f) => ({
@@ -382,6 +394,48 @@ export default function NutritionView() {
         ))}
       </div>
 
+      {/* ── Water tracker ── */}
+      {(() => {
+        const pct = Math.min(100, Math.round((waterMl / WATER_GOAL_ML) * 100));
+        const liters = (waterMl / 1000).toFixed(1);
+        const goalL = (WATER_GOAL_ML / 1000).toFixed(1);
+        const hit = waterMl >= WATER_GOAL_ML;
+        return (
+          <div className={cn("rounded-2xl border p-4", hit ? "bg-sky-50 border-sky-200" : "bg-white border-slate-200")}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Droplets className={cn("w-4 h-4", hit ? "text-sky-500" : "text-sky-400")} />
+                <span className="text-sm font-semibold text-slate-700">Water</span>
+                <span className={cn("text-sm font-bold tabular-nums", hit ? "text-sky-600" : "text-slate-600")}>{liters}L</span>
+                <span className="text-xs text-slate-400">/ {goalL}L</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button onClick={() => updateWater(-250)}
+                  className="w-7 h-7 rounded-lg border border-slate-200 bg-white flex items-center justify-center text-slate-400 hover:text-red-500 hover:border-red-200 transition">
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                {[250, 500].map(ml => (
+                  <button key={ml} onClick={() => updateWater(ml)}
+                    className="h-7 px-2 rounded-lg border border-sky-200 bg-sky-50 text-sky-700 text-xs font-semibold hover:bg-sky-100 transition">
+                    +{ml}ml
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+              <div className={cn("h-full rounded-full transition-all", hit ? "bg-sky-500" : "bg-sky-400")}
+                style={{ width: `${pct}%` }} />
+            </div>
+            {!hit && waterMl === 0 && (
+              <p className="text-[10px] text-slate-400 mt-1">Dehydration is a major cluster headache trigger — track your water</p>
+            )}
+            {hit && (
+              <p className="text-[10px] text-sky-600 font-medium mt-1">Goal reached — great hydration</p>
+            )}
+          </div>
+        );
+      })()}
+
       {/* ── Daily Assessment ── */}
       {foods.length > 0 && (() => {
         const latestBw = [...(bodyweight?.logs || [])].filter(l => l.weight).sort((a, b) => b.date.localeCompare(a.date))[0];
@@ -473,7 +527,7 @@ export default function NutritionView() {
 
       {/* ── Cluster Headache Risk Panel ── */}
       {(() => {
-        const ch = analyzeCHTriggersForFoods(foods);
+        const ch = analyzeCHTriggersForFoods(foods, waterMl);
         // Always show if there are triggers, or if it's afternoon with no food
         if (ch.matched.length === 0 && !ch.skippedMeal && !ch.caffeineWithdrawalRisk && !ch.dehydrationRisk && !ch.longMealGap && ch.protective.length === 0 && foods.length === 0) return null;
         const dotColor = ch.riskLevel === "Low" ? "bg-green-500" : ch.riskLevel === "Moderate" ? "bg-yellow-400" : ch.riskLevel === "High" ? "bg-orange-500" : "bg-red-500";
