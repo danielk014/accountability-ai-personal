@@ -135,16 +135,19 @@ The user suffers from chronic cluster headaches. This MUST factor into every ass
 **NUTRITION TRIGGERS (flag when reviewing the day):**
 - ALCOHOL: The strongest dietary trigger. ANY alcohol consumption should be flagged as a serious CH risk. Beer and red wine are the worst.
 - HISTAMINE FOODS: Aged cheeses, fermented foods, cured meats — high risk.
-- NITRATES/NITRITES: Bacon, hot dogs, deli meats, sausages — high risk.
+- NITRATES/NITRITES: Bacon, hot dogs, deli meats, sausages — high risk. These are preservatives commonly found in processed meats and fast food.
+- MSG / FAST FOOD: Fast food chains use MSG, nitrites, and preservatives heavily — flag any fast food as HIGH risk during active CH cycles. McDonald's, Burger King, KFC, Subway, etc.
 - HIGH SUGAR SPIKES: Candy, soda, pastries — moderate risk (blood sugar instability).
-- SKIPPED MEALS: Irregular eating destabilizes blood sugar. Flag if meals are skipped or spaced too far apart.
-- CAFFEINE: Consistent moderate intake is OK. Sudden withdrawal or excess (>400mg) is a trigger.
+- SKIPPED MEALS / FASTING: Irregular eating and fasting destabilize blood sugar. Flag if meals are skipped or gaps exceed 5 hours. Fasting is explicitly dangerous during CH cycles.
+- CAFFEINE: Consistent moderate intake is OK. Sudden withdrawal or excess (>400mg) is a trigger. Caffeine + dehydration is an especially dangerous combo.
+- DEHYDRATION: A major standalone trigger. Always check if the user is drinking enough water. Recommend tracking water intake and aiming for 2-3L/day minimum.
 
 **PROTECTIVE RECOMMENDATIONS:**
-- Magnesium-rich foods (spinach, almonds, avocado)
-- Omega-3 foods (salmon, walnuts, flaxseed)
-- Consistent hydration throughout the day
+- Magnesium-rich foods (spinach, almonds, avocado) — magnesium deficiency is linked to CH
+- Omega-3 foods (salmon, walnuts, flaxseed) — anti-inflammatory
+- Consistent hydration throughout the day (2-3L water minimum)
 - Regular meal timing (no more than 4-5 hours between meals)
+- Melatonin-supporting foods in the evening (tart cherries, bananas)
 
 **WHEN PLANNING DAYS:**
 - Ensure consistent sleep schedule (same bedtime ±30min every day)
@@ -451,7 +454,7 @@ function computeCHTriggerSummary(nutrition, today) {
     { category: "Histamine", weight: 2, keywords: ["aged cheese","parmesan","cheddar","brie","blue cheese","salami","pepperoni","sauerkraut","kimchi","soy sauce","miso","tempeh","kombucha"] },
     { category: "Nitrates", weight: 2, keywords: ["bacon","hot dog","deli meat","ham","sausage","jerky","pepperoni","salami","corned beef","prosciutto","bratwurst","bologna","pastrami"] },
     { category: "High Sugar", weight: 1, keywords: ["candy","soda","energy drink","pastry","donut","cake","ice cream","milkshake"] },
-    { category: "MSG", weight: 1, keywords: ["instant noodles","ramen","chips","doritos","fast food","chinese takeout"] },
+    { category: "MSG/Fast Food", weight: 2, keywords: ["instant noodles","ramen","chips","doritos","fast food","chinese takeout","mcdonalds","mcdonald","burger king","wendys","kfc","taco bell","subway","pizza hut","dominos","popeyes","chick-fil-a","five guys","panda express","chipotle"] },
     { category: "Chocolate", weight: 1, keywords: ["chocolate","cocoa","nutella","brownie"] },
   ];
 

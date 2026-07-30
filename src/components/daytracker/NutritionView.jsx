@@ -20,8 +20,8 @@ const CH_TRIGGERS = [
     keywords: ["bacon","hot dog","deli meat","ham","sausage","jerky","pepperoni","salami","corned beef","prosciutto","bratwurst","kielbasa","bologna","pastrami"] },
   { category: "High Sugar Spike", weight: 1, level: "Moderate",
     keywords: ["candy","soda","energy drink","pastry","donut","doughnut","cake","ice cream","milkshake","frappuccino","slurpee","gummy","skittles","pop tart","frosting"] },
-  { category: "MSG / Processed", weight: 1, level: "Moderate",
-    keywords: ["instant noodles","ramen","chips","doritos","fast food","chinese takeout","cheetos","msg","cup noodle","pot noodle"] },
+  { category: "MSG / Fast Food", weight: 2, level: "High",
+    keywords: ["instant noodles","ramen","chips","doritos","fast food","chinese takeout","cheetos","msg","cup noodle","pot noodle","mcdonalds","mcdonald","burger king","wendys","wendy","kfc","taco bell","subway","pizza hut","dominos","domino","popeyes","chick-fil-a","five guys","shake shack","panda express","chipotle","jack in the box","arby"] },
   { category: "Chocolate", weight: 1, level: "Low",
     keywords: ["chocolate","cocoa","nutella","brownie","chocolate cake","chocolate ice cream","mocha"] },
 ];
@@ -89,13 +89,30 @@ function analyzeCHTriggersForFoods(foods) {
   });
   const caffeineWithdrawalRisk = currentHour >= 14 && !hasCaffeine && foods.length > 0;
 
+  // Dehydration check: no water/hydration logged
+  const hasWater = foods.some(f => {
+    const n = (f.name || "").toLowerCase();
+    return n.includes("water") || n.includes("electrolyte") || n.includes("hydra");
+  });
+  const dehydrationRisk = currentHour >= 12 && !hasWater && foods.length > 0;
+
+  // Long meal gap check: if foods have times, check for gaps > 5 hours
+  const foodTimes = foods.map(f => f.time ? parseInt(f.time.split(":")[0]) : null).filter(h => h !== null).sort((a, b) => a - b);
+  let longMealGap = false;
+  if (foodTimes.length >= 2) {
+    for (let i = 1; i < foodTimes.length; i++) {
+      if (foodTimes[i] - foodTimes[i - 1] >= 5) { longMealGap = true; break; }
+    }
+  }
+  if (longMealGap) totalWeight += 1;
+
   let riskLevel, riskColor, riskBg, riskBorder;
   if (totalWeight === 0)      { riskLevel = "Low";      riskColor = "text-green-700";  riskBg = "bg-green-50";  riskBorder = "border-green-200"; }
   else if (totalWeight <= 2)  { riskLevel = "Moderate";  riskColor = "text-yellow-700"; riskBg = "bg-yellow-50"; riskBorder = "border-yellow-200"; }
   else if (totalWeight <= 4)  { riskLevel = "High";      riskColor = "text-orange-700"; riskBg = "bg-orange-50"; riskBorder = "border-orange-200"; }
   else                        { riskLevel = "Critical";  riskColor = "text-red-700";    riskBg = "bg-red-50";    riskBorder = "border-red-200"; }
 
-  return { matched, protective, totalWeight, riskLevel, riskColor, riskBg, riskBorder, skippedMeal, caffeineWithdrawalRisk };
+  return { matched, protective, totalWeight, riskLevel, riskColor, riskBg, riskBorder, skippedMeal, caffeineWithdrawalRisk, dehydrationRisk, longMealGap };
 }
 
 // ── Storage helpers (same keys as Gym.jsx — shared data) ─────────────────────
@@ -456,7 +473,7 @@ export default function NutritionView() {
       {(() => {
         const ch = analyzeCHTriggersForFoods(foods);
         // Always show if there are triggers, or if it's afternoon with no food
-        if (ch.matched.length === 0 && !ch.skippedMeal && !ch.caffeineWithdrawalRisk && ch.protective.length === 0 && foods.length === 0) return null;
+        if (ch.matched.length === 0 && !ch.skippedMeal && !ch.caffeineWithdrawalRisk && !ch.dehydrationRisk && !ch.longMealGap && ch.protective.length === 0 && foods.length === 0) return null;
         const dotColor = ch.riskLevel === "Low" ? "bg-green-500" : ch.riskLevel === "Moderate" ? "bg-yellow-400" : ch.riskLevel === "High" ? "bg-orange-500" : "bg-red-500";
         return (
           <div className={cn("rounded-2xl border p-4", ch.riskBg, ch.riskBorder)}>
@@ -497,18 +514,30 @@ export default function NutritionView() {
             )}
 
             {/* Warnings */}
-            {(ch.skippedMeal || ch.caffeineWithdrawalRisk) && (
+            {(ch.skippedMeal || ch.caffeineWithdrawalRisk || ch.dehydrationRisk || ch.longMealGap) && (
               <div className="mb-3 space-y-1">
                 {ch.skippedMeal && (
                   <p className="text-xs text-orange-700 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />
-                    No food logged past 2 PM — skipped meals can trigger attacks
+                    No food logged past 2 PM — skipped meals / fasting destabilizes blood sugar and triggers attacks
+                  </p>
+                )}
+                {ch.longMealGap && (
+                  <p className="text-xs text-orange-700 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />
+                    5+ hour gap between meals detected — irregular eating is a known CH trigger
                   </p>
                 )}
                 {ch.caffeineWithdrawalRisk && (
                   <p className="text-xs text-yellow-700 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 flex-shrink-0" />
-                    No caffeine logged today — withdrawal can trigger attacks. Keep intake consistent.
+                    No caffeine logged today — sudden withdrawal can trigger attacks. Keep intake consistent.
+                  </p>
+                )}
+                {ch.dehydrationRisk && (
+                  <p className="text-xs text-yellow-700 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 flex-shrink-0" />
+                    No water logged today — dehydration is a major CH trigger. Track your water intake.
                   </p>
                 )}
               </div>
