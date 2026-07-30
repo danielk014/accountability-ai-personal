@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Plus, Trash2, X, Loader2, Bot, Camera, ChevronLeft, ChevronRight,
+  AlertTriangle, Shield, Droplets,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getUserPrefix } from '@/lib/userStore';
@@ -8,6 +9,94 @@ import { supabaseStorage } from '@/api/supabaseStorage';
 import { analyzeFoodWithAI } from '@/api/claudeClient';
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, addMonths, subMonths } from 'date-fns';
+
+// ── Cluster Headache Trigger Detection ──────────────────────────────────────
+const CH_TRIGGERS = [
+  { category: "Alcohol", weight: 3, level: "Critical",
+    keywords: ["beer","wine","vodka","whiskey","cocktail","rum","gin","sake","champagne","cider","ale","lager","spirits","bourbon","tequila","margarita","mimosa","sangria","mead","stout","porter"] },
+  { category: "Histamine Foods", weight: 2, level: "High",
+    keywords: ["aged cheese","parmesan","cheddar","brie","blue cheese","salami","pepperoni","sauerkraut","kimchi","soy sauce","miso","tempeh","kombucha","vinegar","pickled"] },
+  { category: "Nitrates/Nitrites", weight: 2, level: "High",
+    keywords: ["bacon","hot dog","deli meat","ham","sausage","jerky","pepperoni","salami","corned beef","prosciutto","bratwurst","kielbasa","bologna","pastrami"] },
+  { category: "High Sugar Spike", weight: 1, level: "Moderate",
+    keywords: ["candy","soda","energy drink","pastry","donut","doughnut","cake","ice cream","milkshake","frappuccino","slurpee","gummy","skittles","pop tart","frosting"] },
+  { category: "MSG / Processed", weight: 1, level: "Moderate",
+    keywords: ["instant noodles","ramen","chips","doritos","fast food","chinese takeout","cheetos","msg","cup noodle","pot noodle"] },
+  { category: "Chocolate", weight: 1, level: "Low",
+    keywords: ["chocolate","cocoa","nutella","brownie","chocolate cake","chocolate ice cream","mocha"] },
+];
+
+const CH_PROTECTIVE = [
+  { category: "Magnesium-rich", keywords: ["spinach","almonds","almond","avocado","pumpkin seeds","cashew","dark chocolate","banana","black beans","edamame","quinoa"] },
+  { category: "Omega-3", keywords: ["salmon","sardines","sardine","walnuts","walnut","flaxseed","flax","mackerel","tuna","chia","herring","anchovies"] },
+];
+
+function analyzeCHTriggersForFoods(foods) {
+  const matched = [];
+  const protective = [];
+  let totalWeight = 0;
+  const now = new Date();
+  const currentHour = now.getHours();
+
+  for (const food of foods) {
+    const name = (food.name || "").toLowerCase();
+
+    // Check AI-flagged triggers first
+    if (food.chTrigger) {
+      const existing = matched.find(m => m.foodName === food.name);
+      if (!existing) {
+        matched.push({ foodName: food.name, category: "AI-detected", level: "High", weight: 2, reason: food.chTriggerReason || "Flagged by AI analysis" });
+        totalWeight += 2;
+      }
+    }
+
+    // Keyword-based trigger detection
+    for (const trigger of CH_TRIGGERS) {
+      for (const kw of trigger.keywords) {
+        if (name.includes(kw)) {
+          const alreadyMatched = matched.find(m => m.foodName === food.name && m.category === trigger.category);
+          if (!alreadyMatched) {
+            matched.push({ foodName: food.name, category: trigger.category, level: trigger.level, weight: trigger.weight, reason: `Contains "${kw}" — ${trigger.category.toLowerCase()} trigger` });
+            totalWeight += trigger.weight;
+          }
+          break;
+        }
+      }
+    }
+
+    // Protective factor detection
+    for (const prot of CH_PROTECTIVE) {
+      for (const kw of prot.keywords) {
+        if (name.includes(kw)) {
+          const alreadyFound = protective.find(p => p.foodName === food.name && p.category === prot.category);
+          if (!alreadyFound) {
+            protective.push({ foodName: food.name, category: prot.category });
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  // Add +1 if no food logged by 14:00 (skipped meals risk)
+  const skippedMeal = foods.length === 0 && currentHour >= 14;
+  if (skippedMeal) totalWeight += 1;
+
+  // Caffeine withdrawal check: if it's afternoon and no coffee/caffeine logged
+  const hasCaffeine = foods.some(f => {
+    const n = (f.name || "").toLowerCase();
+    return n.includes("coffee") || n.includes("espresso") || n.includes("caffeine") || n.includes("tea") || n.includes("latte") || n.includes("cappuccino");
+  });
+  const caffeineWithdrawalRisk = currentHour >= 14 && !hasCaffeine && foods.length > 0;
+
+  let riskLevel, riskColor, riskBg, riskBorder;
+  if (totalWeight === 0)      { riskLevel = "Low";      riskColor = "text-green-700";  riskBg = "bg-green-50";  riskBorder = "border-green-200"; }
+  else if (totalWeight <= 2)  { riskLevel = "Moderate";  riskColor = "text-yellow-700"; riskBg = "bg-yellow-50"; riskBorder = "border-yellow-200"; }
+  else if (totalWeight <= 4)  { riskLevel = "High";      riskColor = "text-orange-700"; riskBg = "bg-orange-50"; riskBorder = "border-orange-200"; }
+  else                        { riskLevel = "Critical";  riskColor = "text-red-700";    riskBg = "bg-red-50";    riskBorder = "border-red-200"; }
+
+  return { matched, protective, totalWeight, riskLevel, riskColor, riskBg, riskBorder, skippedMeal, caffeineWithdrawalRisk };
+}
 
 // ── Storage helpers (same keys as Gym.jsx — shared data) ─────────────────────
 const getNutritionKey  = () => `${getUserPrefix()}gym_nutrition_v1`;
@@ -185,6 +274,8 @@ export default function NutritionView() {
       fiber:         parseFloat(foodData.fiber)        || 0,
       nutritionScore: foodData.nutritionScore ?? null,
       healthScore:    foodData.healthScore ?? null,
+      chTrigger:       foodData.chTrigger ?? false,
+      chTriggerReason: foodData.chTriggerReason ?? null,
       time: format(new Date(), "HH:mm"),
     };
     saveDay([...foods, entry]);
@@ -361,6 +452,94 @@ export default function NutritionView() {
         );
       })()}
 
+      {/* ── Cluster Headache Risk Panel ── */}
+      {(() => {
+        const ch = analyzeCHTriggersForFoods(foods);
+        // Always show if there are triggers, or if it's afternoon with no food
+        if (ch.matched.length === 0 && !ch.skippedMeal && !ch.caffeineWithdrawalRisk && ch.protective.length === 0 && foods.length === 0) return null;
+        const dotColor = ch.riskLevel === "Low" ? "bg-green-500" : ch.riskLevel === "Moderate" ? "bg-yellow-400" : ch.riskLevel === "High" ? "bg-orange-500" : "bg-red-500";
+        return (
+          <div className={cn("rounded-2xl border p-4", ch.riskBg, ch.riskBorder)}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className={cn("w-4 h-4", ch.riskColor)} />
+                <h3 className="text-sm font-semibold text-slate-700">Cluster Headache Risk</h3>
+              </div>
+              <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-xs font-bold", ch.riskBg, ch.riskBorder, ch.riskColor)}>
+                <span className={cn("w-2 h-2 rounded-full", dotColor)} />
+                {ch.riskLevel}
+              </div>
+            </div>
+
+            {/* Triggered foods */}
+            {ch.matched.length > 0 && (
+              <div className="mb-3">
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Triggers Detected</p>
+                <div className="space-y-1.5">
+                  {ch.matched.map((m, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs">
+                      <span className={cn(
+                        "flex-shrink-0 px-1.5 py-0.5 rounded-md text-[10px] font-bold border",
+                        m.level === "Critical" ? "bg-red-100 text-red-700 border-red-200" :
+                        m.level === "High" ? "bg-orange-100 text-orange-700 border-orange-200" :
+                        "bg-yellow-100 text-yellow-700 border-yellow-200"
+                      )}>
+                        {m.level}
+                      </span>
+                      <div className="min-w-0">
+                        <span className="font-semibold text-slate-700">{m.foodName}</span>
+                        <span className="text-slate-500 ml-1">— {m.reason}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Warnings */}
+            {(ch.skippedMeal || ch.caffeineWithdrawalRisk) && (
+              <div className="mb-3 space-y-1">
+                {ch.skippedMeal && (
+                  <p className="text-xs text-orange-700 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0" />
+                    No food logged past 2 PM — skipped meals can trigger attacks
+                  </p>
+                )}
+                {ch.caffeineWithdrawalRisk && (
+                  <p className="text-xs text-yellow-700 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 flex-shrink-0" />
+                    No caffeine logged today — withdrawal can trigger attacks. Keep intake consistent.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Protective factors */}
+            {ch.protective.length > 0 && (
+              <div className="mb-3">
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Protective Factors</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {ch.protective.map((p, i) => (
+                    <span key={i} className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-lg bg-green-100 text-green-700 border border-green-200">
+                      <Shield className="w-3 h-3" />
+                      {p.foodName} ({p.category})
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Reminders */}
+            <div className="pt-2 border-t border-slate-200/60">
+              <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+                <Droplets className="w-3 h-3" />
+                Stay hydrated — dehydration is a CH trigger. Aim for consistent meal timing.
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── Food log ── */}
       <div>
         <h3 className="text-sm font-semibold text-slate-700 mb-2">
@@ -394,6 +573,19 @@ export default function NutritionView() {
                       const txt = s >= 85 ? "text-green-700" : s >= 65 ? "text-yellow-700" : s >= 45 ? "text-orange-700" : "text-red-700";
                       const bg = s >= 85 ? "bg-green-50 border-green-200" : s >= 65 ? "bg-yellow-50 border-yellow-200" : s >= 45 ? "bg-orange-50 border-orange-200" : "bg-red-50 border-red-200";
                       return <span title="Health" className={cn("text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border flex-shrink-0", txt, bg)}>&#9829;{s}</span>;
+                    })()}
+                    {(() => {
+                      // CH trigger badge — check AI flag or keyword match
+                      const name = (f.name || "").toLowerCase();
+                      const isAiTrigger = f.chTrigger;
+                      const isKeywordTrigger = CH_TRIGGERS.some(t => t.keywords.some(kw => name.includes(kw)));
+                      if (!isAiTrigger && !isKeywordTrigger) return null;
+                      const reason = f.chTriggerReason || CH_TRIGGERS.find(t => t.keywords.some(kw => name.includes(kw)))?.category || "Trigger";
+                      return (
+                        <span title={`CH trigger: ${reason}`} className="text-[10px] font-bold flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border flex-shrink-0 bg-red-50 border-red-200 text-red-700">
+                          <AlertTriangle className="w-3 h-3" />CH
+                        </span>
+                      );
                     })()}
                   </div>
                   <p className="text-xs text-slate-500 mt-0.5 flex flex-wrap gap-x-2">
@@ -532,9 +724,12 @@ export default function NutritionView() {
                 { label: "Potassium", val: aiResult.potassiumMg, unit: "mg" },
                 { label: "Calcium",   val: aiResult.calciumMg,   unit: "mg" },
                 { label: "Iron",      val: aiResult.ironMg,      unit: "mg" },
+                { label: "Magnesium", val: aiResult.magnesiumMg, unit: "mg" },
+                { label: "Zinc",      val: aiResult.zincMg,      unit: "mg" },
                 { label: "Vit A",     val: aiResult.vitaminAPct, unit: "%" },
                 { label: "Vit C",     val: aiResult.vitaminCPct, unit: "%" },
                 { label: "Vit D",     val: aiResult.vitaminDPct, unit: "%" },
+                { label: "Vit B12",   val: aiResult.vitaminB12Pct, unit: "%" },
               ].filter(m => m.val > 0);
               return (
                 <div className="bg-white rounded-2xl border border-indigo-200 p-4 shadow-sm">
@@ -579,11 +774,23 @@ export default function NutritionView() {
                   </div>
 
                   {/* Details */}
-                  {(aiResult.saturatedFat > 0 || aiResult.sugar > 0 || aiResult.fiber > 0) && (
+                  {(aiResult.saturatedFat > 0 || aiResult.transFat > 0 || aiResult.sugar > 0 || aiResult.fiber > 0) && (
                     <div className="flex flex-wrap gap-2 mb-3">
                       {aiResult.saturatedFat > 0 && <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-red-100 text-red-700">{aiResult.saturatedFat}g sat. fat</span>}
+                      {aiResult.transFat > 0 && <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-red-200 text-red-800">{aiResult.transFat}g trans fat</span>}
                       {aiResult.sugar > 0 && <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-pink-100 text-pink-700">{aiResult.sugar}g sugar</span>}
                       {aiResult.fiber > 0 && <span className="text-xs px-2.5 py-1 rounded-full font-medium bg-violet-100 text-violet-700">{aiResult.fiber}g fiber</span>}
+                    </div>
+                  )}
+
+                  {/* Additives / cancer risk warning */}
+                  {aiResult.additivesWarning && (
+                    <div className="flex items-start gap-2 text-xs rounded-xl px-3 py-2 mb-3 border bg-amber-50 border-amber-200 text-amber-800">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600" />
+                      <div>
+                        <span className="font-bold">Additives / Health Concern</span>
+                        <p className="mt-0.5">{aiResult.additivesWarning}</p>
+                      </div>
                     </div>
                   )}
 
@@ -607,6 +814,17 @@ export default function NutritionView() {
                     <p className={cn("text-xs rounded-xl px-3 py-2 mb-3 border", noteBg, noteTxt)}>
                       {aiResult.healthNote}
                     </p>
+                  )}
+
+                  {/* CH trigger warning */}
+                  {aiResult.chTrigger && (
+                    <div className="flex items-start gap-2 text-xs rounded-xl px-3 py-2 mb-3 border bg-red-50 border-red-200 text-red-700">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold">Cluster Headache Trigger</span>
+                        {aiResult.chTriggerReason && <span className="ml-1">— {aiResult.chTriggerReason}</span>}
+                      </div>
+                    </div>
                   )}
 
                   <button onClick={() => addFoodToLog(aiResult)}

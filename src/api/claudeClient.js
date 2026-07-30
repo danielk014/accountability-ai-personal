@@ -1237,17 +1237,21 @@ export async function analyzeFoodWithAI(imageBase64, mediaType, description) {
     }
   } catch (e) { console.error('[analyzeFoodWithAI] Error loading food personality/files:', e); }
 
-  const prompt = `Analyze this food${description ? `: "${description}"` : ""}. The user's goal is to be in a calorie surplus to maximize muscle growth — more calories and protein is generally better, and calorie-dense whole foods are a positive. Score down for highly processed foods, excessive sugar, or trans fats, not for being calorie-dense. Estimate nutritional values for a typical serving.${foodCustomInstructions} Return ONLY valid JSON in this exact format with no other text:
-{"name":"food name","serving":"serving description","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"saturated_fat_g":0,"sugar_g":0,"fiber_g":0,"nutrition_score":0,"health_score":0,"sodium_mg":0,"potassium_mg":0,"calcium_mg":0,"iron_mg":0,"vitamin_a_pct":0,"vitamin_c_pct":0,"vitamin_d_pct":0,"health_note":"one sentence on whether this food supports muscle-building calorie surplus or not"}
-nutrition_score is 0-100 for muscle gain via calorie surplus: 85-100=excellent (high protein, quality calories), 65-84=good, 45-64=moderate (low protein or processed), 0-44=poor (high sugar, trans fats, or highly processed with little protein).
-health_score is 0-100 for overall healthiness: considers nutrient density, whole food quality, vitamin/mineral content, balance. 85-100=very healthy, 65-84=healthy, 45-64=moderate, 0-44=unhealthy.
-Micronutrients: sodium_mg, potassium_mg, calcium_mg, iron_mg in milligrams. vitamin_a_pct, vitamin_c_pct, vitamin_d_pct as % daily value (0-100+).`;
+  const prompt = `Analyze this food${description ? `: "${description}"` : ""}. The user wants accurate health analysis. They are bulking (calorie surplus for muscle growth) so high calories/protein is good — do NOT penalize calorie-dense whole foods. But health scoring must be strict and honest about processed ingredients, additives, and long-term health risks. Estimate nutritional values for a typical serving.${foodCustomInstructions} Return ONLY valid JSON in this exact format with no other text:
+{"name":"food name","serving":"serving description","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"saturated_fat_g":0,"trans_fat_g":0,"sugar_g":0,"fiber_g":0,"nutrition_score":0,"health_score":0,"sodium_mg":0,"potassium_mg":0,"calcium_mg":0,"iron_mg":0,"magnesium_mg":0,"zinc_mg":0,"vitamin_a_pct":0,"vitamin_c_pct":0,"vitamin_d_pct":0,"vitamin_b12_pct":0,"additives_warning":"","health_note":"","cluster_headache_trigger":false,"ch_trigger_reason":""}
+nutrition_score: 0-100 for muscle gain via calorie surplus. 85-100=excellent (high protein, quality calories), 65-84=good, 45-64=moderate, 0-44=poor. Calorie-dense whole foods score HIGH. Only penalize for being highly processed with little protein, or having trans fats/excessive sugar.
+health_score: 0-100 for TRUE overall healthiness. Be STRICT and HONEST. Consider: whole food vs ultra-processed, nutrient density, additives/preservatives, cancer-linked ingredients (nitrites, BHA/BHT, artificial colors, acrylamide, processed red meat), trans fats, seed oil quality, sugar content, and long-term health impact. 85-100=genuinely healthy whole food, 65-84=mostly healthy with minor concerns, 45-64=moderate (some processed elements or additives), 25-44=unhealthy (ultra-processed, harmful additives, or known carcinogens), 0-24=very unhealthy. Ultra-processed foods with artificial additives should NEVER score above 50 regardless of macros.
+additives_warning: List any concerning additives, preservatives, or cancer-linked compounds likely in this food (e.g. "Contains nitrites (IARC Group 1 carcinogen in processed meat), sodium benzoate, artificial colors"). Empty string if clean whole food.
+health_note: 1-2 sentences covering both muscle-building value AND honest health assessment including any additive/processing concerns.
+Micronutrients: sodium_mg, potassium_mg, calcium_mg, iron_mg, magnesium_mg, zinc_mg in milligrams. vitamin_a_pct, vitamin_c_pct, vitamin_d_pct, vitamin_b12_pct as % daily value (0-100+). Estimate all — these matter for the user's health tracking.
+cluster_headache_trigger: true if this food is a known cluster headache trigger (alcohol, histamine-rich foods like aged cheese/fermented foods, nitrate-containing cured/processed meats, high-sugar spike foods, MSG-heavy foods, or chocolate). false otherwise.
+ch_trigger_reason: if trigger is true, brief explanation why. Empty string if not a trigger.`;
   content.push({ type: "text", text: prompt });
 
   const response = await fetch('/api/claude', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 600, messages: [{ role: 'user', content }] }),
+    body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 800, messages: [{ role: 'user', content }] }),
   });
   if (!response.ok) throw new Error(`AI error ${response.status}`);
   const data = await response.json();
@@ -1263,6 +1267,7 @@ Micronutrients: sodium_mg, potassium_mg, calcium_mg, iron_mg in milligrams. vita
     carbs:         Math.round((p.carbs_g        || 0) * 10) / 10,
     fat:           Math.round((p.fat_g          || 0) * 10) / 10,
     saturatedFat:  Math.round((p.saturated_fat_g|| 0) * 10) / 10,
+    transFat:      Math.round((p.trans_fat_g    || 0) * 10) / 10,
     sugar:         Math.round((p.sugar_g        || 0) * 10) / 10,
     fiber:         Math.round((p.fiber_g        || 0) * 10) / 10,
     nutritionScore: Math.min(100, Math.max(0, Math.round(p.nutrition_score || 0))),
@@ -1271,9 +1276,15 @@ Micronutrients: sodium_mg, potassium_mg, calcium_mg, iron_mg in milligrams. vita
     potassiumMg:   Math.round(p.potassium_mg   || 0),
     calciumMg:     Math.round(p.calcium_mg     || 0),
     ironMg:        Math.round((p.iron_mg       || 0) * 10) / 10,
+    magnesiumMg:   Math.round(p.magnesium_mg   || 0),
+    zincMg:        Math.round((p.zinc_mg       || 0) * 10) / 10,
     vitaminAPct:   Math.round(p.vitamin_a_pct  || 0),
     vitaminCPct:   Math.round(p.vitamin_c_pct  || 0),
     vitaminDPct:   Math.round(p.vitamin_d_pct  || 0),
+    vitaminB12Pct: Math.round(p.vitamin_b12_pct|| 0),
+    additivesWarning: p.additives_warning || "",
     healthNote:    p.health_note || "",
+    chTrigger:       !!p.cluster_headache_trigger,
+    chTriggerReason: p.ch_trigger_reason || "",
   };
 }

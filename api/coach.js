@@ -119,7 +119,44 @@ ADVANCED BEHAVIORS:
 - MORNING BRIEFING: When I say "good morning", "morning", or "start my day": Give me a status report — what's on my plate today, any carryover tasks from yesterday, my recent trajectory, and what I should prioritize. Then build my schedule if I don't have one.
 - EVENING DEBRIEF: When I say "end of day", "wrap up", or "how did today go": Score my day, note what I completed vs. missed, identify wins and losses, and suggest what to carry to tomorrow.
 - WEEKLY REVIEW: When I ask for a review: Full analysis across all domains — hours logged, task completion rate, nutrition averages, gym consistency, financial moves, and trajectory vs. goals.
-- EMERGENCY MODE: If my data shows a clear downward spiral (multiple days of missed tasks, no gym, bad nutrition), escalate your tone. Don't be gentle. Sound the alarm.`;
+- EMERGENCY MODE: If my data shows a clear downward spiral (multiple days of missed tasks, no gym, bad nutrition), escalate your tone. Don't be gentle. Sound the alarm.
+
+═══════════════════════════════════════
+CLUSTER HEADACHE AWARENESS:
+═══════════════════════════════════════
+The user suffers from chronic cluster headaches. This MUST factor into every assessment. Key triggers and rules:
+
+**SLEEP (the #1 trigger):**
+- Irregular sleep is the single biggest trigger. ALWAYS check sleep consistency.
+- If bedtime varies by more than 1 hour across recent days, FLAG IT prominently.
+- Recommend 7-8.5 hours, consistent bedtime/wake time, no screens 30min before bed.
+- Naps can disrupt the cycle — warn against long daytime naps.
+
+**NUTRITION TRIGGERS (flag when reviewing the day):**
+- ALCOHOL: The strongest dietary trigger. ANY alcohol consumption should be flagged as a serious CH risk. Beer and red wine are the worst.
+- HISTAMINE FOODS: Aged cheeses, fermented foods, cured meats — high risk.
+- NITRATES/NITRITES: Bacon, hot dogs, deli meats, sausages — high risk.
+- HIGH SUGAR SPIKES: Candy, soda, pastries — moderate risk (blood sugar instability).
+- SKIPPED MEALS: Irregular eating destabilizes blood sugar. Flag if meals are skipped or spaced too far apart.
+- CAFFEINE: Consistent moderate intake is OK. Sudden withdrawal or excess (>400mg) is a trigger.
+
+**PROTECTIVE RECOMMENDATIONS:**
+- Magnesium-rich foods (spinach, almonds, avocado)
+- Omega-3 foods (salmon, walnuts, flaxseed)
+- Consistent hydration throughout the day
+- Regular meal timing (no more than 4-5 hours between meals)
+
+**WHEN PLANNING DAYS:**
+- Ensure consistent sleep schedule (same bedtime ±30min every day)
+- Schedule regular meals — never let gaps exceed 5 hours
+- If the user mentions alcohol plans, warn about CH risk
+- Cross-reference sleep data with nutrition to give holistic advice
+
+**IN ASSESSMENTS:**
+- Always mention sleep consistency as part of daily/weekly review
+- If trigger foods were consumed, note the cumulative CH risk
+- Praise protective behaviors (good sleep, magnesium-rich foods, hydration)`;
+
 
 function formatScheduleBlocks(scheduleBlocks) {
   if (!scheduleBlocks || typeof scheduleBlocks !== 'object' || Array.isArray(scheduleBlocks) || Object.keys(scheduleBlocks).length === 0) return '(No schedule blocks yet)';
@@ -403,6 +440,41 @@ function computePatternAnalysis(logs, dailyTasks, scheduleBlocks, nutrition) {
   return analysis.length > 0 ? analysis.join('\n') : '(Not enough data for pattern analysis yet)';
 }
 
+// Compute cluster headache trigger summary from today's nutrition
+function computeCHTriggerSummary(nutrition, today) {
+  if (!nutrition || !Array.isArray(nutrition.logs)) return '';
+  const todayLog = nutrition.logs.find(l => l.date === today);
+  if (!todayLog || !todayLog.foods || todayLog.foods.length === 0) return 'No food logged today — if past 2 PM, skipped meals increase CH risk.';
+
+  const triggerDefs = [
+    { category: "Alcohol", weight: 3, keywords: ["beer","wine","vodka","whiskey","cocktail","rum","gin","sake","champagne","cider","ale","lager","spirits","bourbon","tequila"] },
+    { category: "Histamine", weight: 2, keywords: ["aged cheese","parmesan","cheddar","brie","blue cheese","salami","pepperoni","sauerkraut","kimchi","soy sauce","miso","tempeh","kombucha"] },
+    { category: "Nitrates", weight: 2, keywords: ["bacon","hot dog","deli meat","ham","sausage","jerky","pepperoni","salami","corned beef","prosciutto","bratwurst","bologna","pastrami"] },
+    { category: "High Sugar", weight: 1, keywords: ["candy","soda","energy drink","pastry","donut","cake","ice cream","milkshake"] },
+    { category: "MSG", weight: 1, keywords: ["instant noodles","ramen","chips","doritos","fast food","chinese takeout"] },
+    { category: "Chocolate", weight: 1, keywords: ["chocolate","cocoa","nutella","brownie"] },
+  ];
+
+  const matched = [];
+  let totalWeight = 0;
+  for (const food of todayLog.foods) {
+    const name = (food.name || '').toLowerCase();
+    for (const t of triggerDefs) {
+      if (t.keywords.some(kw => name.includes(kw))) {
+        matched.push(`${food.name} (${t.category})`);
+        totalWeight += t.weight;
+        break;
+      }
+    }
+  }
+
+  const level = totalWeight === 0 ? 'Low' : totalWeight <= 2 ? 'Moderate' : totalWeight <= 4 ? 'High' : 'Critical';
+  let summary = `CH Risk Level: ${level} (score: ${totalWeight})`;
+  if (matched.length > 0) summary += `\n  Trigger foods today: ${matched.join(', ')}`;
+  else summary += '\n  No trigger foods detected today.';
+  return summary;
+}
+
 const CATEGORY_COLORS = {
   work: '#f97316',
   sleep: '#6366f1',
@@ -541,6 +613,7 @@ export default async function handler(req, res) {
 
     // Compute pattern analysis
     const patternAnalysis = computePatternAnalysis(logs, dailyTasks, scheduleBlocks, nutrition);
+    const chTriggerSummary = computeCHTriggerSummary(nutrition, today);
 
     const context = `
 ═══ CURRENT STATUS ═══
@@ -577,6 +650,9 @@ ${formatGymData(gymData)}
 
 ═══ LIFE LESSONS (personal operating system) ═══
 ${formatLifeLessons(lifeLessons)}
+
+═══ CLUSTER HEADACHE STATUS (today) ═══
+${chTriggerSummary}
 `;
 
     // Build system prompt with optional custom personality
