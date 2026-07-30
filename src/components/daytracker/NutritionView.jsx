@@ -425,11 +425,13 @@ export default function NutritionView() {
               key: "satFat", label: "Saturated Fat", value: Math.round(totals.saturatedFat * 10) / 10, unit: "g",
               note: bwKg ? `Keep under ${satFatLimit}g (0.15g x ${bwKg}kg) — lower is better` : "Keep under 20g — lower is better",
               score: scoreLower(totals.saturatedFat, satFatLimit * 0.5, satFatLimit, satFatLimit * 1.5),
+              exceeded: totals.saturatedFat > satFatLimit,
             },
             {
               key: "sugar", label: "Sugar", value: Math.round(totals.sugar * 10) / 10, unit: "g",
               note: `Keep under ${sugarLimit}g/day — lower is better`,
               score: scoreLower(totals.sugar, sugarLimit * 0.6, sugarLimit, sugarLimit * 1.5),
+              exceeded: totals.sugar > sugarLimit,
             },
           ] : []),
         ];
@@ -456,7 +458,7 @@ export default function NutritionView() {
                     <span className={cn("text-[11px] font-bold", textColor(m.score))}>{m.score}/100 · {label(m.score)}</span>
                   </div>
                   <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div className={cn("h-full rounded-full transition-all", barColor(m.score))} style={{ width: `${m.score}%` }} />
+                    <div className={cn("h-full rounded-full transition-all", m.exceeded ? "bg-red-500" : barColor(m.score))} style={{ width: m.exceeded ? "100%" : `${m.score}%` }} />
                   </div>
                   <p className="text-[10px] text-slate-400 mt-0.5">{m.note}</p>
                 </div>
