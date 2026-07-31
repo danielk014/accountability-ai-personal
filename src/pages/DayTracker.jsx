@@ -11,7 +11,7 @@ import NutritionView from '@/components/daytracker/NutritionView';
 import LifeLessonsView from '@/components/daytracker/LifeLessonsView';
 import '@/components/daytracker/daytracker.css';
 
-const TABS = ['Schedule', 'Calendar', 'Goals', 'Projects', 'Notes', 'Lessons', 'Nutrition', 'Coach'];
+const TABS = ['Schedule', 'Calendar', 'Chapters', 'Projects', 'Notes', 'Lessons', 'Nutrition', 'Coach'];
 
 export default function DayTracker() {
   const { user } = useAuth();
@@ -69,7 +69,7 @@ export default function DayTracker() {
         <main className="content">
           {tab === 'Schedule' && <DailyView overrideDate={selectedDate} />}
           {tab === 'Calendar' && <CombinedCalendarView onDaySelect={handleDaySelect} />}
-          {tab === 'Goals' && <GoalsView />}
+          {tab === 'Chapters' && <GoalsView />}
           {tab === 'Projects' && <ProjectsView />}
           {tab === 'Notes' && <NotesView />}
           {tab === 'Lessons' && <LifeLessonsView />}

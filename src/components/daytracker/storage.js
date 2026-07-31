@@ -13,6 +13,7 @@ const NOTES_KEY = 'daily-tracker-notes';
 const GOALS_V2_KEY = 'daily-tracker-goals-v2';
 const LIFE_AREAS_KEY = 'daily-tracker-life-areas';
 const VISIONS_KEY = 'daily-tracker-visions';
+const CHAPTERS_KEY = 'daily-tracker-chapters';
 const TIMESTAMPS_KEY = 'daily-tracker-sync-timestamps';
 
 // ── Mapping: localStorage key  ↔  user_kv key (prefixed with dt: to avoid collisions) ──
@@ -29,6 +30,7 @@ const LOCAL_TO_KV = {
   [GOALS_V2_KEY]: 'dt:goals_v2',
   [LIFE_AREAS_KEY]: 'dt:life_areas',
   [VISIONS_KEY]: 'dt:visions',
+  [CHAPTERS_KEY]: 'dt:chapters',
 };
 
 const KV_TO_LOCAL = Object.fromEntries(
@@ -178,6 +180,13 @@ export function loadVisions() {
 export function saveVisions(visions) {
   localStorage.setItem(VISIONS_KEY, JSON.stringify(visions));
   _syncToKV(VISIONS_KEY);
+}
+export function loadChapters() {
+  try { return JSON.parse(localStorage.getItem(CHAPTERS_KEY)) || null; } catch { return null; }
+}
+export function saveChapters(chapters) {
+  localStorage.setItem(CHAPTERS_KEY, JSON.stringify(chapters));
+  _syncToKV(CHAPTERS_KEY);
 }
 
 export function loadProjects() {
