@@ -30,34 +30,34 @@ const CH_TRIGGERS = [
 const DISEASE_RISKS = [
   { disease: "Colorectal Cancer", risk: "high", icon: "🔴",
     keywords: ["bacon","hot dog","deli meat","ham","sausage","jerky","pepperoni","salami","corned beef","prosciutto","bratwurst","kielbasa","bologna","pastrami","spam"],
-    reason: "Processed meat is a WHO Group 1 carcinogen — directly linked to colorectal cancer" },
+    reason: "Processed meat is WHO Group 1 carcinogen — same classification as smoking for colorectal cancer" },
   { disease: "Colorectal Cancer", risk: "moderate", icon: "🟠",
     keywords: ["beef","steak","pork","lamb","veal","ground beef","meatball","burger patty","ribs"],
-    reason: "Red meat is a WHO Group 2A probable carcinogen when consumed regularly" },
-  { disease: "Cardiovascular Disease", risk: "high", icon: "🔴",
-    keywords: ["trans fat","margarine","shortening","hydrogenated","fried chicken","french fries","fries","deep fried","onion rings"],
-    reason: "Trans fats and deep-fried foods increase LDL cholesterol and heart disease risk" },
-  { disease: "Cardiovascular Disease", risk: "moderate", icon: "🟠",
-    keywords: ["bacon","sausage","hot dog","butter","cream cheese","lard","palm oil"],
-    reason: "High in saturated fat — raises LDL cholesterol with regular consumption" },
-  { disease: "Type 2 Diabetes", risk: "high", icon: "🔴",
-    keywords: ["soda","coca cola","pepsi","fanta","sprite","mountain dew","energy drink","red bull","monster","candy","gummy","skittles","sweet tea"],
-    reason: "High sugar beverages/candy cause insulin spikes and insulin resistance over time" },
-  { disease: "Type 2 Diabetes", risk: "moderate", icon: "🟠",
-    keywords: ["donut","doughnut","pastry","cake","ice cream","milkshake","frappuccino","cookie","brownie","pie","frosting","pop tart","cereal","pancake syrup"],
-    reason: "High refined sugar and processed carbs destabilize blood sugar" },
-  { disease: "Hypertension", risk: "moderate", icon: "🟠",
-    keywords: ["instant noodles","ramen","chips","doritos","cheetos","fast food","pizza","frozen dinner","canned soup","soy sauce","teriyaki"],
-    reason: "Very high sodium content raises blood pressure with regular consumption" },
-  { disease: "Liver Disease", risk: "high", icon: "🔴",
-    keywords: ["beer","wine","vodka","whiskey","cocktail","rum","gin","sake","champagne","tequila","bourbon","spirits","ale","lager","margarita"],
-    reason: "Alcohol is directly toxic to liver cells — causes fatty liver, cirrhosis" },
-  { disease: "Obesity", risk: "moderate", icon: "🟠",
-    keywords: ["mcdonalds","mcdonald","burger king","wendys","kfc","taco bell","dominos","pizza hut","popeyes","chick-fil-a","five guys","shake shack","panda express"],
-    reason: "Ultra-processed fast food is calorie-dense, nutrient-poor, and engineered to overconsume" },
+    reason: "Red meat is WHO Group 2A probable carcinogen — linked to colorectal cancer with regular consumption" },
   { disease: "Stomach/Esophageal Cancer", risk: "moderate", icon: "🟠",
     keywords: ["pickled","smoked salmon","smoked meat","smoked fish","charred","grilled meat","bbq","barbecue"],
-    reason: "Smoked/charred/pickled foods contain carcinogenic compounds (PAHs, nitrosamines)" },
+    reason: "Smoked/charred/pickled foods contain PAHs and nitrosamines — known carcinogenic compounds" },
+  { disease: "Pancreatic Cancer", risk: "moderate", icon: "🟠",
+    keywords: ["bacon","hot dog","sausage","deli meat","ham","salami","pepperoni","bologna","spam"],
+    reason: "Processed meat consumption linked to 19% increased pancreatic cancer risk per 50g/day (meta-analysis)" },
+  { disease: "Liver Cancer & Cirrhosis", risk: "high", icon: "🔴",
+    keywords: ["beer","wine","vodka","whiskey","cocktail","rum","gin","sake","champagne","tequila","bourbon","spirits","ale","lager","margarita"],
+    reason: "Alcohol is directly hepatotoxic — causes fatty liver, cirrhosis, and hepatocellular carcinoma" },
+  { disease: "Cardiovascular Disease", risk: "high", icon: "🔴",
+    keywords: ["trans fat","margarine","shortening","hydrogenated","fried chicken","french fries","fries","deep fried","onion rings"],
+    reason: "Trans fats raise LDL, lower HDL — strongly linked to atherosclerosis and heart attack regardless of fitness" },
+  { disease: "Cardiovascular Disease", risk: "moderate", icon: "🟠",
+    keywords: ["bacon","sausage","hot dog","lard","palm oil"],
+    reason: "Processed meat saturated fat and sodium nitrite damage arterial endothelium over time" },
+  { disease: "Kidney Disease", risk: "moderate", icon: "🟠",
+    keywords: ["instant noodles","ramen","chips","doritos","cheetos","frozen dinner","canned soup","fast food","soy sauce"],
+    reason: "Chronic high sodium intake (>5g/day) damages kidney filtration and raises renal disease risk" },
+  { disease: "Neurodegeneration", risk: "moderate", icon: "🟠",
+    keywords: ["beer","wine","vodka","whiskey","cocktail","rum","gin","spirits","bourbon","tequila","champagne","ale","lager","margarita"],
+    reason: "Alcohol is neurotoxic — causes brain volume loss and increases dementia risk even at moderate intake" },
+  { disease: "Bladder Cancer", risk: "moderate", icon: "🟠",
+    keywords: ["bacon","ham","deli meat","sausage","hot dog","salami","pepperoni","bologna","bratwurst"],
+    reason: "Nitrites in processed meat form N-nitroso compounds — linked to bladder and gastric cancers" },
 ];
 
 function analyzeDiseaseRisks(foods) {
@@ -66,9 +66,9 @@ function analyzeDiseaseRisks(foods) {
   for (const food of foods) {
     const name = (food.name || "").toLowerCase();
 
-    // AI-provided disease risks
+    // AI-provided disease risks (filter out lifestyle diseases irrelevant for lean athletes)
     if (Array.isArray(food.diseaseRisks) && food.diseaseRisks.length > 0) {
-      for (const dr of food.diseaseRisks) {
+      for (const dr of food.diseaseRisks.filter(d => !/obesity|diabetes|hypertension/i.test(d.disease))) {
         const key = dr.disease;
         if (!risks.has(key)) {
           risks.set(key, { disease: key, risk: dr.risk, reason: dr.reason, foods: [food.name], icon: dr.risk === 'high' ? '🔴' : dr.risk === 'moderate' ? '🟠' : '🟡' });
