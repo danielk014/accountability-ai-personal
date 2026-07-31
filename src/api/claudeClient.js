@@ -1263,7 +1263,7 @@ export async function analyzeFoodWithAI(imageBase64, mediaType, description) {
     }
   } catch (e) { console.error('[analyzeFoodWithAI] Error loading food personality/files:', e); }
 
-  const prompt = `Analyze this food${description ? `: "${description}"` : ""}. The user wants accurate health analysis. They are bulking (calorie surplus for muscle growth) so high calories/protein is good — do NOT penalize calorie-dense whole foods. But health scoring must be strict and honest about processed ingredients, additives, and long-term health risks. Estimate nutritional values for a typical serving.${foodCustomInstructions} Return ONLY valid JSON in this exact format with no other text:
+  const prompt = `Analyze this food${description ? `: "${description}"` : ""}. If the image shows a receipt, label, menu, or list of foods, pick the MAIN item or combine all items into one summary entry. If the image is unclear, make your BEST guess — do NOT refuse. The user wants accurate health analysis. They are bulking (calorie surplus for muscle growth) so high calories/protein is good — do NOT penalize calorie-dense whole foods. But health scoring must be strict and honest about processed ingredients, additives, and long-term health risks. Estimate nutritional values for a typical serving.${foodCustomInstructions} Return ONLY valid JSON in this exact format with no other text:
 {"name":"food name","serving":"serving description","calories":0,"protein_g":0,"carbs_g":0,"fat_g":0,"saturated_fat_g":0,"trans_fat_g":0,"sugar_g":0,"fiber_g":0,"nutrition_score":0,"health_score":0,"sodium_mg":0,"potassium_mg":0,"calcium_mg":0,"iron_mg":0,"magnesium_mg":0,"zinc_mg":0,"vitamin_a_pct":0,"vitamin_c_pct":0,"vitamin_d_pct":0,"vitamin_b12_pct":0,"additives_warning":"","health_note":"","disease_risks":[],"cluster_headache_trigger":false,"ch_trigger_reason":""}
 nutrition_score: 0-100 for muscle gain via calorie surplus. 85-100=excellent (high protein, quality calories), 65-84=good, 45-64=moderate, 0-44=poor. Calorie-dense whole foods score HIGH. Only penalize for being highly processed with little protein, or having trans fats/excessive sugar.
 health_score: 0-100 for TRUE overall healthiness. Be STRICT and HONEST. Consider: whole food vs ultra-processed, nutrient density, additives/preservatives, cancer-linked ingredients (nitrites, BHA/BHT, artificial colors, acrylamide, processed red meat), trans fats, seed oil quality, sugar content, and long-term health impact. 85-100=genuinely healthy whole food, 65-84=mostly healthy with minor concerns, 45-64=moderate (some processed elements or additives), 25-44=unhealthy (ultra-processed, harmful additives, or known carcinogens), 0-24=very unhealthy. Ultra-processed foods with artificial additives should NEVER score above 50 regardless of macros.
@@ -1276,12 +1276,25 @@ ch_trigger_reason: if trigger is true, brief explanation why. Empty string if no
   content.push({ type: "text", text: prompt });
 
   let p;
-  const MAX_RETRIES = 2;
+  const MAX_RETRIES = 3;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    // On later retries, swap to a simpler follow-up prompt
+    let reqMessages;
+    if (attempt === 0) {
+      reqMessages = [{ role: 'user', content }];
+    } else {
+      // Send the original content + a retry nudge so the model tries again
+      reqMessages = [
+        { role: 'user', content },
+        { role: 'assistant', content: 'I' },            // prefill to force JSON
+        { role: 'user', content: 'Return ONLY the raw JSON object, no markdown, no explanation.' },
+      ];
+    }
+
     const response = await fetch('/api/claude', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 1024, messages: [{ role: 'user', content }] }),
+      body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 1024, messages: reqMessages }),
     });
     if (response.status === 529 || response.status === 503 || response.status === 429) {
       if (attempt < MAX_RETRIES) { await new Promise(r => setTimeout(r, 1500 * (attempt + 1))); continue; }
@@ -1290,18 +1303,29 @@ ch_trigger_reason: if trigger is true, brief explanation why. Empty string if no
     if (!response.ok) throw new Error(`AI error ${response.status}`);
     const data = await response.json();
     const text = data.content?.find(b => b.type === 'text')?.text ?? '';
+
+    // Strip markdown code fences before extracting JSON
+    const cleaned = text.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '');
     // Greedy match: first { to last } to handle braces inside string values
-    const match = text.match(/\{[\s\S]*\}/);
+    const match = cleaned.match(/\{[\s\S]*\}/);
     if (!match) {
       if (attempt < MAX_RETRIES) { await new Promise(r => setTimeout(r, 1000)); continue; }
-      throw new Error('Invalid AI response');
+      throw new Error('Could not analyze — try adding a text description of the food');
     }
     try {
       p = JSON.parse(match[0]);
       break;
     } catch {
+      // Try fixing common JSON issues: trailing commas, single quotes
+      try {
+        const fixed = match[0]
+          .replace(/,\s*([}\]])/g, '$1')       // trailing commas
+          .replace(/'/g, '"');                   // single quotes
+        p = JSON.parse(fixed);
+        break;
+      } catch { /* fall through to retry */ }
       if (attempt < MAX_RETRIES) { await new Promise(r => setTimeout(r, 1000)); continue; }
-      throw new Error('Failed to parse AI response');
+      throw new Error('Could not analyze — try adding a text description of the food');
     }
   }
   return {

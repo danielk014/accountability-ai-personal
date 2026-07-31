@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Plus, Minus, Trash2, X, Loader2, Bot, Camera, ChevronLeft, ChevronRight,
-  AlertTriangle, Shield, Droplets,
+  AlertTriangle, AlertCircle, Shield, Droplets,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getUserPrefix } from '@/lib/userStore';
@@ -321,6 +321,7 @@ export default function NutritionView() {
   const [aiImage, setAiImage] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [aiResult, setAiResult] = useState(null);
+  const [aiError, setAiError] = useState(null);
   const fileInputRef = useRef(null);
 
   // Reload when supabase storage becomes ready
@@ -404,6 +405,7 @@ export default function NutritionView() {
     saveDay([...foods, entry]);
     setForm(emptyForm);
     setAiResult(null);
+    setAiError(null);
     setAiText("");
     setAiImage(null);
     toast.success(`${entry.name} logged`);
@@ -431,6 +433,7 @@ export default function NutritionView() {
     if (!aiText.trim() && !aiImage) return;
     setAnalyzing(true);
     setAiResult(null);
+    setAiError(null);
     try {
       const result = await analyzeFoodWithAI(
         aiImage?.data   || null,
@@ -438,8 +441,8 @@ export default function NutritionView() {
         aiText.trim()   || null
       );
       setAiResult(result);
-    } catch {
-      toast.error("Couldn't analyze food — try describing it more specifically.");
+    } catch (err) {
+      setAiError(err.message || "Couldn't analyze food — try adding a text description.");
     } finally {
       setAnalyzing(false);
     }
@@ -848,7 +851,7 @@ export default function NutritionView() {
         <div className="flex gap-2 mb-4">
           {[{ key: "manual", label: "Manual" }, { key: "ai", label: "AI Analyze" }].map(m => (
             <button key={m.key}
-              onClick={() => { setAddMode(m.key); setAiResult(null); }}
+              onClick={() => { setAddMode(m.key); setAiResult(null); setAiError(null); }}
               className={cn(
                 "px-3.5 py-1.5 rounded-xl text-sm font-medium transition",
                 addMode === m.key
@@ -928,6 +931,19 @@ export default function NutritionView() {
                   className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-white border border-slate-200 flex items-center justify-center hover:bg-red-50 hover:border-red-200 transition shadow-sm">
                   <X className="w-3 h-3 text-slate-500" />
                 </button>
+              </div>
+            )}
+
+            {/* AI error */}
+            {aiError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p>{aiError}</p>
+                  {!aiText.trim() && aiImage && (
+                    <p className="mt-1 text-xs text-red-500">Tip: add a text description of the food along with the image.</p>
+                  )}
+                </div>
               </div>
             )}
 
