@@ -26,6 +26,97 @@ const CH_TRIGGERS = [
     keywords: ["chocolate","cocoa","nutella","brownie","chocolate cake","chocolate ice cream","mocha"] },
 ];
 
+// ── Disease Risk Detection (keyword-based) ──────────────────────────────────
+const DISEASE_RISKS = [
+  { disease: "Colorectal Cancer", risk: "high", icon: "🔴",
+    keywords: ["bacon","hot dog","deli meat","ham","sausage","jerky","pepperoni","salami","corned beef","prosciutto","bratwurst","kielbasa","bologna","pastrami","spam"],
+    reason: "Processed meat is a WHO Group 1 carcinogen — directly linked to colorectal cancer" },
+  { disease: "Colorectal Cancer", risk: "moderate", icon: "🟠",
+    keywords: ["beef","steak","pork","lamb","veal","ground beef","meatball","burger patty","ribs"],
+    reason: "Red meat is a WHO Group 2A probable carcinogen when consumed regularly" },
+  { disease: "Cardiovascular Disease", risk: "high", icon: "🔴",
+    keywords: ["trans fat","margarine","shortening","hydrogenated","fried chicken","french fries","fries","deep fried","onion rings"],
+    reason: "Trans fats and deep-fried foods increase LDL cholesterol and heart disease risk" },
+  { disease: "Cardiovascular Disease", risk: "moderate", icon: "🟠",
+    keywords: ["bacon","sausage","hot dog","butter","cream cheese","lard","palm oil"],
+    reason: "High in saturated fat — raises LDL cholesterol with regular consumption" },
+  { disease: "Type 2 Diabetes", risk: "high", icon: "🔴",
+    keywords: ["soda","coca cola","pepsi","fanta","sprite","mountain dew","energy drink","red bull","monster","candy","gummy","skittles","sweet tea"],
+    reason: "High sugar beverages/candy cause insulin spikes and insulin resistance over time" },
+  { disease: "Type 2 Diabetes", risk: "moderate", icon: "🟠",
+    keywords: ["donut","doughnut","pastry","cake","ice cream","milkshake","frappuccino","cookie","brownie","pie","frosting","pop tart","cereal","pancake syrup"],
+    reason: "High refined sugar and processed carbs destabilize blood sugar" },
+  { disease: "Hypertension", risk: "moderate", icon: "🟠",
+    keywords: ["instant noodles","ramen","chips","doritos","cheetos","fast food","pizza","frozen dinner","canned soup","soy sauce","teriyaki"],
+    reason: "Very high sodium content raises blood pressure with regular consumption" },
+  { disease: "Liver Disease", risk: "high", icon: "🔴",
+    keywords: ["beer","wine","vodka","whiskey","cocktail","rum","gin","sake","champagne","tequila","bourbon","spirits","ale","lager","margarita"],
+    reason: "Alcohol is directly toxic to liver cells — causes fatty liver, cirrhosis" },
+  { disease: "Obesity", risk: "moderate", icon: "🟠",
+    keywords: ["mcdonalds","mcdonald","burger king","wendys","kfc","taco bell","dominos","pizza hut","popeyes","chick-fil-a","five guys","shake shack","panda express"],
+    reason: "Ultra-processed fast food is calorie-dense, nutrient-poor, and engineered to overconsume" },
+  { disease: "Stomach/Esophageal Cancer", risk: "moderate", icon: "🟠",
+    keywords: ["pickled","smoked salmon","smoked meat","smoked fish","charred","grilled meat","bbq","barbecue"],
+    reason: "Smoked/charred/pickled foods contain carcinogenic compounds (PAHs, nitrosamines)" },
+];
+
+function analyzeDiseaseRisks(foods) {
+  const risks = new Map(); // disease -> { risk, reason, foods[], icon }
+
+  for (const food of foods) {
+    const name = (food.name || "").toLowerCase();
+
+    // AI-provided disease risks
+    if (Array.isArray(food.diseaseRisks) && food.diseaseRisks.length > 0) {
+      for (const dr of food.diseaseRisks) {
+        const key = dr.disease;
+        if (!risks.has(key)) {
+          risks.set(key, { disease: key, risk: dr.risk, reason: dr.reason, foods: [food.name], icon: dr.risk === 'high' ? '🔴' : dr.risk === 'moderate' ? '🟠' : '🟡' });
+        } else {
+          const existing = risks.get(key);
+          if (!existing.foods.includes(food.name)) existing.foods.push(food.name);
+          if (dr.risk === 'high' && existing.risk !== 'high') { existing.risk = 'high'; existing.icon = '🔴'; }
+        }
+      }
+    }
+
+    // Keyword-based detection
+    for (const dr of DISEASE_RISKS) {
+      for (const kw of dr.keywords) {
+        if (name.includes(kw)) {
+          const key = `${dr.disease}-${dr.risk}`;
+          if (!risks.has(key)) {
+            risks.set(key, { disease: dr.disease, risk: dr.risk, reason: dr.reason, foods: [food.name], icon: dr.icon });
+          } else {
+            const existing = risks.get(key);
+            if (!existing.foods.includes(food.name)) existing.foods.push(food.name);
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  // Merge same disease (keep highest risk)
+  const merged = new Map();
+  for (const entry of risks.values()) {
+    if (!merged.has(entry.disease)) {
+      merged.set(entry.disease, entry);
+    } else {
+      const existing = merged.get(entry.disease);
+      for (const f of entry.foods) { if (!existing.foods.includes(f)) existing.foods.push(f); }
+      if (entry.risk === 'high' && existing.risk !== 'high') { existing.risk = 'high'; existing.icon = '🔴'; existing.reason = entry.reason; }
+    }
+  }
+
+  const sorted = [...merged.values()].sort((a, b) => {
+    const order = { high: 0, moderate: 1, low: 2 };
+    return (order[a.risk] ?? 3) - (order[b.risk] ?? 3);
+  });
+
+  return sorted;
+}
+
 const CH_PROTECTIVE = [
   { category: "Magnesium-rich", keywords: ["spinach","almonds","almond","avocado","pumpkin seeds","cashew","dark chocolate","banana","black beans","edamame","quinoa"] },
   { category: "Omega-3", keywords: ["salmon","sardines","sardine","walnuts","walnut","flaxseed","flax","mackerel","tuna","chia","herring","anchovies"] },
@@ -306,6 +397,8 @@ export default function NutritionView() {
       healthScore:    foodData.healthScore ?? null,
       chTrigger:       foodData.chTrigger ?? false,
       chTriggerReason: foodData.chTriggerReason ?? null,
+      diseaseRisks:    foodData.diseaseRisks ?? [],
+      additivesWarning: foodData.additivesWarning ?? "",
       time: format(new Date(), "HH:mm"),
     };
     saveDay([...foods, entry]);
@@ -626,6 +719,61 @@ export default function NutritionView() {
         );
       })()}
 
+      {/* ── Disease Risk Indicator ── */}
+      {(() => {
+        const diseaseRisks = analyzeDiseaseRisks(foods);
+        if (diseaseRisks.length === 0) return null;
+        const highCount = diseaseRisks.filter(d => d.risk === 'high').length;
+        const modCount = diseaseRisks.filter(d => d.risk === 'moderate').length;
+        const overallBg = highCount > 0 ? "bg-red-50" : modCount > 0 ? "bg-amber-50" : "bg-yellow-50";
+        const overallBorder = highCount > 0 ? "border-red-200" : modCount > 0 ? "border-amber-200" : "border-yellow-200";
+        const overallText = highCount > 0 ? "text-red-700" : modCount > 0 ? "text-amber-700" : "text-yellow-700";
+        return (
+          <div className={cn("rounded-2xl border p-4", overallBg, overallBorder)}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-base">🏥</span>
+                <h3 className="text-sm font-semibold text-slate-700">Disease Risk Indicator</h3>
+              </div>
+              <span className={cn("text-xs font-bold px-2 py-0.5 rounded-lg border", overallBg, overallBorder, overallText)}>
+                {highCount > 0 ? `${highCount} high risk` : `${modCount} moderate`}
+              </span>
+            </div>
+
+            <div className="space-y-2.5">
+              {diseaseRisks.map((dr, i) => (
+                <div key={i} className="bg-white/70 rounded-xl border border-slate-100 px-3 py-2.5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm">{dr.icon}</span>
+                    <span className="text-xs font-bold text-slate-800">{dr.disease}</span>
+                    <span className={cn(
+                      "text-[10px] font-bold px-1.5 py-0.5 rounded border",
+                      dr.risk === 'high' ? "bg-red-100 text-red-700 border-red-200" :
+                      dr.risk === 'moderate' ? "bg-amber-100 text-amber-700 border-amber-200" :
+                      "bg-yellow-100 text-yellow-700 border-yellow-200"
+                    )}>
+                      {dr.risk}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-snug">{dr.reason}</p>
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {dr.foods.map((f, j) => (
+                      <span key={j} className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                        {f}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-[10px] text-slate-400 mt-3 pt-2 border-t border-slate-200/60">
+              Based on WHO IARC classifications and epidemiological research. Reducing these foods lowers long-term disease risk.
+            </p>
+          </div>
+        );
+      })()}
+
       {/* ── Food log ── */}
       <div>
         <h3 className="text-sm font-semibold text-slate-700 mb-2">
@@ -909,6 +1057,24 @@ export default function NutritionView() {
                       <div>
                         <span className="font-bold">Cluster Headache Trigger</span>
                         {aiResult.chTriggerReason && <span className="ml-1">— {aiResult.chTriggerReason}</span>}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Disease risks */}
+                  {Array.isArray(aiResult.diseaseRisks) && aiResult.diseaseRisks.length > 0 && (
+                    <div className="text-xs rounded-xl px-3 py-2 mb-3 border bg-red-50 border-red-200">
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <span className="text-sm">🏥</span>
+                        <span className="font-bold text-red-700">Disease Risks</span>
+                      </div>
+                      <div className="space-y-1">
+                        {aiResult.diseaseRisks.map((dr, i) => (
+                          <div key={i} className="flex items-start gap-1.5">
+                            <span>{dr.risk === 'high' ? '🔴' : dr.risk === 'moderate' ? '🟠' : '🟡'}</span>
+                            <span className="text-slate-700"><span className="font-semibold">{dr.disease}</span> — {dr.reason}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
