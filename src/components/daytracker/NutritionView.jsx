@@ -284,7 +284,8 @@ export default function NutritionView() {
   const saveDay = (updatedFoods) => {
     const updated = [...logs];
     const idx = updated.findIndex(l => l.date === selectedDate);
-    const entry = { date: selectedDate, foods: updatedFoods };
+    const existing = idx >= 0 ? updated[idx] : {};
+    const entry = { ...existing, date: selectedDate, foods: updatedFoods };
     if (idx >= 0) updated[idx] = entry; else updated.push(entry);
     onUpdate({ logs: updated });
   };
