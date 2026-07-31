@@ -400,6 +400,7 @@ export default function NutritionView() {
       chTriggerReason: foodData.chTriggerReason ?? null,
       diseaseRisks:    foodData.diseaseRisks ?? [],
       additivesWarning: foodData.additivesWarning ?? "",
+      isProcessedMeat: foodData.isProcessedMeat ?? false,
       time: format(new Date(), "HH:mm"),
     };
     saveDay([...foods, entry]);
@@ -1040,6 +1041,17 @@ export default function NutritionView() {
                       <div>
                         <span className="font-bold">Additives / Health Concern</span>
                         <p className="mt-0.5">{aiResult.additivesWarning}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Processed meat carcinogen warning */}
+                  {(aiResult.isProcessedMeat || /\b(bacon|hot dog|sausage|salami|pepperoni|deli meat|ham|jerky|corned beef|prosciutto|bratwurst|kielbasa|bologna|pastrami|spam|luncheon meat)\b/i.test(aiResult.name)) && (
+                    <div className="flex items-start gap-2 text-xs rounded-xl px-3 py-2 mb-3 border bg-red-100 border-red-300 text-red-800">
+                      <Shield className="w-4 h-4 flex-shrink-0 mt-0.5 text-red-600" />
+                      <div>
+                        <span className="font-bold">WHO Group 1 Carcinogen</span>
+                        <p className="mt-0.5">Processed meat is classified as a Group 1 carcinogen by the WHO (IARC) — the same category as tobacco smoking. Linked to colorectal, pancreatic, and stomach cancers. Even small daily amounts (50g) increase colorectal cancer risk by 18%.</p>
                       </div>
                     </div>
                   )}

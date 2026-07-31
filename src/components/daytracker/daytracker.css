@@ -624,128 +624,631 @@
   text-align: right;
 }
 
-/* ── Chapters View ──────────────────────────────────────────────────────── */
+/* ── Chapters View (Redesigned) ─────────────────────────────────────────── */
 
 .day-tracker-root .ch-root { padding-bottom: 20px; }
 
 /* Header */
-.day-tracker-root .ch-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
-.day-tracker-root .ch-title { font-size: 13px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.4px; }
-.day-tracker-root .ch-manage-btn { padding: 5px 14px; border-radius: 8px; background: #f1f5f9; border: 1px solid #e2e8f0; color: #64748b; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.day-tracker-root .ch-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.day-tracker-root .ch-title {
+  font-size: 13px; font-weight: 700; color: #334155;
+  text-transform: uppercase; letter-spacing: 0.4px;
+}
+.day-tracker-root .ch-header-actions {
+  display: flex; align-items: center; gap: 4px;
+}
+.day-tracker-root .ch-view-toggle {
+  padding: 5px 12px; border-radius: 8px; background: none;
+  border: 1px solid transparent; color: #94a3b8;
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+}
+.day-tracker-root .ch-view-toggle:hover { color: #64748b; }
+.day-tracker-root .ch-view-toggle-active {
+  background: #eef2ff; color: #6366f1; border-color: #c7d2fe;
+}
+.day-tracker-root .ch-manage-btn {
+  padding: 5px 14px; border-radius: 8px; background: #f1f5f9;
+  border: 1px solid #e2e8f0; color: #64748b; font-size: 12px;
+  font-weight: 600; cursor: pointer; transition: all 0.15s;
+}
 .day-tracker-root .ch-manage-btn:hover { background: #e2e8f0; color: #334155; }
 
-/* Path */
-.day-tracker-root .ch-path { display: flex; flex-direction: column; align-items: stretch; }
+/* Navigation */
+.day-tracker-root .ch-nav {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; margin-bottom: 16px;
+}
+.day-tracker-root .ch-nav-btn {
+  width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e2e8f0;
+  background: #fff; color: #64748b; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.day-tracker-root .ch-nav-btn:hover:not(:disabled) {
+  background: #f1f5f9; color: #334155; border-color: #cbd5e1;
+}
+.day-tracker-root .ch-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.day-tracker-root .ch-nav-label {
+  font-size: 13px; font-weight: 600; color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
 
-/* Connector line */
-.day-tracker-root .ch-connector { width: 2px; height: 20px; margin-left: 11px; }
-.day-tracker-root .ch-connector-done { background: #cbd5e1; }
-.day-tracker-root .ch-connector-active { background: #6366f1; }
-.day-tracker-root .ch-connector-future { background: #e2e8f0; }
+/* Layout: timeline sidebar + card */
+.day-tracker-root .ch-layout {
+  display: flex; gap: 16px; align-items: flex-start;
+}
 
-/* Step wrapper */
-.day-tracker-root .ch-step { display: flex; flex-direction: column; }
+/* Timeline sidebar */
+.day-tracker-root .ch-timeline {
+  display: flex; flex-direction: column; align-items: center;
+  width: 48px; flex-shrink: 0; padding-top: 4px;
+}
+.day-tracker-root .ch-tl-item {
+  display: flex; flex-direction: column; align-items: center;
+}
+.day-tracker-root .ch-tl-node {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: none; cursor: pointer; transition: all 0.2s;
+  position: relative; padding: 0;
+}
+.day-tracker-root .ch-tl-done {
+  background: #dcfce7; color: #16a34a;
+}
+.day-tracker-root .ch-tl-done:hover { background: #bbf7d0; }
+.day-tracker-root .ch-tl-active {
+  background: #6366f1; color: #fff;
+  box-shadow: 0 0 0 4px rgba(99,102,241,0.15);
+}
+.day-tracker-root .ch-tl-active:hover { background: #4f46e5; }
+.day-tracker-root .ch-tl-future {
+  background: #f8fafc; border: 2px solid #e2e8f0; color: #94a3b8;
+}
+.day-tracker-root .ch-tl-future:hover { border-color: #cbd5e1; background: #f1f5f9; }
+.day-tracker-root .ch-tl-selected {
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.3);
+}
+.day-tracker-root .ch-tl-pulse {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #fff; animation: ch-pulse 2s infinite;
+}
+@keyframes ch-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.8); }
+}
+.day-tracker-root .ch-tl-line {
+  width: 2px; height: 20px; flex-shrink: 0;
+}
+.day-tracker-root .ch-tl-line-done { background: #86efac; }
+.day-tracker-root .ch-tl-line-future { background: #e2e8f0; }
 
-/* Node row */
-.day-tracker-root .ch-node-row { display: flex; align-items: flex-start; gap: 14px; }
-.day-tracker-root .ch-node { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
-.day-tracker-root .ch-node-done { background: #e2e8f0; color: #94a3b8; font-size: 10px; }
-.day-tracker-root .ch-node-active { background: #6366f1; box-shadow: 0 0 0 4px rgba(99,102,241,0.15); }
-.day-tracker-root .ch-node-future { background: #f1f5f9; border: 2px solid #e2e8f0; }
-.day-tracker-root .ch-node-info { flex: 1; min-width: 0; padding-top: 2px; }
+/* Card */
+.day-tracker-root .ch-card {
+  flex: 1; min-width: 0;
+  background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 16px; padding: 24px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.02);
+}
+.day-tracker-root .ch-card-enter {
+  animation: ch-card-fade 0.25s ease-out;
+}
+@keyframes ch-card-fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-/* Closed chapter line */
-.day-tracker-root .ch-closed-line { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
-.day-tracker-root .ch-closed-name { font-size: 13px; color: #94a3b8; text-decoration: line-through; font-weight: 500; }
-.day-tracker-root .ch-closed-years { font-size: 11px; color: #cbd5e1; font-weight: 500; }
+/* Card header */
+.day-tracker-root .ch-card-header { margin-bottom: 16px; }
+.day-tracker-root .ch-card-title-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 6px; flex-wrap: wrap;
+}
+.day-tracker-root .ch-card-name {
+  font-size: 18px; font-weight: 700; color: #1e293b; margin: 0;
+}
+.day-tracker-root .ch-badge {
+  font-size: 10px; font-weight: 700; padding: 3px 10px;
+  border-radius: 6px; text-transform: uppercase; letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.day-tracker-root .ch-badge-active {
+  color: #6366f1; background: #eef2ff; border: 1px solid #c7d2fe;
+}
+.day-tracker-root .ch-badge-closed {
+  color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0;
+}
+.day-tracker-root .ch-badge-future {
+  color: #64748b; background: #f1f5f9; border: 1px solid #e2e8f0;
+}
+.day-tracker-root .ch-badge-sm { font-size: 9px; padding: 2px 7px; }
+.day-tracker-root .ch-card-meta {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.day-tracker-root .ch-card-dates {
+  font-size: 12px; color: #64748b; font-weight: 500;
+}
+.day-tracker-root .ch-card-elapsed {
+  font-size: 11px; color: #94a3b8; font-weight: 500;
+}
 
-/* Future chapter line */
-.day-tracker-root .ch-future-line { display: flex; align-items: center; gap: 8px; padding: 2px 0; }
-.day-tracker-root .ch-future-name { font-size: 13px; color: #94a3b8; font-weight: 500; }
-.day-tracker-root .ch-future-label { font-size: 10px; color: #cbd5e1; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+/* Card purpose */
+.day-tracker-root .ch-card-purpose {
+  font-size: 13px; color: #475569; line-height: 1.6;
+  margin: 0 0 16px; padding: 0;
+}
 
-/* Active chapter card */
-.day-tracker-root .ch-active-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; margin: 2px 0 4px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
-.day-tracker-root .ch-active-header { margin-bottom: 12px; }
-.day-tracker-root .ch-active-title-row { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
-.day-tracker-root .ch-active-name { font-size: 16px; font-weight: 700; color: #1e293b; }
-.day-tracker-root .ch-you-are-here { font-size: 10px; font-weight: 700; color: #6366f1; background: #eef2ff; padding: 2px 8px; border-radius: 6px; border: 1px solid #c7d2fe; text-transform: uppercase; letter-spacing: 0.3px; }
-.day-tracker-root .ch-elapsed { font-size: 11px; color: #94a3b8; font-weight: 500; }
+/* Card fields (outcome, why, priorities) */
+.day-tracker-root .ch-card-field { margin-bottom: 14px; }
+.day-tracker-root .ch-card-field-label {
+  display: block; font-size: 10px; font-weight: 700;
+  color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+.day-tracker-root .ch-card-field-text {
+  font-size: 13px; color: #475569; line-height: 1.5;
+  margin: 0;
+}
 
-/* Purpose */
-.day-tracker-root .ch-purpose { font-size: 13px; color: #475569; line-height: 1.5; margin-bottom: 16px; }
+/* Card sections (exit criteria, goals) */
+.day-tracker-root .ch-card-section {
+  margin-bottom: 16px; padding: 14px;
+  background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9;
+}
+.day-tracker-root .ch-card-section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.day-tracker-root .ch-card-section-label {
+  font-size: 11px; font-weight: 700; color: #64748b;
+  text-transform: uppercase; letter-spacing: 0.3px;
+}
+.day-tracker-root .ch-card-section-count {
+  font-size: 12px; font-weight: 600; color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
 
-/* Conditions */
-.day-tracker-root .ch-conditions { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-.day-tracker-root .ch-conditions-label { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
-.day-tracker-root .ch-condition { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: #334155; cursor: pointer; padding: 6px 0; }
-.day-tracker-root .ch-condition input[type="checkbox"] { width: 16px; height: 16px; accent-color: #6366f1; margin-top: 1px; flex-shrink: 0; cursor: pointer; }
-.day-tracker-root .ch-cond-done { color: #94a3b8; text-decoration: line-through; }
+/* Progress bar */
+.day-tracker-root .ch-progress-bar-track {
+  height: 6px; background: #e2e8f0; border-radius: 3px;
+  overflow: hidden; margin-bottom: 12px;
+}
+.day-tracker-root .ch-progress-bar-fill {
+  height: 100%; background: #6366f1; border-radius: 3px;
+  transition: width 0.3s ease;
+}
 
-/* Progress dots */
-.day-tracker-root .ch-progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-.day-tracker-root .ch-progress-text { font-size: 12px; color: #94a3b8; font-weight: 600; font-variant-numeric: tabular-nums; }
-.day-tracker-root .ch-progress-dots { display: flex; gap: 4px; }
-.day-tracker-root .ch-dot { width: 10px; height: 10px; border-radius: 50%; transition: background 0.2s; }
-.day-tracker-root .ch-dot-done { background: #6366f1; }
-.day-tracker-root .ch-dot-empty { background: #e2e8f0; }
+/* Conditions (exit criteria checkboxes) */
+.day-tracker-root .ch-conditions {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.day-tracker-root .ch-condition {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 13px; color: #334155; cursor: pointer; padding: 5px 0;
+}
+.day-tracker-root .ch-condition input[type="checkbox"] {
+  width: 16px; height: 16px; accent-color: #6366f1;
+  margin-top: 1px; flex-shrink: 0; cursor: pointer;
+}
+.day-tracker-root .ch-condition input[type="checkbox"]:disabled {
+  cursor: default; opacity: 0.7;
+}
+.day-tracker-root .ch-cond-done { color: #475569; }
 
-/* Close chapter button */
-.day-tracker-root .ch-close-btn { width: 100%; padding: 10px; border-radius: 10px; background: #6366f1; color: #fff; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
-.day-tracker-root .ch-close-btn:hover { background: #4f46e5; }
+/* Card actions */
+.day-tracker-root .ch-card-actions {
+  display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap;
+}
+.day-tracker-root .ch-card-edit-btn {
+  padding: 9px 18px; border-radius: 10px; border: 1px solid #e2e8f0;
+  background: #fff; color: #64748b; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+}
+.day-tracker-root .ch-card-edit-btn:hover { background: #f1f5f9; color: #334155; }
+.day-tracker-root .ch-card-close-btn {
+  padding: 9px 18px; border-radius: 10px; border: none;
+  background: #6366f1; color: #fff; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: background 0.15s; flex: 1;
+}
+.day-tracker-root .ch-card-close-btn:hover { background: #4f46e5; }
 
-/* Modal */
-.day-tracker-root .ch-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.day-tracker-root .ch-modal { background: #fff; border-radius: 16px; padding: 24px; max-width: 380px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
-.day-tracker-root .ch-modal-title { font-size: 16px; font-weight: 700; color: #1e293b; margin: 0 0 8px; }
-.day-tracker-root .ch-modal-body { font-size: 13px; color: #475569; line-height: 1.5; margin: 0 0 20px; }
-.day-tracker-root .ch-modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
-.day-tracker-root .ch-modal-cancel { padding: 8px 16px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer; }
+/* Goals section */
+.day-tracker-root .ch-goals-empty {
+  font-size: 12px; color: #94a3b8; margin: 0; padding: 4px 0;
+}
+.day-tracker-root .ch-goal-item {
+  padding: 10px 12px; background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 10px; margin-bottom: 6px; cursor: pointer;
+  transition: all 0.15s;
+}
+.day-tracker-root .ch-goal-item:hover { border-color: #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.day-tracker-root .ch-goal-completed { opacity: 0.7; }
+.day-tracker-root .ch-goal-editing {
+  cursor: default; border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+.day-tracker-root .ch-goal-top {
+  display: flex; align-items: center; gap: 8px;
+}
+.day-tracker-root .ch-goal-check {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid #cbd5e1; background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; padding: 0;
+  transition: all 0.15s;
+}
+.day-tracker-root .ch-goal-check:hover { border-color: #6366f1; }
+.day-tracker-root .ch-goal-check-done {
+  background: #6366f1; border-color: #6366f1; color: #fff;
+}
+.day-tracker-root .ch-goal-title {
+  font-size: 13px; font-weight: 500; color: #334155;
+}
+.day-tracker-root .ch-goal-title-done {
+  color: #94a3b8; text-decoration: line-through;
+}
+.day-tracker-root .ch-goal-bar-track {
+  height: 4px; background: #e2e8f0; border-radius: 2px;
+  overflow: hidden; margin-top: 8px;
+}
+.day-tracker-root .ch-goal-bar-fill {
+  height: 100%; background: #6366f1; border-radius: 2px;
+  transition: width 0.3s ease;
+}
+.day-tracker-root .ch-goal-next {
+  display: block; font-size: 11px; color: #94a3b8;
+  margin-top: 6px; font-style: italic;
+}
+
+/* Goal editing */
+.day-tracker-root .ch-goal-edit-input {
+  width: 100%; padding: 7px 10px; border: 1px solid #e2e8f0;
+  border-radius: 8px; font-size: 13px; background: #fff;
+  box-sizing: border-box; margin-bottom: 6px;
+}
+.day-tracker-root .ch-goal-edit-input:focus { outline: none; border-color: #6366f1; }
+.day-tracker-root .ch-goal-progress-edit {
+  margin-bottom: 6px;
+}
+.day-tracker-root .ch-goal-progress-label {
+  font-size: 11px; color: #64748b; font-weight: 500;
+  display: block; margin-bottom: 4px;
+}
+.day-tracker-root .ch-goal-slider {
+  width: 100%; height: 6px; -webkit-appearance: none; appearance: none;
+  background: #e2e8f0; border-radius: 3px; outline: none;
+}
+.day-tracker-root .ch-goal-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px;
+  border-radius: 50%; background: #6366f1; cursor: pointer;
+  border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.day-tracker-root .ch-goal-edit-actions {
+  display: flex; gap: 6px; margin-top: 4px;
+}
+.day-tracker-root .ch-goal-edit-save {
+  padding: 5px 14px; border-radius: 8px; border: none;
+  background: #6366f1; color: #fff; font-size: 12px;
+  font-weight: 600; cursor: pointer;
+}
+.day-tracker-root .ch-goal-edit-save:hover { background: #4f46e5; }
+.day-tracker-root .ch-goal-edit-cancel {
+  padding: 5px 14px; border-radius: 8px; border: 1px solid #e2e8f0;
+  background: #fff; color: #64748b; font-size: 12px;
+  font-weight: 600; cursor: pointer;
+}
+.day-tracker-root .ch-goal-edit-delete {
+  padding: 5px 14px; border-radius: 8px; border: 1px solid #fecaca;
+  background: #fff; color: #ef4444; font-size: 12px;
+  font-weight: 600; cursor: pointer; margin-left: auto;
+}
+.day-tracker-root .ch-goal-edit-delete:hover { background: #fef2f2; }
+
+/* Goal add */
+.day-tracker-root .ch-goal-add-btn {
+  width: 100%; padding: 8px; border-radius: 8px;
+  border: 1px dashed #cbd5e1; background: none;
+  color: #94a3b8; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; margin-top: 4px;
+}
+.day-tracker-root .ch-goal-add-btn:hover { border-color: #6366f1; color: #6366f1; }
+.day-tracker-root .ch-goal-add-form { margin-top: 6px; }
+.day-tracker-root .ch-goal-add-input {
+  width: 100%; padding: 7px 10px; border: 1px solid #e2e8f0;
+  border-radius: 8px; font-size: 13px; background: #fff;
+  box-sizing: border-box; margin-bottom: 6px;
+}
+.day-tracker-root .ch-goal-add-input:focus { outline: none; border-color: #6366f1; }
+.day-tracker-root .ch-goal-add-actions { display: flex; gap: 6px; }
+.day-tracker-root .ch-goal-add-save {
+  padding: 5px 14px; border-radius: 8px; border: none;
+  background: #6366f1; color: #fff; font-size: 12px;
+  font-weight: 600; cursor: pointer;
+}
+.day-tracker-root .ch-goal-add-save:disabled { opacity: 0.4; cursor: not-allowed; }
+.day-tracker-root .ch-goal-add-cancel {
+  padding: 5px 14px; border-radius: 8px; border: 1px solid #e2e8f0;
+  background: #fff; color: #64748b; font-size: 12px;
+  font-weight: 600; cursor: pointer;
+}
+.day-tracker-root .ch-goals-completed-group { margin-top: 8px; }
+.day-tracker-root .ch-goals-completed-label {
+  font-size: 10px; font-weight: 600; color: #94a3b8;
+  text-transform: uppercase; letter-spacing: 0.3px;
+  display: block; margin-bottom: 6px;
+}
+
+/* Modal (shared) */
+.day-tracker-root .ch-modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4); z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.day-tracker-root .ch-modal {
+  background: #fff; border-radius: 16px; padding: 24px;
+  max-width: 420px; width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+.day-tracker-root .ch-modal-title {
+  font-size: 16px; font-weight: 700; color: #1e293b; margin: 0 0 8px;
+}
+.day-tracker-root .ch-modal-body {
+  font-size: 13px; color: #475569; line-height: 1.5; margin: 0 0 20px;
+}
+.day-tracker-root .ch-modal-actions {
+  display: flex; gap: 8px; justify-content: flex-end;
+}
+.day-tracker-root .ch-modal-cancel {
+  padding: 8px 16px; border-radius: 8px; border: 1px solid #e2e8f0;
+  background: #fff; font-size: 13px; font-weight: 600;
+  color: #64748b; cursor: pointer;
+}
 .day-tracker-root .ch-modal-cancel:hover { background: #f8fafc; }
-.day-tracker-root .ch-modal-confirm { padding: 8px 16px; border-radius: 8px; border: none; background: #6366f1; font-size: 13px; font-weight: 600; color: #fff; cursor: pointer; }
+.day-tracker-root .ch-modal-confirm {
+  padding: 8px 16px; border-radius: 8px; border: none;
+  background: #6366f1; font-size: 13px; font-weight: 600;
+  color: #fff; cursor: pointer;
+}
 .day-tracker-root .ch-modal-confirm:hover { background: #4f46e5; }
+.day-tracker-root .ch-modal-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Close chapter modal extras */
+.day-tracker-root .ch-close-next { margin-bottom: 16px; }
+.day-tracker-root .ch-close-next-label {
+  font-size: 11px; font-weight: 700; color: #64748b;
+  text-transform: uppercase; letter-spacing: 0.3px;
+  display: block; margin-bottom: 8px;
+}
+.day-tracker-root .ch-close-next-options {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.day-tracker-root .ch-close-next-option {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: #334155; cursor: pointer;
+  padding: 8px 10px; background: #f8fafc;
+  border: 1px solid #e2e8f0; border-radius: 8px;
+  transition: all 0.15s;
+}
+.day-tracker-root .ch-close-next-option:hover { background: #eef2ff; border-color: #c7d2fe; }
+.day-tracker-root .ch-close-next-option input[type="radio"] { accent-color: #6366f1; }
+
+/* Edit modal (full form) */
+.day-tracker-root .ch-edit-modal {
+  background: #fff; border-radius: 16px; padding: 0;
+  max-width: 500px; width: 100%; max-height: 85vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+.day-tracker-root .ch-edit-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px 16px; border-bottom: 1px solid #f1f5f9;
+}
+.day-tracker-root .ch-edit-modal-title {
+  font-size: 16px; font-weight: 700; color: #1e293b; margin: 0;
+}
+.day-tracker-root .ch-edit-modal-close {
+  width: 28px; height: 28px; border-radius: 6px; border: none;
+  background: none; color: #94a3b8; font-size: 20px;
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: center;
+}
+.day-tracker-root .ch-edit-modal-close:hover { background: #f1f5f9; color: #334155; }
+.day-tracker-root .ch-edit-modal-body {
+  padding: 20px 24px; overflow-y: auto; flex: 1;
+}
+.day-tracker-root .ch-edit-modal-footer {
+  display: flex; gap: 8px; justify-content: flex-end;
+  padding: 16px 24px 20px; border-top: 1px solid #f1f5f9;
+}
+.day-tracker-root .ch-edit-field { margin-bottom: 14px; }
+.day-tracker-root .ch-edit-label {
+  display: block; font-size: 11px; font-weight: 700;
+  color: #64748b; margin-bottom: 4px;
+  text-transform: uppercase; letter-spacing: 0.3px;
+}
+.day-tracker-root .ch-edit-input {
+  width: 100%; padding: 8px 12px; border: 1px solid #e2e8f0;
+  border-radius: 8px; font-size: 13px; background: #fff;
+  box-sizing: border-box; font-family: inherit;
+}
+.day-tracker-root .ch-edit-input:focus { outline: none; border-color: #6366f1; }
+.day-tracker-root .ch-edit-textarea {
+  width: 100%; padding: 8px 12px; border: 1px solid #e2e8f0;
+  border-radius: 8px; font-size: 13px; background: #fff;
+  resize: vertical; box-sizing: border-box; font-family: inherit;
+}
+.day-tracker-root .ch-edit-textarea:focus { outline: none; border-color: #6366f1; }
+.day-tracker-root .ch-edit-row {
+  display: flex; gap: 12px;
+}
+.day-tracker-root .ch-edit-half { flex: 1; }
+.day-tracker-root .ch-edit-cond-row {
+  display: flex; align-items: center; gap: 4px; margin-bottom: 6px;
+}
+.day-tracker-root .ch-edit-cond-remove {
+  width: 24px; height: 24px; border-radius: 6px; border: none;
+  background: none; color: #94a3b8; font-size: 18px;
+  cursor: pointer; flex-shrink: 0;
+}
+.day-tracker-root .ch-edit-cond-remove:hover { color: #ef4444; }
+.day-tracker-root .ch-edit-cond-add {
+  padding: 4px 10px; border-radius: 6px; border: 1px dashed #cbd5e1;
+  background: none; color: #94a3b8; font-size: 11px;
+  font-weight: 600; cursor: pointer; margin-top: 2px;
+}
+.day-tracker-root .ch-edit-cond-add:hover { border-color: #6366f1; color: #6366f1; }
+
+/* Roadmap view */
+.day-tracker-root .ch-roadmap { }
+.day-tracker-root .ch-roadmap-group { margin-bottom: 20px; }
+.day-tracker-root .ch-roadmap-group-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+}
+.day-tracker-root .ch-roadmap-group-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+.day-tracker-root .ch-roadmap-group-label {
+  font-size: 12px; font-weight: 700; color: #64748b;
+  text-transform: uppercase; letter-spacing: 0.4px;
+}
+.day-tracker-root .ch-roadmap-cards {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.day-tracker-root .ch-roadmap-card {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 14px 16px; background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 12px; cursor: pointer; text-align: left;
+  transition: all 0.15s; width: 100;
+  font-family: inherit;
+}
+.day-tracker-root .ch-roadmap-card:hover {
+  border-color: #c7d2fe; box-shadow: 0 2px 8px rgba(99,102,241,0.08);
+}
+.day-tracker-root .ch-roadmap-card-name {
+  font-size: 14px; font-weight: 600; color: #1e293b;
+}
+.day-tracker-root .ch-roadmap-card-outcome {
+  font-size: 12px; color: #64748b; line-height: 1.4;
+}
+.day-tracker-root .ch-roadmap-card-footer {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.day-tracker-root .ch-roadmap-card-dates {
+  font-size: 11px; color: #94a3b8; font-weight: 500;
+}
+.day-tracker-root .ch-roadmap-card-progress {
+  font-size: 11px; color: #94a3b8; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 
 /* Manage panel */
-.day-tracker-root .ch-manage { margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 16px; }
-.day-tracker-root .ch-manage-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.day-tracker-root .ch-manage-title { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
-.day-tracker-root .ch-manage-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
-.day-tracker-root .ch-manage-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; }
-.day-tracker-root .ch-manage-item-info { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
-.day-tracker-root .ch-manage-order { font-size: 11px; font-weight: 700; color: #cbd5e1; min-width: 16px; }
-.day-tracker-root .ch-manage-name { font-size: 13px; font-weight: 500; color: #334155; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.day-tracker-root .ch-manage-closed { color: #94a3b8; text-decoration: line-through; }
-.day-tracker-root .ch-manage-status { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; padding: 1px 6px; border-radius: 4px; }
+.day-tracker-root .ch-manage {
+  margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 16px;
+}
+.day-tracker-root .ch-manage-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.day-tracker-root .ch-manage-title {
+  font-size: 11px; font-weight: 700; color: #94a3b8;
+  text-transform: uppercase; letter-spacing: 0.3px;
+}
+.day-tracker-root .ch-manage-list {
+  display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px;
+}
+.day-tracker-root .ch-manage-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px; background: #f8fafc;
+  border: 1px solid #e2e8f0; border-radius: 8px;
+}
+.day-tracker-root .ch-manage-item-info {
+  display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;
+}
+.day-tracker-root .ch-manage-order {
+  font-size: 11px; font-weight: 700; color: #cbd5e1; min-width: 16px;
+}
+.day-tracker-root .ch-manage-name {
+  font-size: 13px; font-weight: 500; color: #334155;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.day-tracker-root .ch-manage-status {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.3px; padding: 1px 6px; border-radius: 4px;
+}
 .day-tracker-root .ch-manage-status-active { color: #6366f1; background: #eef2ff; }
 .day-tracker-root .ch-manage-status-closed { color: #94a3b8; background: #f1f5f9; }
-.day-tracker-root .ch-manage-item-actions { display: flex; gap: 2px; flex-shrink: 0; }
-.day-tracker-root .ch-manage-item-actions button { width: 26px; height: 26px; border-radius: 6px; border: none; background: none; color: #94a3b8; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.day-tracker-root .ch-manage-item-actions {
+  display: flex; gap: 2px; flex-shrink: 0;
+}
+.day-tracker-root .ch-manage-item-actions button {
+  width: 26px; height: 26px; border-radius: 6px; border: none;
+  background: none; color: #94a3b8; font-size: 13px;
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: center;
+}
 .day-tracker-root .ch-manage-item-actions button:hover { background: #e2e8f0; color: #334155; }
 .day-tracker-root .ch-manage-item-actions button:disabled { opacity: 0.3; cursor: not-allowed; }
 .day-tracker-root .ch-manage-delete:hover { color: #ef4444 !important; background: #fef2f2 !important; }
 
-/* Edit form */
-.day-tracker-root .ch-manage-edit { display: flex; flex-direction: column; gap: 6px; width: 100%; }
-.day-tracker-root .ch-manage-input { width: 100%; padding: 7px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: #fff; box-sizing: border-box; }
+/* Form inputs (manage + add) */
+.day-tracker-root .ch-manage-input {
+  width: 100%; padding: 7px 10px; border: 1px solid #e2e8f0;
+  border-radius: 8px; font-size: 13px; background: #fff;
+  box-sizing: border-box;
+}
 .day-tracker-root .ch-manage-input:focus { outline: none; border-color: #6366f1; }
-.day-tracker-root .ch-manage-textarea { width: 100%; padding: 7px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px; background: #fff; resize: vertical; box-sizing: border-box; font-family: inherit; }
+.day-tracker-root .ch-manage-textarea {
+  width: 100%; padding: 7px 10px; border: 1px solid #e2e8f0;
+  border-radius: 8px; font-size: 12px; background: #fff;
+  resize: vertical; box-sizing: border-box; font-family: inherit;
+}
 .day-tracker-root .ch-manage-textarea:focus { outline: none; border-color: #6366f1; }
 .day-tracker-root .ch-manage-edit-actions { display: flex; gap: 6px; }
-.day-tracker-root .ch-manage-save { padding: 5px 14px; border-radius: 8px; border: none; background: #6366f1; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; }
+.day-tracker-root .ch-manage-save {
+  padding: 5px 14px; border-radius: 8px; border: none;
+  background: #6366f1; color: #fff; font-size: 12px;
+  font-weight: 600; cursor: pointer;
+}
 .day-tracker-root .ch-manage-save:disabled { opacity: 0.4; cursor: not-allowed; }
 .day-tracker-root .ch-manage-save:hover { background: #4f46e5; }
-.day-tracker-root .ch-manage-cancel-btn { padding: 5px 14px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; color: #64748b; font-size: 12px; font-weight: 600; cursor: pointer; }
+.day-tracker-root .ch-manage-cancel-btn {
+  padding: 5px 14px; border-radius: 8px; border: 1px solid #e2e8f0;
+  background: #fff; color: #64748b; font-size: 12px;
+  font-weight: 600; cursor: pointer;
+}
 
 /* Add chapter */
-.day-tracker-root .ch-add-btn { width: 100%; padding: 10px; border-radius: 8px; border: 1px dashed #cbd5e1; background: #f8fafc; color: #64748b; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.day-tracker-root .ch-add-btn {
+  width: 100%; padding: 10px; border-radius: 8px;
+  border: 1px dashed #cbd5e1; background: #f8fafc;
+  color: #64748b; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+}
 .day-tracker-root .ch-add-btn:hover { border-color: #6366f1; color: #6366f1; background: #eef2ff; }
-.day-tracker-root .ch-add-form { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.day-tracker-root .ch-add-form {
+  background: #f8fafc; border: 1px solid #e2e8f0;
+  border-radius: 10px; padding: 14px;
+  display: flex; flex-direction: column; gap: 8px;
+}
 .day-tracker-root .ch-add-conditions { display: flex; flex-direction: column; gap: 4px; }
-.day-tracker-root .ch-add-cond-label { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
+.day-tracker-root .ch-add-cond-label {
+  font-size: 10px; font-weight: 700; color: #94a3b8;
+  text-transform: uppercase; letter-spacing: 0.3px;
+}
 .day-tracker-root .ch-add-cond-row { display: flex; align-items: center; gap: 4px; }
-.day-tracker-root .ch-add-cond-remove { width: 24px; height: 24px; border-radius: 6px; border: none; background: none; color: #94a3b8; font-size: 16px; cursor: pointer; }
+.day-tracker-root .ch-add-cond-remove {
+  width: 24px; height: 24px; border-radius: 6px; border: none;
+  background: none; color: #94a3b8; font-size: 16px; cursor: pointer;
+}
 .day-tracker-root .ch-add-cond-remove:hover { color: #ef4444; }
-.day-tracker-root .ch-add-cond-add { padding: 4px 10px; border-radius: 6px; border: 1px dashed #cbd5e1; background: none; color: #94a3b8; font-size: 11px; font-weight: 600; cursor: pointer; align-self: flex-start; }
+.day-tracker-root .ch-add-cond-add {
+  padding: 4px 10px; border-radius: 6px; border: 1px dashed #cbd5e1;
+  background: none; color: #94a3b8; font-size: 11px;
+  font-weight: 600; cursor: pointer; align-self: flex-start;
+}
 .day-tracker-root .ch-add-cond-add:hover { border-color: #6366f1; color: #6366f1; }
 
 /* Legacy (keep for backwards compat) */
@@ -2882,15 +3385,42 @@
     font-size: 16px;
   }
 
-  /* Chapters / Notes / Projects / Nutrition */
-  .day-tracker-root .ch-active-card,
+  /* Chapters responsive */
+  .day-tracker-root .ch-layout {
+    flex-direction: column;
+  }
+  .day-tracker-root .ch-timeline {
+    flex-direction: row; width: 100%;
+    justify-content: center; gap: 0;
+    padding-top: 0; margin-bottom: 12px;
+  }
+  .day-tracker-root .ch-tl-item {
+    flex-direction: row; align-items: center;
+  }
+  .day-tracker-root .ch-tl-line {
+    width: 16px; height: 2px;
+  }
+  .day-tracker-root .ch-tl-node {
+    width: 24px; height: 24px;
+  }
+  .day-tracker-root .ch-card {
+    padding: 16px;
+  }
+  .day-tracker-root .ch-card-name {
+    font-size: 15px;
+  }
+  .day-tracker-root .ch-edit-modal {
+    max-width: 100%; max-height: 90vh;
+    border-radius: 12px;
+  }
+  .day-tracker-root .ch-edit-row {
+    flex-direction: column; gap: 0;
+  }
+
+  /* Notes / Projects / Nutrition */
   .day-tracker-root .project-card,
   .day-tracker-root .note-card {
     padding: 14px;
-  }
-
-  .day-tracker-root .ch-active-name {
-    font-size: 14px;
   }
 
   .day-tracker-root .ch-manage-item {
