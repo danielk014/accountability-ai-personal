@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { sanitizeImageSrc } from '@/lib/sanitize';
 import { History, Paperclip, X, FileText, Zap, Sun, Moon, BarChart3, Calendar, Target } from 'lucide-react';
-import { loadLogs, loadGoals, loadLongTermGoals, loadGoalsV2, loadVisions, loadAllDailyTasks, loadAllBlocks, loadBlocks, saveBlocks, loadDailyTasks, saveDailyTasks } from './storage';
+import { loadLogs, loadGoals, loadLongTermGoals, loadGoalsV2, loadVisions, loadChapters, loadAllDailyTasks, loadAllBlocks, loadBlocks, saveBlocks, loadDailyTasks, saveDailyTasks } from './storage';
 import { loadNutrition } from './NutritionView';
 import { loadLessons } from './LifeLessonsView';
 import ChatHistoryPanel from '@/components/ChatHistoryPanel';
@@ -210,6 +210,7 @@ function CoachView() {
       const longTermGoals = loadLongTermGoals();
       const goalsV2 = loadGoalsV2();
       const visionsData = loadVisions();
+      const chaptersData = loadChapters() || [];
       const dailyTasks = loadAllDailyTasks();
       const scheduleBlocks = loadAllBlocks();
       const nutrition = loadNutrition();
@@ -243,7 +244,7 @@ function CoachView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMsg,
-          logs, goals, longTermGoals, goalsV2, visionsData, dailyTasks, scheduleBlocks, nutrition,
+          logs, goals, longTermGoals, goalsV2, visionsData, chaptersData, dailyTasks, scheduleBlocks, nutrition,
           financials,
           gymData,
           lifeLessons,

@@ -1682,7 +1682,9 @@ function AICoachTab({ gymData, nutrition, bodyweight, physique, onDataChange }) 
     setLoading(true);
 
     const apiHistory = [
-      ...messages.map(m => ({ role: m.role, content: m.content || "" })),
+      ...messages
+        .filter(m => m.content && (typeof m.content !== 'string' || m.content.trim().length > 0))
+        .map(m => ({ role: m.role, content: m.content })),
       { role: "user", content: apiContent },
     ];
 

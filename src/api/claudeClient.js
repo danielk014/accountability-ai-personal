@@ -852,7 +852,17 @@ export async function sendOneOffPrompt(prompt) {
 
 async function _agenticLoop(history, systemPrompt) {
   let messages = history
-    .map(m => ({ role: m.role, content: m.content }))
+    .map(m => {
+      let c = m.content;
+      // Clean array content: remove text blocks with empty text
+      if (Array.isArray(c)) {
+        c = c.filter(block => {
+          if (block.type === 'text') return block.text && block.text.trim().length > 0;
+          return true;
+        });
+      }
+      return { role: m.role, content: c };
+    })
     .filter(m => {
       const c = m.content;
       if (typeof c === 'string') return c.trim().length > 0;
@@ -1170,7 +1180,23 @@ ${gymContext}`;
     history = _injectContextFiles(history, gymFiles);
   }
 
-  let messages = history.map(m => ({ role: m.role, content: m.content }));
+  let messages = history
+    .map(m => {
+      let c = m.content;
+      if (Array.isArray(c)) {
+        c = c.filter(block => {
+          if (block.type === 'text') return block.text && block.text.trim().length > 0;
+          return true;
+        });
+      }
+      return { role: m.role, content: c };
+    })
+    .filter(m => {
+      const c = m.content;
+      if (typeof c === 'string') return c.trim().length > 0;
+      if (Array.isArray(c)) return c.length > 0;
+      return c != null;
+    });
 
   for (let turn = 0; turn < 8; turn++) {
     const response = await fetch('/api/claude', {

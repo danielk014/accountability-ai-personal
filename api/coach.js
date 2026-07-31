@@ -634,6 +634,7 @@ export default async function handler(req, res) {
     const goals = Array.isArray(body.goals) ? body.goals : [];
     const goalsV2 = Array.isArray(body.goalsV2) ? body.goalsV2 : [];
     const visionsData = Array.isArray(body.visionsData) ? body.visionsData : [];
+    const chaptersData = Array.isArray(body.chaptersData) ? body.chaptersData : [];
     const coachContextFiles = Array.isArray(body.coachContextFiles) ? body.coachContextFiles : [];
     const attachments = Array.isArray(body.attachments) ? body.attachments : [];
     const conversationHistory = Array.isArray(body.conversationHistory) ? body.conversationHistory : [];
@@ -719,10 +720,10 @@ SCHEDULE PLANNING RULES:
     // Add previous conversation messages (for memory within the session)
     if (conversationHistory.length > 0) {
       for (const msg of conversationHistory) {
-        if (msg.role === 'user') {
-          messages.push({ role: 'user', content: [{ type: 'text', text: msg.text }] });
-        } else if (msg.role === 'assistant') {
-          messages.push({ role: 'assistant', content: [{ type: 'text', text: msg.text }] });
+        const text = (msg.text || '').trim();
+        if (!text) continue; // skip empty messages — API rejects empty text blocks
+        if (msg.role === 'user' || msg.role === 'assistant') {
+          messages.push({ role: msg.role, content: [{ type: 'text', text }] });
         }
       }
     }
@@ -757,6 +758,21 @@ SCHEDULE PLANNING RULES:
     const hasPdf = userContent.some(b => b.type === 'document');
 
     messages.push({ role: 'user', content: userContent });
+
+    // Ensure messages alternate roles (required by the API)
+    const deduped = [];
+    for (const m of messages) {
+      if (deduped.length > 0 && deduped[deduped.length - 1].role === m.role) {
+        // Merge same-role messages by combining text
+        const prev = deduped[deduped.length - 1];
+        const prevText = Array.isArray(prev.content) ? prev.content.map(b => b.text || '').join('\n') : '';
+        const curText = Array.isArray(m.content) ? m.content.map(b => b.text || '').join('\n') : '';
+        prev.content = [{ type: 'text', text: (prevText + '\n' + curText).trim() }];
+      } else {
+        deduped.push({ ...m });
+      }
+    }
+    messages = deduped;
 
     const scheduleChanges = [];
     let replyText = '';
