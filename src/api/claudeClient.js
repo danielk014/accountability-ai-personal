@@ -1248,17 +1248,35 @@ cluster_headache_trigger: true if this food is a known cluster headache trigger 
 ch_trigger_reason: if trigger is true, brief explanation why. Empty string if not a trigger.`;
   content.push({ type: "text", text: prompt });
 
-  const response = await fetch('/api/claude', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 800, messages: [{ role: 'user', content }] }),
-  });
-  if (!response.ok) throw new Error(`AI error ${response.status}`);
-  const data = await response.json();
-  const text = data.content?.find(b => b.type === 'text')?.text ?? '';
-  const match = text.match(/\{[\s\S]*?\}/);
-  if (!match) throw new Error('Invalid AI response');
-  const p = JSON.parse(match[0]);
+  let p;
+  const MAX_RETRIES = 2;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const response = await fetch('/api/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 1024, messages: [{ role: 'user', content }] }),
+    });
+    if (response.status === 529 || response.status === 503 || response.status === 429) {
+      if (attempt < MAX_RETRIES) { await new Promise(r => setTimeout(r, 1500 * (attempt + 1))); continue; }
+      throw new Error('AI service is busy — try again in a moment');
+    }
+    if (!response.ok) throw new Error(`AI error ${response.status}`);
+    const data = await response.json();
+    const text = data.content?.find(b => b.type === 'text')?.text ?? '';
+    // Greedy match: first { to last } to handle braces inside string values
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) {
+      if (attempt < MAX_RETRIES) { await new Promise(r => setTimeout(r, 1000)); continue; }
+      throw new Error('Invalid AI response');
+    }
+    try {
+      p = JSON.parse(match[0]);
+      break;
+    } catch {
+      if (attempt < MAX_RETRIES) { await new Promise(r => setTimeout(r, 1000)); continue; }
+      throw new Error('Failed to parse AI response');
+    }
+  }
   return {
     name:          p.name    || description || "Food",
     serving:       p.serving || "1 serving",
