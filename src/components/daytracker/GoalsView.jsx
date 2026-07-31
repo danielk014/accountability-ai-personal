@@ -662,6 +662,134 @@ function GoalItem({ goal, isEditing, onStartEdit, onStopEdit, onUpdate, onRemove
   );
 }
 
+// ── DatePickerField ─────────────────────────────────────────────────────────
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAY_NAMES = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+
+function DatePickerField({ value, onChange, placeholder }) {
+  const [open, setOpen] = useState(false);
+  const [viewDate, setViewDate] = useState(() => {
+    if (value) return new Date(value + 'T00:00:00');
+    return new Date();
+  });
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  const selected = value ? new Date(value + 'T00:00:00') : null;
+
+  function getDays() {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    // Monday-based: 0=Mon ... 6=Sun
+    let startDow = firstDay.getDay() - 1;
+    if (startDow < 0) startDow = 6;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysInPrev = new Date(year, month, 0).getDate();
+    const cells = [];
+    // Previous month padding
+    for (let i = startDow - 1; i >= 0; i--) {
+      cells.push({ day: daysInPrev - i, outside: true, date: new Date(year, month - 1, daysInPrev - i) });
+    }
+    // Current month
+    for (let d = 1; d <= daysInMonth; d++) {
+      cells.push({ day: d, outside: false, date: new Date(year, month, d) });
+    }
+    // Next month padding
+    const remaining = 42 - cells.length;
+    for (let d = 1; d <= remaining; d++) {
+      cells.push({ day: d, outside: true, date: new Date(year, month + 1, d) });
+    }
+    return cells;
+  }
+
+  function toStr(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function isSameDay(a, b) {
+    return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
+  function isToday(d) {
+    return isSameDay(d, new Date());
+  }
+
+  function prevMonth() { setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1)); }
+  function nextMonth() { setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1)); }
+
+  function selectDay(cell) {
+    onChange(toStr(cell.date));
+    setOpen(false);
+  }
+
+  function displayValue() {
+    if (!value) return placeholder || 'Select date';
+    const d = new Date(value + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  const cells = open ? getDays() : [];
+
+  return (
+    <div className="ch-datepicker" ref={ref}>
+      <button className={`ch-datepicker-trigger ${value ? '' : 'ch-datepicker-empty'}`} onClick={() => setOpen(!open)} type="button">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="ch-datepicker-icon">
+          <rect x="1" y="2.5" width="12" height="10" rx="2" stroke="currentColor" strokeWidth="1.3"/>
+          <path d="M1 5.5h12" stroke="currentColor" strokeWidth="1.3"/>
+          <path d="M4.5 1v2.5M9.5 1v2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+        </svg>
+        <span>{displayValue()}</span>
+        {value && (
+          <span className="ch-datepicker-clear" onClick={e => { e.stopPropagation(); onChange(''); }} title="Clear">&times;</span>
+        )}
+      </button>
+      {open && (
+        <div className="ch-datepicker-dropdown">
+          <div className="ch-datepicker-header">
+            <button className="ch-datepicker-nav" onClick={prevMonth} type="button">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8 2L4 6l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+            <span className="ch-datepicker-month">{MONTH_NAMES[viewDate.getMonth()]} {viewDate.getFullYear()}</span>
+            <button className="ch-datepicker-nav" onClick={nextMonth} type="button">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
+          </div>
+          <div className="ch-datepicker-weekdays">
+            {DAY_NAMES.map(d => <span key={d} className="ch-datepicker-weekday">{d}</span>)}
+          </div>
+          <div className="ch-datepicker-grid">
+            {cells.map((cell, i) => (
+              <button
+                key={i}
+                type="button"
+                className={`ch-datepicker-day ${cell.outside ? 'ch-datepicker-outside' : ''} ${isSameDay(cell.date, selected) ? 'ch-datepicker-selected' : ''} ${isToday(cell.date) ? 'ch-datepicker-today' : ''}`}
+                onClick={() => selectDay(cell)}
+              >
+                {cell.day}
+              </button>
+            ))}
+          </div>
+          <div className="ch-datepicker-footer">
+            <button type="button" className="ch-datepicker-today-btn" onClick={() => { onChange(toStr(new Date())); setOpen(false); }}>Today</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── EditModal ───────────────────────────────────────────────────────────────
 function EditModal({ chapter, onSave, onClose }) {
   const [name, setName] = useState(chapter.name);
@@ -740,11 +868,11 @@ function EditModal({ chapter, onSave, onClose }) {
           <div className="ch-edit-row">
             <div className="ch-edit-field ch-edit-half">
               <label className="ch-edit-label">Start Date</label>
-              <input className="ch-edit-input" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+              <DatePickerField value={startDate} onChange={setStartDate} placeholder="Select start date" />
             </div>
             <div className="ch-edit-field ch-edit-half">
               <label className="ch-edit-label">Target End Date</label>
-              <input className="ch-edit-input" type="date" value={targetEndDate} onChange={e => setTargetEndDate(e.target.value)} />
+              <DatePickerField value={targetEndDate} onChange={setTargetEndDate} placeholder="Select target date" />
             </div>
           </div>
 
