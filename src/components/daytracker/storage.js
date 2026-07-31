@@ -10,6 +10,9 @@ const DAILY_TASKS_KEY = 'daily-tracker-daily-tasks';
 const RECURRING_TASKS_KEY = 'daily-tracker-recurring-tasks';
 const BLOCKS_KEY = 'daily-tracker-blocks';
 const NOTES_KEY = 'daily-tracker-notes';
+const GOALS_V2_KEY = 'daily-tracker-goals-v2';
+const LIFE_AREAS_KEY = 'daily-tracker-life-areas';
+const VISIONS_KEY = 'daily-tracker-visions';
 const TIMESTAMPS_KEY = 'daily-tracker-sync-timestamps';
 
 // ── Mapping: localStorage key  ↔  user_kv key (prefixed with dt: to avoid collisions) ──
@@ -23,6 +26,9 @@ const LOCAL_TO_KV = {
   [RECURRING_TASKS_KEY]: 'dt:recurring_tasks',
   [BLOCKS_KEY]: 'dt:blocks',
   [NOTES_KEY]: 'dt:notes',
+  [GOALS_V2_KEY]: 'dt:goals_v2',
+  [LIFE_AREAS_KEY]: 'dt:life_areas',
+  [VISIONS_KEY]: 'dt:visions',
 };
 
 const KV_TO_LOCAL = Object.fromEntries(
@@ -149,6 +155,29 @@ export function loadLongTermGoals() {
 export function saveLongTermGoals(goals) {
   localStorage.setItem(LONG_TERM_GOALS_KEY, JSON.stringify(goals));
   _syncToKV(LONG_TERM_GOALS_KEY);
+}
+
+// ── Goals V2 (measurable goals, life areas, visions) ─────────────────────────
+export function loadGoalsV2() {
+  try { return JSON.parse(localStorage.getItem(GOALS_V2_KEY)) || []; } catch { return []; }
+}
+export function saveGoalsV2(goals) {
+  localStorage.setItem(GOALS_V2_KEY, JSON.stringify(goals));
+  _syncToKV(GOALS_V2_KEY);
+}
+export function loadLifeAreas() {
+  try { return JSON.parse(localStorage.getItem(LIFE_AREAS_KEY)) || null; } catch { return null; }
+}
+export function saveLifeAreas(areas) {
+  localStorage.setItem(LIFE_AREAS_KEY, JSON.stringify(areas));
+  _syncToKV(LIFE_AREAS_KEY);
+}
+export function loadVisions() {
+  try { return JSON.parse(localStorage.getItem(VISIONS_KEY)) || []; } catch { return []; }
+}
+export function saveVisions(visions) {
+  localStorage.setItem(VISIONS_KEY, JSON.stringify(visions));
+  _syncToKV(VISIONS_KEY);
 }
 
 export function loadProjects() {

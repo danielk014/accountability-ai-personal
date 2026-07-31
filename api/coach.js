@@ -478,6 +478,33 @@ function computeCHTriggerSummary(nutrition, today) {
   return summary;
 }
 
+function formatGoalsV2(goalsV2, visionsData) {
+  if (!goalsV2 || goalsV2.length === 0) return '(No measurable goals yet)';
+  const today = new Date().toISOString().slice(0, 10);
+  let output = '';
+  for (const g of goalsV2.filter(g => !g.archived)) {
+    const pct = g.progressType === 'metric'
+      ? Math.round(((g.currentValue - g.startValue) / ((g.targetValue - g.startValue) || 1)) * 100)
+      : g.progressType === 'milestone'
+      ? Math.round(((g.milestones || []).filter(m => m.done).length / ((g.milestones || []).length || 1)) * 100)
+      : 0;
+    const daysLeft = g.deadline ? Math.round((new Date(g.deadline) - new Date(today)) / 86400000) : null;
+    const lastLog = (g.progressLog || []).slice(-1)[0];
+    const stale = lastLog ? Math.round((new Date(today) - new Date(lastLog.date)) / 86400000) >= 14 : false;
+    output += `\n  [${g.area}] ${g.title} — ${pct}% (${g.progressType}: ${g.currentValue ?? '?'}/${g.targetValue ?? '?'} ${g.unit || ''})`;
+    if (daysLeft !== null) output += ` | ${daysLeft}d left`;
+    if (stale) output += ' | STALE (no update in 14+ days)';
+  }
+  if (visionsData && visionsData.length > 0) {
+    output += '\n\nVisions:';
+    for (const v of visionsData) {
+      const childCount = goalsV2.filter(g => g.visionId === v.id && !g.archived).length;
+      output += `\n  [${v.area}] ${v.title} (${v.horizon}) — ${childCount} linked goals`;
+    }
+  }
+  return output || '(No measurable goals yet)';
+}
+
 const CATEGORY_COLORS = {
   work: '#f97316',
   sleep: '#6366f1',
@@ -605,6 +632,8 @@ export default async function handler(req, res) {
     const { message, logs, dailyTasks, scheduleBlocks, nutrition, financials, gymData, coachPersonality, lifeLessons } = body;
     const longTermGoals = Array.isArray(body.longTermGoals) ? body.longTermGoals : [];
     const goals = Array.isArray(body.goals) ? body.goals : [];
+    const goalsV2 = Array.isArray(body.goalsV2) ? body.goalsV2 : [];
+    const visionsData = Array.isArray(body.visionsData) ? body.visionsData : [];
     const coachContextFiles = Array.isArray(body.coachContextFiles) ? body.coachContextFiles : [];
     const attachments = Array.isArray(body.attachments) ? body.attachments : [];
     const conversationHistory = Array.isArray(body.conversationHistory) ? body.conversationHistory : [];
@@ -650,6 +679,9 @@ ${formatFinancials(financials)}
 
 ═══ GYM DATA ═══
 ${formatGymData(gymData)}
+
+═══ MEASURABLE GOALS (v2 — with progress tracking) ═══
+${formatGoalsV2(goalsV2, visionsData)}
 
 ═══ LIFE LESSONS (personal operating system) ═══
 ${formatLifeLessons(lifeLessons)}

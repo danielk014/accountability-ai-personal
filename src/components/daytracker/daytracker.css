@@ -624,56 +624,42 @@
   text-align: right;
 }
 
-/* ── Goals View ─────────────────────────────────────────────────────────── */
+/* ── Goals View V2 ──────────────────────────────────────────────────────── */
 
-.day-tracker-root .goals-view {
+.day-tracker-root .gv2-root {
   padding-bottom: 20px;
 }
 
+/* Life Snapshot */
+.day-tracker-root .gv2-snapshot { margin-bottom: 16px; }
+.day-tracker-root .gv2-snapshot-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.day-tracker-root .gv2-snapshot-title { font-size: 13px; font-weight: 700; color: #334155; text-transform: uppercase; letter-spacing: 0.3px; }
+.day-tracker-root .gv2-checkin-btn { padding: 6px 14px; border-radius: 8px; background: #6366f1; color: #fff; font-size: 12px; font-weight: 600; border: none; cursor: pointer; transition: background 0.15s; }
+.day-tracker-root .gv2-checkin-btn:hover { background: #4f46e5; }
+.day-tracker-root .gv2-snapshot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.day-tracker-root .gv2-snapshot-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; text-align: center; position: relative; }
+.day-tracker-root .gv2-snapshot-card-top { display: flex; align-items: center; justify-content: center; gap: 4px; margin-bottom: 4px; }
+.day-tracker-root .gv2-snapshot-icon { font-size: 14px; }
+.day-tracker-root .gv2-snapshot-name { font-size: 11px; font-weight: 600; color: #64748b; }
+.day-tracker-root .gv2-snapshot-score { font-size: 22px; font-weight: 800; line-height: 1.1; }
+.day-tracker-root .gv2-snapshot-of { font-size: 11px; font-weight: 500; color: #94a3b8; }
+.day-tracker-root .gv2-snapshot-bar-track { height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden; margin-top: 4px; }
+.day-tracker-root .gv2-snapshot-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+.day-tracker-root .gv2-snapshot-trend { font-size: 10px; font-weight: 700; position: absolute; top: 6px; right: 6px; }
+.day-tracker-root .gv2-trend-up { color: #22c55e; }
+.day-tracker-root .gv2-trend-down { color: #ef4444; }
+.day-tracker-root .gv2-snapshot-empty { font-size: 10px; color: #94a3b8; margin-top: 4px; }
+
 /* Stats bar */
-.day-tracker-root .goals-stats-bar {
-  display: flex;
-  gap: 2px;
-  background: #f8fafc;
-  border-radius: 12px;
-  padding: 12px 8px;
-  margin-bottom: 16px;
-  border: 1px solid #e2e8f0;
-}
-
-.day-tracker-root .goals-stat {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.day-tracker-root .goals-stat-num {
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.day-tracker-root .goals-stat-label {
-  font-size: 10px;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  font-weight: 600;
-}
+.day-tracker-root .gv2-stats-bar { display: flex; gap: 2px; background: #f8fafc; border-radius: 12px; padding: 12px 8px; margin-bottom: 16px; border: 1px solid #e2e8f0; }
+.day-tracker-root .gv2-stat { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.day-tracker-root .gv2-stat-num { font-size: 20px; font-weight: 700; line-height: 1; }
+.day-tracker-root .gv2-stat-label { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; font-weight: 600; }
 
 /* Tabs */
-.day-tracker-root .goals-tabs {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 12px;
-  background: #f1f5f9;
-  border-radius: 10px;
-  padding: 3px;
-}
+.day-tracker-root .gv2-tabs { display: flex; gap: 4px; margin-bottom: 12px; background: #f1f5f9; border-radius: 10px; padding: 3px; }
 
-.day-tracker-root .goals-tab {
+.day-tracker-root .gv2-tab {
   flex: 1;
   padding: 8px 12px;
   border: none;
@@ -690,611 +676,145 @@
   gap: 6px;
 }
 
-.day-tracker-root .goals-tab:hover {
-  color: #334155;
-}
-
-.day-tracker-root .goals-tab-active {
-  background: #fff;
-  color: #1e293b;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-}
-
-.day-tracker-root .goals-tab-count {
-  font-size: 11px;
-  background: #e2e8f0;
-  color: #64748b;
-  padding: 1px 6px;
-  border-radius: 10px;
-  font-weight: 700;
-}
-
-.day-tracker-root .goals-tab-active .goals-tab-count {
-  background: #6366f1;
-  color: #fff;
-}
+.day-tracker-root .gv2-tab:hover { color: #334155; }
+.day-tracker-root .gv2-tab-active { background: #fff; color: #1e293b; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.day-tracker-root .gv2-tab-count { font-size: 11px; background: #e2e8f0; color: #64748b; padding: 1px 6px; border-radius: 10px; font-weight: 700; margin-left: 4px; }
+.day-tracker-root .gv2-tab-active .gv2-tab-count { background: #6366f1; color: #fff; }
 
 /* Filters */
-.day-tracker-root .goals-filters {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.day-tracker-root .goals-filter-select {
-  flex: 1;
-  padding: 6px 10px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 12px;
-  color: #475569;
-  background: #fff;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.day-tracker-root .goals-filter-select:focus {
-  outline: none;
-  border-color: #6366f1;
-}
-
-/* Goal card */
-.day-tracker-root .goal-card {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  margin-bottom: 8px;
-  background: #fff;
-  transition: all 0.15s;
-  overflow: hidden;
-}
-
-.day-tracker-root .goal-card:hover {
-  border-color: #c7d2fe;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.06);
-}
-
-.day-tracker-root .goal-card-achieved {
-  opacity: 0.7;
-  background: #fafafa;
-}
-
-.day-tracker-root .goal-card-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  cursor: pointer;
-}
-
-.day-tracker-root .goal-status-btn {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  border-radius: 50%;
-  border: 2px solid;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.15s;
-  margin-top: 1px;
-}
-
-.day-tracker-root .goal-status-btn:hover {
-  transform: scale(1.1);
-}
-
-.day-tracker-root .goal-card-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.day-tracker-root .goal-card-text {
-  font-size: 14px;
-  font-weight: 500;
-  color: #1e293b;
-  display: block;
-  line-height: 1.4;
-}
-
-.day-tracker-root .goal-text-achieved {
-  text-decoration: line-through;
-  color: #94a3b8;
-}
-
-.day-tracker-root .goal-card-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  flex-wrap: wrap;
-}
-
-.day-tracker-root .goal-category-badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 6px;
-  border: 1px solid;
-  white-space: nowrap;
-}
-
-.day-tracker-root .goal-deadline-badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 6px;
-}
-
-.day-tracker-root .goal-deadline-overdue {
-  color: #ef4444;
-  background: #fef2f2;
-}
-
-.day-tracker-root .goal-deadline-today {
-  color: #ef4444;
-  background: #fef2f2;
-}
-
-.day-tracker-root .goal-deadline-soon {
-  color: #f59e0b;
-  background: #fffbeb;
-}
-
-.day-tracker-root .goal-deadline-normal {
-  color: #64748b;
-  background: #f1f5f9;
-}
-
-.day-tracker-root .goal-card-actions {
-  display: flex;
-  gap: 2px;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.day-tracker-root .goal-card:hover .goal-card-actions,
-.day-tracker-root .vision-card:hover .goal-card-actions {
-  opacity: 1;
-}
-
-.day-tracker-root .goal-action-btn {
-  background: none;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 4px 6px;
-  border-radius: 6px;
-  font-size: 15px;
-  transition: all 0.15s;
-}
-
-.day-tracker-root .goal-action-btn:hover {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.day-tracker-root .goal-action-delete:hover {
-  background: #fef2f2;
-  color: #ef4444;
-}
-
-.day-tracker-root .goal-edit-input {
-  width: 100%;
-  padding: 4px 8px;
-  border: 1px solid #c7d2fe;
-  border-radius: 6px;
-  font-size: 14px;
-  font-family: inherit;
-  color: #1e293b;
-  background: #f8fafc;
-}
-
-.day-tracker-root .goal-edit-input:focus {
-  outline: none;
-  border-color: #6366f1;
-  background: #fff;
-}
-
-/* Expanded goal card */
-.day-tracker-root .goal-card-expanded {
-  padding: 0 14px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border-top: 1px solid #f1f5f9;
-  padding-top: 12px;
-}
-
-.day-tracker-root .goal-expanded-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.day-tracker-root .goal-expanded-label {
-  font-size: 11px;
-  font-weight: 600;
-  color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  min-width: 60px;
-}
-
-.day-tracker-root .goal-category-picker {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.day-tracker-root .goal-cat-option {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
-}
-
-.day-tracker-root .goal-cat-option:hover {
-  border-color: #94a3b8;
-  transform: scale(1.08);
-}
-
-.day-tracker-root .goal-cat-active {
-  transform: scale(1.08);
-}
-
-.day-tracker-root .goal-status-picker {
-  display: flex;
-  gap: 4px;
-}
-
-.day-tracker-root .goal-status-option {
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  font-size: 11px;
-  font-weight: 600;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.day-tracker-root .goal-status-option:hover {
-  border-color: #94a3b8;
-}
-
-.day-tracker-root .goal-date-input {
-  padding: 4px 10px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 12px;
-  font-family: inherit;
-  color: #475569;
-  background: #fff;
-}
-
-.day-tracker-root .goal-date-input:focus {
-  outline: none;
-  border-color: #6366f1;
-}
-
-.day-tracker-root .goal-clear-date {
-  font-size: 11px;
-  color: #94a3b8;
-  background: none;
-  border: none;
-  cursor: pointer;
-}
-
-.day-tracker-root .goal-clear-date:hover {
-  color: #ef4444;
-}
-
-.day-tracker-root .goal-notes-input {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 13px;
-  font-family: inherit;
-  color: #475569;
-  resize: vertical;
-  min-height: 60px;
-  background: #fafafa;
-}
-
-.day-tracker-root .goal-notes-input:focus {
-  outline: none;
-  border-color: #6366f1;
-  background: #fff;
-}
-
-/* Vision card */
-.day-tracker-root .vision-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  margin-bottom: 6px;
-  background: #fff;
-  transition: all 0.15s;
-}
-
-.day-tracker-root .vision-card:hover {
-  border-color: #c7d2fe;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.06);
-}
-
-.day-tracker-root .vision-card-left {
-  flex-shrink: 0;
-}
-
-.day-tracker-root .vision-timeframe {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 800;
-  padding: 4px 8px;
-  border-radius: 6px;
-  border: 1px solid;
-  min-width: 32px;
-}
-
-.day-tracker-root .vision-card-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.day-tracker-root .vision-card-text {
-  font-size: 14px;
-  font-weight: 500;
-  color: #1e293b;
-  display: block;
-  line-height: 1.4;
-  cursor: text;
-}
-
-.day-tracker-root .vision-card-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  flex-wrap: wrap;
-}
-
-.day-tracker-root .vision-meta-actions {
-  display: flex;
-  gap: 4px;
-  margin-left: auto;
-}
-
-.day-tracker-root .vision-tf-select,
-.day-tracker-root .vision-cat-select {
-  padding: 2px 6px;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  font-size: 11px;
-  color: #64748b;
-  background: #fafafa;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.day-tracker-root .vision-tf-select:focus,
-.day-tracker-root .vision-cat-select:focus {
-  outline: none;
-  border-color: #6366f1;
-}
-
-/* Vision groups */
-.day-tracker-root .vision-group {
-  margin-bottom: 16px;
-}
-
-.day-tracker-root .vision-group-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  padding-left: 4px;
-}
-
-.day-tracker-root .vision-group-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
-.day-tracker-root .vision-group-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: #475569;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.day-tracker-root .vision-group-count {
-  font-size: 11px;
-  color: #94a3b8;
-  background: #f1f5f9;
-  padding: 1px 6px;
-  border-radius: 10px;
-  font-weight: 600;
-}
-
-/* Add goal button & form */
-.day-tracker-root .goal-add-btn {
-  margin-top: 10px;
-  background: #fafafa;
-  border: 1px dashed #d1d5db;
-  color: #64748b;
-  padding: 12px 16px;
-  border-radius: 12px;
-  width: 100%;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: all 0.15s;
-}
-
-.day-tracker-root .goal-add-btn:hover {
-  border-color: #6366f1;
-  color: #6366f1;
-  background: #eef2ff;
-}
-
-.day-tracker-root .goal-add-icon {
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.day-tracker-root .goal-add-form {
-  margin-top: 10px;
-  padding: 14px;
-  border: 1px solid #c7d2fe;
-  border-radius: 12px;
-  background: #fafbff;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.day-tracker-root .goal-add-input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
-  color: #1e293b;
-  background: #fff;
-}
-
-.day-tracker-root .goal-add-input:focus {
-  outline: none;
-  border-color: #6366f1;
-}
-
-.day-tracker-root .goal-add-options {
-  display: flex;
-  gap: 8px;
-}
-
-.day-tracker-root .goal-add-select {
-  flex: 1;
-  padding: 6px 10px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 12px;
-  color: #475569;
-  background: #fff;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.day-tracker-root .goal-add-select:focus {
-  outline: none;
-  border-color: #6366f1;
-}
-
-.day-tracker-root .goal-add-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-.day-tracker-root .goal-add-cancel {
-  padding: 6px 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #fff;
-  color: #64748b;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.day-tracker-root .goal-add-cancel:hover {
-  background: #f1f5f9;
-}
-
-.day-tracker-root .goal-add-submit {
-  padding: 6px 16px;
-  border: none;
-  border-radius: 8px;
-  background: #6366f1;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.day-tracker-root .goal-add-submit:hover {
-  background: #4f46e5;
-}
-
-.day-tracker-root .goal-add-submit:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.day-tracker-root .gv2-filters { display: flex; gap: 8px; margin-bottom: 14px; }
+.day-tracker-root .gv2-filter { flex: 1; padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px; color: #475569; background: #fff; cursor: pointer; appearance: none; -webkit-appearance: none; }
+.day-tracker-root .gv2-filter:focus { outline: none; border-color: #6366f1; }
+
+/* Goal Card */
+.day-tracker-root .gv2-goal-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 8px; overflow: hidden; transition: border-color 0.15s, box-shadow 0.15s; position: relative; }
+.day-tracker-root .gv2-goal-card:hover { border-color: #cbd5e1; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+.day-tracker-root .gv2-goal-stale { border-color: #fbbf24; }
+.day-tracker-root .gv2-goal-complete { opacity: 0.7; }
+.day-tracker-root .gv2-goal-card-main { padding: 12px 14px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; position: relative; }
+.day-tracker-root .gv2-goal-top-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.day-tracker-root .gv2-goal-title { font-size: 14px; font-weight: 600; color: #1e293b; line-height: 1.3; flex: 1; }
+.day-tracker-root .gv2-pace-pill { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 6px; border: 1px solid; white-space: nowrap; flex-shrink: 0; }
+.day-tracker-root .gv2-goal-meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.day-tracker-root .gv2-area-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; border: 1px solid; white-space: nowrap; }
+.day-tracker-root .gv2-goal-value { font-size: 12px; color: #64748b; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+/* Progress bar */
+.day-tracker-root .gv2-bar-container { display: flex; align-items: center; gap: 8px; }
+.day-tracker-root .gv2-bar-track { flex: 1; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: visible; position: relative; }
+.day-tracker-root .gv2-bar-fill { height: 100%; border-radius: 3px; min-width: 0; }
+.day-tracker-root .gv2-bar-expected { position: absolute; top: -2px; width: 2px; height: 10px; background: #1e293b; border-radius: 1px; opacity: 0.35; transform: translateX(-1px); }
+.day-tracker-root .gv2-bar-pct { font-size: 11px; font-weight: 700; color: #64748b; min-width: 32px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Goal footer */
+.day-tracker-root .gv2-goal-footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.day-tracker-root .gv2-deadline { font-size: 10px; color: #64748b; font-weight: 500; }
+.day-tracker-root .gv2-deadline-overdue { color: #ef4444; font-weight: 700; }
+.day-tracker-root .gv2-deadline-soon { color: #f59e0b; font-weight: 600; }
+.day-tracker-root .gv2-last-updated { font-size: 10px; color: #94a3b8; }
+.day-tracker-root .gv2-stale-flag { font-size: 9px; font-weight: 700; color: #f59e0b; background: #fef3c7; padding: 1px 6px; border-radius: 4px; border: 1px solid #fde68a; }
+.day-tracker-root .gv2-sparkline { flex-shrink: 0; margin-left: auto; }
+
+/* Goal actions */
+.day-tracker-root .gv2-goal-actions { position: absolute; top: 10px; right: 10px; display: flex; gap: 4px; }
+.day-tracker-root .gv2-log-btn { width: 28px; height: 28px; border-radius: 8px; background: #f1f5f9; border: 1px solid #e2e8f0; color: #6366f1; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; line-height: 1; }
+.day-tracker-root .gv2-log-btn:hover { background: #eef2ff; border-color: #c7d2fe; }
+
+/* Expanded goal */
+.day-tracker-root .gv2-goal-expanded { padding: 0 14px 14px; border-top: 1px solid #f1f5f9; }
+.day-tracker-root .gv2-milestones { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; }
+.day-tracker-root .gv2-milestone-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #334155; cursor: pointer; }
+.day-tracker-root .gv2-milestone-item input[type="checkbox"] { accent-color: #6366f1; width: 14px; height: 14px; }
+.day-tracker-root .gv2-ms-done { text-decoration: line-through; color: #94a3b8; }
+.day-tracker-root .gv2-progress-log { margin: 10px 0; }
+.day-tracker-root .gv2-log-title { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; display: block; margin-bottom: 6px; }
+.day-tracker-root .gv2-log-entry { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 3px 0; border-bottom: 1px solid #f8fafc; }
+.day-tracker-root .gv2-log-date { color: #94a3b8; font-weight: 500; min-width: 80px; }
+.day-tracker-root .gv2-log-value { color: #334155; font-weight: 600; font-variant-numeric: tabular-nums; }
+.day-tracker-root .gv2-log-note { color: #64748b; font-style: italic; }
+.day-tracker-root .gv2-overdue-actions { margin: 10px 0; padding: 10px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; }
+.day-tracker-root .gv2-overdue-msg { font-size: 12px; color: #ef4444; font-weight: 600; display: block; margin-bottom: 8px; }
+.day-tracker-root .gv2-overdue-btns { display: flex; gap: 6px; }
+.day-tracker-root .gv2-overdue-btns button { padding: 4px 10px; border-radius: 6px; border: 1px solid #e2e8f0; background: #fff; font-size: 11px; font-weight: 600; color: #475569; cursor: pointer; }
+.day-tracker-root .gv2-overdue-btns button:hover { background: #f8fafc; }
+.day-tracker-root .gv2-goal-edit-actions { display: flex; gap: 6px; margin-top: 10px; }
+.day-tracker-root .gv2-edit-btn, .day-tracker-root .gv2-delete-btn { padding: 4px 12px; border-radius: 6px; border: 1px solid #e2e8f0; background: #fff; font-size: 11px; font-weight: 600; color: #475569; cursor: pointer; }
+.day-tracker-root .gv2-edit-btn:hover { background: #f8fafc; }
+.day-tracker-root .gv2-delete-btn { color: #ef4444; border-color: #fecaca; }
+.day-tracker-root .gv2-delete-btn:hover { background: #fef2f2; }
+
+/* Vision Card */
+.day-tracker-root .gv2-vision-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 8px; }
+.day-tracker-root .gv2-vision-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.day-tracker-root .gv2-vision-title { font-size: 14px; font-weight: 600; color: #1e293b; flex: 1; }
+.day-tracker-root .gv2-vision-horizon { font-size: 10px; font-weight: 700; color: #6366f1; background: #eef2ff; padding: 2px 8px; border-radius: 6px; border: 1px solid #c7d2fe; }
+.day-tracker-root .gv2-vision-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.day-tracker-root .gv2-vision-stats { font-size: 11px; color: #22c55e; font-weight: 600; }
+.day-tracker-root .gv2-vision-no-goals { font-size: 11px; color: #f59e0b; font-weight: 600; }
+.day-tracker-root .gv2-vision-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+/* Add forms */
+.day-tracker-root .gv2-add-btn { width: 100%; padding: 12px; margin-top: 4px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; color: #64748b; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.15s; }
+.day-tracker-root .gv2-add-btn:hover { border-color: #6366f1; color: #6366f1; background: #eef2ff; }
+.day-tracker-root .gv2-add-icon { font-size: 16px; font-weight: 700; }
+.day-tracker-root .gv2-add-form { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
+.day-tracker-root .gv2-add-input { width: 100%; padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 13px; background: #fff; box-sizing: border-box; }
+.day-tracker-root .gv2-add-input:focus { outline: none; border-color: #6366f1; }
+.day-tracker-root .gv2-add-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.day-tracker-root .gv2-add-select { flex: 1; min-width: 100px; padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px; background: #fff; }
+.day-tracker-root .gv2-add-small { flex: 1; min-width: 70px; padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px; background: #fff; box-sizing: border-box; }
+.day-tracker-root .gv2-add-small:focus, .day-tracker-root .gv2-add-select:focus { outline: none; border-color: #6366f1; }
+.day-tracker-root .gv2-add-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.day-tracker-root .gv2-cancel-btn { padding: 6px 14px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; font-size: 12px; font-weight: 600; color: #64748b; cursor: pointer; }
+.day-tracker-root .gv2-cancel-btn:hover { background: #f8fafc; }
+.day-tracker-root .gv2-submit-btn { padding: 6px 14px; border-radius: 8px; border: none; background: #6366f1; font-size: 12px; font-weight: 600; color: #fff; cursor: pointer; }
+.day-tracker-root .gv2-submit-btn:hover { background: #4f46e5; }
+.day-tracker-root .gv2-submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Milestone builder */
+.day-tracker-root .gv2-milestone-builder { display: flex; flex-direction: column; gap: 4px; }
+.day-tracker-root .gv2-ms-preview { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 12px; }
+.day-tracker-root .gv2-ms-preview button { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px; padding: 0 4px; }
+.day-tracker-root .gv2-ms-preview button:hover { color: #ef4444; }
+
+/* Modal */
+.day-tracker-root .gv2-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.day-tracker-root .gv2-modal { background: #fff; border-radius: 16px; padding: 24px; max-width: 420px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+.day-tracker-root .gv2-checkin-modal { max-width: 480px; }
+.day-tracker-root .gv2-modal-title { font-size: 16px; font-weight: 700; color: #1e293b; margin: 0 0 4px; }
+.day-tracker-root .gv2-modal-subtitle { font-size: 13px; color: #64748b; margin: 0 0 16px; }
+.day-tracker-root .gv2-modal-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.day-tracker-root .gv2-modal-field label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px; }
+.day-tracker-root .gv2-modal-field input { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; }
+.day-tracker-root .gv2-modal-field input:focus { outline: none; border-color: #6366f1; }
+.day-tracker-root .gv2-modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+/* Check-in */
+.day-tracker-root .gv2-checkin-step { display: flex; flex-direction: column; gap: 10px; }
+.day-tracker-root .gv2-checkin-prompt { font-size: 13px; color: #475569; margin: 8px 0 4px; font-weight: 500; }
+.day-tracker-root .gv2-checkin-area { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.day-tracker-root .gv2-checkin-area-label { font-size: 13px; font-weight: 600; color: #334155; min-width: 80px; }
+.day-tracker-root .gv2-checkin-area input[type="range"] { flex: 1; height: 6px; }
+.day-tracker-root .gv2-checkin-area-val { font-size: 16px; font-weight: 800; min-width: 24px; text-align: right; }
+.day-tracker-root .gv2-checkin-no-goals { font-size: 13px; color: #94a3b8; font-style: italic; }
+.day-tracker-root .gv2-checkin-goal { padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+.day-tracker-root .gv2-checkin-goal-title { font-size: 13px; font-weight: 600; color: #334155; display: block; margin-bottom: 4px; }
+.day-tracker-root .gv2-checkin-goal-hint { font-size: 11px; color: #94a3b8; }
+.day-tracker-root .gv2-checkin-goal-input { display: flex; align-items: center; gap: 8px; }
+.day-tracker-root .gv2-checkin-goal-input input { width: 80px; padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; }
+.day-tracker-root .gv2-checkin-goal-unit { font-size: 11px; color: #94a3b8; }
+.day-tracker-root .gv2-checkin-summary { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.day-tracker-root .gv2-summary-row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
 
 /* Empty states */
-.day-tracker-root .goals-empty {
-  text-align: center;
-  padding: 24px;
-  color: #94a3b8;
-  font-size: 13px;
-}
+.day-tracker-root .gv2-empty { text-align: center; color: #94a3b8; font-size: 13px; padding: 24px 0; }
+.day-tracker-root .gv2-empty-state { text-align: center; padding: 40px 20px; }
+.day-tracker-root .gv2-empty-icon { font-size: 36px; margin-bottom: 8px; }
+.day-tracker-root .gv2-empty-title { font-size: 15px; font-weight: 700; color: #334155; margin: 0 0 4px; }
+.day-tracker-root .gv2-empty-desc { font-size: 12px; color: #94a3b8; max-width: 280px; margin: 0 auto; line-height: 1.5; }
 
-.day-tracker-root .goals-empty-state {
-  text-align: center;
-  padding: 32px 16px;
-}
-
-.day-tracker-root .goals-empty-icon {
-  font-size: 36px;
-  margin-bottom: 8px;
-}
-
-.day-tracker-root .goals-empty-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: #475569;
-  margin-bottom: 4px;
-}
-
-.day-tracker-root .goals-empty-desc {
-  font-size: 12px;
-  color: #94a3b8;
-  line-height: 1.5;
-  max-width: 280px;
-  margin: 0 auto;
-}
-
-/* Goals list */
-.day-tracker-root .goals-list {
-  display: flex;
-  flex-direction: column;
-}
+/* List */
+.day-tracker-root .gv2-list { display: flex; flex-direction: column; }
 
 /* Legacy (keep for backwards compat) */
 .day-tracker-root .add-goal {
@@ -3430,46 +2950,32 @@
     font-size: 16px;
   }
 
-  /* Goals / Notes / Projects / Nutrition */
-  .day-tracker-root .goal-card,
-  .day-tracker-root .vision-card,
+  /* Goals V2 / Notes / Projects / Nutrition */
+  .day-tracker-root .gv2-goal-card,
+  .day-tracker-root .gv2-vision-card,
   .day-tracker-root .project-card,
   .day-tracker-root .note-card {
     padding: 10px;
   }
 
-  .day-tracker-root .goal-card-header {
-    padding: 10px;
+  .day-tracker-root .gv2-snapshot-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 
-  .day-tracker-root .goal-card-expanded {
-    padding: 0 10px 10px;
-  }
-
-  .day-tracker-root .goal-category-picker {
-    gap: 3px;
-  }
-
-  .day-tracker-root .goal-status-picker {
-    flex-wrap: wrap;
-  }
-
-  .day-tracker-root .goals-stats-bar {
+  .day-tracker-root .gv2-stats-bar {
     padding: 10px 6px;
   }
 
-  .day-tracker-root .goals-stat-num {
+  .day-tracker-root .gv2-stat-num {
     font-size: 16px;
   }
 
-  .day-tracker-root .vision-meta-actions {
-    margin-left: 0;
-    margin-top: 4px;
+  .day-tracker-root .gv2-goal-card-main {
+    padding: 10px;
   }
 
-  .day-tracker-root .vision-card-meta {
-    flex-direction: column;
-    align-items: flex-start;
+  .day-tracker-root .gv2-goal-expanded {
+    padding: 0 10px 10px;
   }
 
   /* Life Lessons */
