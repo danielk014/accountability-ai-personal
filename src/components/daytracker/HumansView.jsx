@@ -196,6 +196,8 @@ export default function HumansView() {
   const [aiLoading, setAiLoading] = useState(false);
   const [decisionQuestion, setDecisionQuestion] = useState('');
   const [decisionLoading, setDecisionLoading] = useState(false);
+  const [showDecisionChat, setShowDecisionChat] = useState(false);
+  const decisionChatEndRef = useRef(null);
 
   useEffect(() => { setPeople(loadPeople()); }, []);
 
@@ -377,11 +379,12 @@ My question: ${questionText}`;
       }
 
       const newEntry = { id: genId(), question: questionText, answer: answer.trim(), date: new Date().toISOString() };
-      updatePerson(selectedId, { aiDecisions: [newEntry, ...(selected.aiDecisions || [])] });
+      updatePerson(selectedId, { aiDecisions: [...(selected.aiDecisions || []), newEntry] });
+      setTimeout(() => decisionChatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     } catch (err) {
       console.error('Decision maker error:', err);
       const errorEntry = { id: genId(), question: questionText, answer: `Error: ${err.message}. Try asking again.`, date: new Date().toISOString() };
-      updatePerson(selectedId, { aiDecisions: [errorEntry, ...(selected.aiDecisions || [])] });
+      updatePerson(selectedId, { aiDecisions: [...(selected.aiDecisions || []), errorEntry] });
     } finally {
       setDecisionLoading(false);
     }
@@ -625,42 +628,11 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
               </div>
             </Section>
 
-            {/* AI Decision Maker */}
-            <Section title="AI Decision Maker" defaultOpen={true}>
-              <form className="hu-decision-form" onSubmit={handleAskDecision}>
-                <input
-                  className="hu-input"
-                  value={decisionQuestion}
-                  onChange={e => setDecisionQuestion(e.target.value)}
-                  placeholder={`Ask about ${selected.name}... (e.g. Should I lend them money?)`}
-                  disabled={decisionLoading}
-                />
-                <button type="submit" className="hu-ai-btn" disabled={decisionLoading || !decisionQuestion.trim()}>
-                  {decisionLoading ? 'Thinking...' : 'Ask'}
-                </button>
-              </form>
-              {(selected.aiDecisions || []).length > 0 ? (
-                <div className="hu-decision-chat">
-                  {(selected.aiDecisions || []).map(d => (
-                    <div key={d.id} className="hu-decision-chat-item">
-                      <div className="hu-decision-chat-q">
-                        <span className="hu-decision-chat-label">You</span>
-                        <span className="hu-decision-chat-date">{formatDate(d.date)}</span>
-                      </div>
-                      <p className="hu-decision-chat-question">{d.question}</p>
-                      <div className="hu-decision-chat-a">
-                        <span className="hu-decision-chat-label">AI</span>
-                      </div>
-                      <p className="hu-decision-chat-answer">{d.answer}</p>
-                    </div>
-                  ))}
-                  <button className="hu-decision-clear-btn" onClick={handleClearDecisionHistory}>Clear History</button>
-                </div>
-              ) : (
-                <p className="hu-muted" style={{ marginTop: 8 }}>Ask any question about this person. The AI will use all your data — traits, trust scores, memories, lessons, and risk flags — to give you a straight answer.</p>
-              )}
-              {decisionLoading && <div className="hu-decision-loading">Thinking...</div>}
-            </Section>
+            {/* AI Decision Maker Button */}
+            <button className="hu-decision-open-btn" onClick={() => setShowDecisionChat(true)}>
+              AI Decision Maker
+              {(selected.aiDecisions || []).length > 0 && <span className="hu-decision-count">{(selected.aiDecisions || []).length}</span>}
+            </button>
 
             {/* Behavioral Traits */}
             <Section title="Behavioral Traits" count={(selected.traits || []).length}>
@@ -868,13 +840,76 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
         )}
       </div>
 
-      {/* Modal */}
+      {/* Person Form Modal */}
       {showForm && (
         <PersonForm
           person={editingPerson}
           onSave={editingPerson ? handleEditPerson : handleAddPerson}
           onCancel={() => { setShowForm(false); setEditingPerson(null); }}
         />
+      )}
+
+      {/* AI Decision Maker Modal */}
+      {showDecisionChat && selected && (
+        <div className="hu-dm-overlay" onClick={() => setShowDecisionChat(false)}>
+          <div className="hu-dm-modal" onClick={e => e.stopPropagation()}>
+            <div className="hu-dm-header">
+              <div>
+                <h3 className="hu-dm-title">AI Decision Maker</h3>
+                <span className="hu-dm-subtitle">Ask anything about {selected.name}</span>
+              </div>
+              <div className="hu-dm-header-actions">
+                {(selected.aiDecisions || []).length > 0 && (
+                  <button className="hu-dm-clear" onClick={handleClearDecisionHistory}>Clear</button>
+                )}
+                <button className="hu-dm-close" onClick={() => setShowDecisionChat(false)}>&times;</button>
+              </div>
+            </div>
+            <div className="hu-dm-messages">
+              {(selected.aiDecisions || []).length === 0 && !decisionLoading && (
+                <div className="hu-dm-empty">
+                  <p>Ask any question about {selected.name}.</p>
+                  <p className="hu-muted">The AI will use all your data — traits, trust scores, memories, lessons, and risk flags — to give you a straight answer.</p>
+                  <div className="hu-dm-suggestions">
+                    {[`Should I lend ${selected.name} money?`, `Can I trust ${selected.name} with a secret?`, `Should I move in with ${selected.name}?`, `Should I keep my distance?`].map((q, i) => (
+                      <button key={i} className="hu-dm-suggestion" onClick={() => { setDecisionQuestion(q); }}>{q}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(selected.aiDecisions || []).map(d => (
+                <div key={d.id} className="hu-dm-exchange">
+                  <div className="hu-dm-bubble hu-dm-user">
+                    <p>{d.question}</p>
+                    <span className="hu-dm-time">{formatDate(d.date)}</span>
+                  </div>
+                  <div className="hu-dm-bubble hu-dm-ai">
+                    <p>{d.answer}</p>
+                  </div>
+                </div>
+              ))}
+              {decisionLoading && (
+                <div className="hu-dm-bubble hu-dm-ai hu-dm-typing">
+                  <span>Thinking...</span>
+                </div>
+              )}
+              <div ref={decisionChatEndRef} />
+            </div>
+            <form className="hu-dm-input-bar" onSubmit={handleAskDecision}>
+              <input
+                className="hu-dm-input"
+                value={decisionQuestion}
+                onChange={e => setDecisionQuestion(e.target.value)}
+                placeholder={`Ask about ${selected.name}...`}
+                disabled={decisionLoading}
+                autoFocus
+              />
+              <button type="submit" className="hu-dm-send" disabled={decisionLoading || !decisionQuestion.trim()}>
+                {decisionLoading ? '...' : 'Send'}
+              </button>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
