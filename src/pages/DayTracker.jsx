@@ -9,9 +9,10 @@ import NotesView from '@/components/daytracker/NotesView';
 import CoachView from '@/components/daytracker/CoachView';
 import NutritionView from '@/components/daytracker/NutritionView';
 import LifeLessonsView from '@/components/daytracker/LifeLessonsView';
+import HumansView from '@/components/daytracker/HumansView';
 import '@/components/daytracker/daytracker.css';
 
-const TABS = ['Schedule', 'Calendar', 'Chapters', 'Projects', 'Notes', 'Lessons', 'Nutrition', 'Coach'];
+const TABS = ['Schedule', 'Calendar', 'Chapters', 'Projects', 'Notes', 'Lessons', 'People', 'Nutrition', 'Coach'];
 
 export default function DayTracker() {
   const { user } = useAuth();
@@ -73,6 +74,7 @@ export default function DayTracker() {
           {tab === 'Projects' && <ProjectsView />}
           {tab === 'Notes' && <NotesView />}
           {tab === 'Lessons' && <LifeLessonsView />}
+          {tab === 'People' && <HumansView />}
           {tab === 'Nutrition' && <NutritionView />}
           {tab === 'Coach' && <CoachView />}
         </main>

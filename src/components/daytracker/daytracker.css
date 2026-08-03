@@ -3612,3 +3612,1077 @@
     font-size: 16px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   People / Humans View (.hu- prefix)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.day-tracker-root .hu-container {
+  display: flex;
+  gap: 20px;
+  height: calc(100vh - 120px);
+  min-height: 500px;
+}
+
+/* ─── Left Panel: People List ──────────────────────────────────────────────── */
+
+.day-tracker-root .hu-list-panel {
+  width: 320px;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e2e8f0;
+  padding-right: 16px;
+}
+
+.day-tracker-root .hu-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.day-tracker-root .hu-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.day-tracker-root .hu-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 2px 0 0;
+}
+
+.day-tracker-root .hu-add-btn {
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.day-tracker-root .hu-add-btn:hover {
+  background: #4f46e5;
+}
+
+.day-tracker-root .hu-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.day-tracker-root .hu-search {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.day-tracker-root .hu-search:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.day-tracker-root .hu-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.day-tracker-root .hu-filter-chip {
+  padding: 4px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748b;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.day-tracker-root .hu-filter-chip.active {
+  background: #6366f11a;
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.day-tracker-root .hu-sort-select {
+  padding: 6px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  color: #64748b;
+  background: #fff;
+}
+
+.day-tracker-root .hu-people-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.day-tracker-root .hu-person-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s;
+}
+
+.day-tracker-root .hu-person-card:hover {
+  background: #f1f5f9;
+}
+
+.day-tracker-root .hu-person-card.active {
+  background: #6366f10d;
+  border-color: #6366f140;
+}
+
+.day-tracker-root .hu-person-card-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.day-tracker-root .hu-person-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #6366f11a;
+  color: #6366f1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.day-tracker-root .hu-person-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.day-tracker-root .hu-person-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid;
+  text-transform: capitalize;
+}
+
+.day-tracker-root .hu-person-card-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.day-tracker-root .hu-health-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.day-tracker-root .hu-last-contact {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+/* ─── Right Panel: Person Detail ───────────────────────────────────────────── */
+
+.day-tracker-root .hu-detail-panel {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.day-tracker-root .hu-detail-content {
+  max-width: 700px;
+}
+
+.day-tracker-root .hu-back-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: #6366f1;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 12px;
+  font-family: inherit;
+}
+
+.day-tracker-root .hu-detail-header {
+  margin-bottom: 20px;
+}
+
+.day-tracker-root .hu-detail-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.day-tracker-root .hu-detail-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 6px;
+}
+
+.day-tracker-root .hu-edit-btn {
+  background: none;
+  border: 1px solid #e2e8f0;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #64748b;
+  font-family: inherit;
+}
+
+.day-tracker-root .hu-edit-btn:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.day-tracker-root .hu-stats-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.day-tracker-root .hu-stat {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* ─── Sections ─────────────────────────────────────────────────────────────── */
+
+.day-tracker-root .hu-section {
+  margin-bottom: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.day-tracker-root .hu-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  background: #f8fafc;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.day-tracker-root .hu-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.day-tracker-root .hu-section-chevron {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.day-tracker-root .hu-section-body {
+  padding: 12px 16px;
+}
+
+/* ─── Quick Info ───────────────────────────────────────────────────────────── */
+
+.day-tracker-root .hu-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.day-tracker-root .hu-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.day-tracker-root .hu-info-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.day-tracker-root .hu-info-item > span:last-child {
+  font-size: 14px;
+  color: #1e293b;
+}
+
+/* ─── Traits ───────────────────────────────────────────────────────────────── */
+
+.day-tracker-root .hu-traits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.day-tracker-root .hu-trait-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.day-tracker-root .hu-trait-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 140px;
+}
+
+.day-tracker-root .hu-trait-name {
+  font-size: 13px;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.day-tracker-root .hu-trait-ai-badge {
+  font-size: 9px;
+  font-weight: 700;
+  background: #6366f11a;
+  color: #6366f1;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.day-tracker-root .hu-trait-value {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-left: auto;
+}
+
+.day-tracker-root .hu-trait-bar-bg {
+  flex: 1;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.day-tracker-root .hu-trait-bar-fill {
+  height: 100%;
+  background: #6366f1;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+/* ─── Trust Dashboard ──────────────────────────────────────────────────────── */
+
+.day-tracker-root .hu-trust-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.day-tracker-root .hu-trust-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.day-tracker-root .hu-trust-card:hover {
+  border-color: #6366f1;
+}
+
+.day-tracker-root .hu-trust-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.day-tracker-root .hu-trust-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.day-tracker-root .hu-trust-bar-bg {
+  flex: 1;
+  height: 5px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.day-tracker-root .hu-trust-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.day-tracker-root .hu-trust-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  min-width: 24px;
+  text-align: right;
+}
+
+.day-tracker-root .hu-trust-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.day-tracker-root .hu-trust-edit input[type="range"] {
+  flex: 1;
+  height: 4px;
+  accent-color: #6366f1;
+}
+
+/* ─── Interaction Timeline ─────────────────────────────────────────────────── */
+
+.day-tracker-root .hu-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.day-tracker-root .hu-timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.day-tracker-root .hu-timeline-item:last-child {
+  border-bottom: none;
+}
+
+.day-tracker-root .hu-timeline-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.day-tracker-root .hu-timeline-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.day-tracker-root .hu-timeline-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.day-tracker-root .hu-timeline-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.day-tracker-root .hu-sentiment {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.day-tracker-root .hu-sentiment-positive { background: #dcfce7; color: #16a34a; }
+.day-tracker-root .hu-sentiment-neutral { background: #e2e8f0; color: #64748b; }
+.day-tracker-root .hu-sentiment-negative { background: #fee2e2; color: #dc2626; }
+.day-tracker-root .hu-sentiment-mixed { background: #fef3c7; color: #d97706; }
+
+.day-tracker-root .hu-timeline-notes {
+  font-size: 12px;
+  color: #64748b;
+  margin: 2px 0;
+  line-height: 1.4;
+}
+
+.day-tracker-root .hu-timeline-date {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* ─── Memories ─────────────────────────────────────────────────────────────── */
+
+.day-tracker-root .hu-memories-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.day-tracker-root .hu-memory-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  position: relative;
+}
+
+.day-tracker-root .hu-memory-category {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6366f1;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.day-tracker-root .hu-memory-text {
+  font-size: 13px;
+  color: #1e293b;
+  margin: 4px 0;
+  line-height: 1.4;
+}
+
+.day-tracker-root .hu-memory-date {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.day-tracker-root .hu-memory-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+/* ─── Lessons ──────────────────────────────────────────────────────────────── */
+
+.day-tracker-root .hu-lessons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.day-tracker-root .hu-lesson-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.day-tracker-root .hu-lesson-text {
+  flex: 1;
+  font-size: 13px;
+  color: #1e293b;
+  line-height: 1.4;
+}
+
+.day-tracker-root .hu-lesson-date {
+  font-size: 11px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+/* ─── Goals ────────────────────────────────────────────────────────────────── */
+
+.day-tracker-root .hu-goals-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.day-tracker-root .hu-goal-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.day-tracker-root .hu-goal-card.hu-goal-overdue {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.day-tracker-root .hu-goal-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.day-tracker-root .hu-goal-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.day-tracker-root .hu-goal-freq {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6366f1;
+  background: #6366f11a;
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.day-tracker-root .hu-goal-last {
+  font-size: 11px;
+  color: #94a3b8;
+  display: block;
+  margin-top: 4px;
+}
+
+.day-tracker-root .hu-goal-overdue-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: #ef4444;
+  display: block;
+  margin-top: 2px;
+}
+
+.day-tracker-root .hu-goal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.day-tracker-root .hu-goal-done-btn {
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.day-tracker-root .hu-goal-done-btn:hover {
+  background: #4f46e5;
+}
+
+/* ─── AI Analysis ──────────────────────────────────────────────────────────── */
+
+.day-tracker-root .hu-ai-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.day-tracker-root .hu-ai-block {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.day-tracker-root .hu-ai-block-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #6366f1;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.day-tracker-root .hu-ai-block p {
+  font-size: 13px;
+  color: #1e293b;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.day-tracker-root .hu-risk-flag {
+  background: #fff;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+
+.day-tracker-root .hu-risk-flag.hu-risk-high {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.day-tracker-root .hu-risk-flag.hu-risk-medium {
+  border-color: #f97316;
+  background: #fff7ed;
+}
+
+.day-tracker-root .hu-risk-flag.hu-risk-low {
+  border-color: #eab308;
+  background: #fefce8;
+}
+
+.day-tracker-root .hu-risk-flag-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  display: block;
+}
+
+.day-tracker-root .hu-risk-evidence {
+  font-size: 12px;
+  color: #64748b;
+  display: block;
+  margin-top: 2px;
+}
+
+.day-tracker-root .hu-risk-confidence {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  display: block;
+  margin-top: 2px;
+}
+
+/* ─── Shared Inline Controls ───────────────────────────────────────────────── */
+
+.day-tracker-root .hu-inline-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #f8fafc;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.day-tracker-root .hu-input {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.day-tracker-root .hu-input:focus {
+  outline: none;
+  border-color: #6366f1;
+}
+
+.day-tracker-root .hu-textarea {
+  resize: vertical;
+  min-height: 40px;
+}
+
+.day-tracker-root .hu-select {
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  background: #fff;
+}
+
+.day-tracker-root .hu-inline-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.day-tracker-root .hu-inline-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.day-tracker-root .hu-inline-add-btn {
+  background: none;
+  border: 1px dashed #cbd5e1;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6366f1;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.day-tracker-root .hu-inline-add-btn:hover {
+  border-color: #6366f1;
+  background: #6366f10a;
+}
+
+.day-tracker-root .hu-ai-btn {
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.day-tracker-root .hu-ai-btn:hover {
+  background: #4f46e5;
+}
+
+.day-tracker-root .hu-ai-btn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.day-tracker-root .hu-inline-delete {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 4px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.day-tracker-root .hu-inline-delete:hover {
+  color: #ef4444;
+}
+
+.day-tracker-root .hu-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.day-tracker-root .hu-slider-row input[type="range"] {
+  flex: 1;
+  accent-color: #6366f1;
+}
+
+.day-tracker-root .hu-slider-row span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  min-width: 32px;
+  text-align: right;
+}
+
+.day-tracker-root .hu-muted {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 4px 0;
+}
+
+/* ─── Empty / No Selection ─────────────────────────────────────────────────── */
+
+.day-tracker-root .hu-empty {
+  text-align: center;
+  padding: 24px;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.day-tracker-root .hu-empty-start {
+  text-align: center;
+  padding: 40px 20px;
+  color: #64748b;
+}
+
+.day-tracker-root .hu-empty-start h3 {
+  margin: 0 0 8px;
+  color: #1e293b;
+}
+
+.day-tracker-root .hu-empty-start p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.day-tracker-root .hu-no-selection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  color: #94a3b8;
+}
+
+.day-tracker-root .hu-no-selection h3 {
+  color: #64748b;
+  margin: 0 0 8px;
+}
+
+.day-tracker-root .hu-no-selection p {
+  font-size: 14px;
+  margin: 0;
+}
+
+/* ─── Danger Zone ──────────────────────────────────────────────────────────── */
+
+.day-tracker-root .hu-danger-zone {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #fee2e2;
+  text-align: center;
+}
+
+.day-tracker-root .hu-delete-person-btn {
+  background: none;
+  border: 1px solid #fca5a5;
+  color: #ef4444;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.day-tracker-root .hu-delete-person-btn:hover {
+  background: #fef2f2;
+}
+
+/* ─── Modal ────────────────────────────────────────────────────────────────── */
+
+.day-tracker-root .hu-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.day-tracker-root .hu-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 24px;
+  width: 90%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.day-tracker-root .hu-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 16px;
+}
+
+.day-tracker-root .hu-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.day-tracker-root .hu-modal-row {
+  display: flex;
+  gap: 12px;
+}
+
+.day-tracker-root .hu-modal-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.day-tracker-root .hu-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.day-tracker-root .hu-modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+/* ─── Mobile Responsive ────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .day-tracker-root .hu-container {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .day-tracker-root .hu-list-panel {
+    width: 100%;
+    min-width: 0;
+    border-right: none;
+    padding-right: 0;
+  }
+
+  .day-tracker-root .hu-hide-mobile {
+    display: none;
+  }
+
+  .day-tracker-root .hu-back-btn {
+    display: block;
+  }
+
+  .day-tracker-root .hu-trust-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .day-tracker-root .hu-memories-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .day-tracker-root .hu-goals-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .day-tracker-root .hu-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .day-tracker-root .hu-modal-row {
+    flex-direction: column;
+  }
+
+  .day-tracker-root .hu-modal {
+    width: 95%;
+    padding: 16px;
+  }
+}
