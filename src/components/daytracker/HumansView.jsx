@@ -186,7 +186,7 @@ export default function HumansView() {
   // Inline form states
   const [memoryForm, setMemoryForm] = useState({ text: '', category: 'fact' });
   const [showMemoryForm, setShowMemoryForm] = useState(false);
-  const [traitForm, setTraitForm] = useState({ name: '', value: 50 });
+  const [traitForm, setTraitForm] = useState({ name: '' });
   const [showTraitForm, setShowTraitForm] = useState(false);
   const [lessonForm, setLessonForm] = useState('');
   const [showLessonForm, setShowLessonForm] = useState(false);
@@ -253,9 +253,9 @@ export default function HumansView() {
   function handleAddTrait(e) {
     e.preventDefault();
     if (!traitForm.name.trim()) return;
-    const trait = { name: traitForm.name, value: Number(traitForm.value), confidence: 'medium', evidence: '', source: 'manual' };
+    const trait = { name: traitForm.name, source: 'manual' };
     updatePerson(selectedId, { traits: [...(selected.traits || []), trait] });
-    setTraitForm({ name: '', value: 50 });
+    setTraitForm({ name: '' });
     setShowTraitForm(false);
   }
 
@@ -551,10 +551,6 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
                     <div className="hu-trait-info">
                       <span className="hu-trait-name">{trait.name}</span>
                       {trait.source === 'ai' && <span className="hu-trait-ai-badge">AI</span>}
-                      <span className="hu-trait-value">{trait.value}%</span>
-                    </div>
-                    <div className="hu-trait-bar-bg">
-                      <div className="hu-trait-bar-fill" style={{ width: `${trait.value}%` }} />
                     </div>
                     {trait.source === 'manual' && (
                       <button className="hu-inline-delete" onClick={() => handleDeleteTrait(trait.name)} title="Remove">&times;</button>
@@ -565,10 +561,6 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
               {showTraitForm ? (
                 <form className="hu-inline-form" onSubmit={handleAddTrait}>
                   <input className="hu-input" value={traitForm.name} onChange={e => setTraitForm(f => ({ ...f, name: e.target.value }))} placeholder="Trait name (e.g. Reliability)" />
-                  <div className="hu-slider-row">
-                    <input type="range" min="0" max="100" value={traitForm.value} onChange={e => setTraitForm(f => ({ ...f, value: e.target.value }))} />
-                    <span>{traitForm.value}%</span>
-                  </div>
                   <div className="hu-inline-actions">
                     <button type="button" className="btn-cancel" onClick={() => setShowTraitForm(false)}>Cancel</button>
                     <button type="submit" className="btn-save">Add</button>
