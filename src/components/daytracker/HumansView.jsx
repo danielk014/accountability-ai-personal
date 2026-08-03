@@ -319,45 +319,69 @@ export default function HumansView() {
     e.preventDefault();
     if (!decisionQuestion.trim() || !selected) return;
     setDecisionLoading(true);
+    const questionText = decisionQuestion;
+    setDecisionQuestion('');
     try {
       const prevHistory = (selected.aiDecisions || []).slice(0, 10);
       const historyContext = prevHistory.length > 0
-        ? `\nPrevious questions asked about this person:\n${prevHistory.map(d => `Q: ${d.question}\nA: ${d.answer}`).join('\n\n')}\n`
+        ? `\nPrevious questions the user asked about this person:\n${prevHistory.map(d => `Q: ${d.question}\nA: ${d.answer}`).join('\n\n')}\n`
         : '';
 
-      const prompt = `You are a brutally honest relationship advisor. The user is asking a decision question about someone in their life. Use ALL the data below to give a direct, well-reasoned answer. Don't sugarcoat — be real, cite specific evidence from their data, and give a clear recommendation. Keep it concise (3-6 sentences). Talk naturally like a real friend giving advice, no markdown or bullet points.
+      const systemPrompt = `You are the user's brutally honest best friend helping them make decisions about people in their life. Be direct, real, no fluff. Talk like a close friend texting — casual, short, punchy. No markdown, no bullet points, no headers. Just give your honest take in 2-5 sentences. If there's not much data on this person, say so and give general advice based on what you do know.`;
 
-Person: ${selected.name}
+      const userPrompt = `Here's everything I know about this person:
+
+Name: ${selected.name}
 Relationship: ${selected.relationship}
 ${selected.occupation ? `Occupation: ${selected.occupation}` : ''}
 ${selected.company ? `Company: ${selected.company}` : ''}
 ${selected.location ? `Location: ${selected.location}` : ''}
 
-Traits: ${(selected.traits || []).length > 0 ? (selected.traits || []).map(t => t.name + (t.source === 'ai' ? ' (AI-observed)' : '')).join(', ') : 'None set'}
+Traits: ${(selected.traits || []).length > 0 ? (selected.traits || []).map(t => t.name + (t.source === 'ai' ? ' (AI-observed)' : '')).join(', ') : 'None recorded yet'}
 
 Trust Scores:
 ${TRUST_DIMENSIONS.map(d => `- ${d.label}: ${selected.trust?.[d.key] != null ? selected.trust[d.key] + '/100' : 'not rated'}`).join('\n')}
 
-Memories:
-${(selected.memories || []).length > 0 ? (selected.memories || []).map(m => `- [${m.category}] ${m.text}`).join('\n') : 'None'}
+Memories about them:
+${(selected.memories || []).length > 0 ? (selected.memories || []).map(m => `- [${m.category}] ${m.text}`).join('\n') : 'None recorded yet'}
 
-Lessons Learned:
-${(selected.lessons || []).length > 0 ? (selected.lessons || []).map(l => `- ${l.text}`).join('\n') : 'None'}
+Lessons I learned from this relationship:
+${(selected.lessons || []).length > 0 ? (selected.lessons || []).map(l => `- ${l.text}`).join('\n') : 'None yet'}
 
-${selected.aiSummary ? `AI Summary: ${selected.aiSummary}` : ''}
-${(selected.aiRiskFlags || []).length > 0 ? `Risk Flags: ${selected.aiRiskFlags.map(r => r.flag).join(', ')}` : ''}
+${selected.aiSummary ? `AI relationship summary: ${selected.aiSummary}` : ''}
+${(selected.aiRiskFlags || []).length > 0 ? `Risk flags: ${selected.aiRiskFlags.map(r => r.flag).join(', ')}` : ''}
 ${historyContext}
-USER'S QUESTION: ${decisionQuestion}
+My question: ${questionText}`;
 
-Give a direct answer. Start with your recommendation (YES/NO/CONDITIONAL), then explain why based on the data above.`;
+      const response = await fetch('/api/claude', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-5',
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userPrompt }],
+        }),
+      });
 
-      const answer = await sendOneOffPrompt(prompt);
-      const newEntry = { id: genId(), question: decisionQuestion, answer, date: new Date().toISOString() };
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`API error ${response.status}: ${errText}`);
+      }
+
+      const data = await response.json();
+      const answer = data.content?.[0]?.text || data.content?.map(b => b.text).filter(Boolean).join('\n') || '';
+
+      if (!answer.trim()) {
+        throw new Error('AI returned an empty response');
+      }
+
+      const newEntry = { id: genId(), question: questionText, answer: answer.trim(), date: new Date().toISOString() };
       updatePerson(selectedId, { aiDecisions: [newEntry, ...(selected.aiDecisions || [])] });
-      setDecisionQuestion('');
     } catch (err) {
       console.error('Decision maker error:', err);
-      alert('Failed to get a response. Try again.');
+      const errorEntry = { id: genId(), question: questionText, answer: `Error: ${err.message}. Try asking again.`, date: new Date().toISOString() };
+      updatePerson(selectedId, { aiDecisions: [errorEntry, ...(selected.aiDecisions || [])] });
     } finally {
       setDecisionLoading(false);
     }
