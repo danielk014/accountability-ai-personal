@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { supabaseStorage } from '@/api/supabaseStorage';
 import { getUserPrefix } from '@/lib/userStore';
 import { sendOneOffPrompt } from '@/api/claudeClient';
+import { loadConversations, saveConversation, deleteConversation, newConversation } from '@/lib/chatHistory';
+import ChatHistoryPanel from '@/components/ChatHistoryPanel';
 
 const STORAGE_KEY_SUFFIX = 'dt_humans_v1';
 function getStorageKey() { return `${getUserPrefix()}${STORAGE_KEY_SUFFIX}`; }
@@ -197,6 +199,10 @@ export default function HumansView() {
   const [decisionQuestion, setDecisionQuestion] = useState('');
   const [decisionLoading, setDecisionLoading] = useState(false);
   const [showDecisionChat, setShowDecisionChat] = useState(false);
+  const [showDecisionHistory, setShowDecisionHistory] = useState(false);
+  const [dmMessages, setDmMessages] = useState([]);
+  const [dmConvId, setDmConvId] = useState(null);
+  const [dmConversations, setDmConversations] = useState([]);
   const decisionChatEndRef = useRef(null);
 
   useEffect(() => { setPeople(loadPeople()); }, []);
@@ -317,23 +323,68 @@ export default function HumansView() {
 
   // ─── AI Decision Maker ──────────────────────────────────────────────────
 
-  async function handleAskDecision(e) {
-    e.preventDefault();
-    if (!decisionQuestion.trim() || !selected) return;
-    setDecisionLoading(true);
-    const questionText = decisionQuestion;
-    setDecisionQuestion('');
-    try {
-      const prevHistory = (selected.aiDecisions || []).slice(0, 10);
-      const historyContext = prevHistory.length > 0
-        ? `\nPrevious questions the user asked about this person:\n${prevHistory.map(d => `Q: ${d.question}\nA: ${d.answer}`).join('\n\n')}\n`
-        : '';
+  function dmChatType() { return `decisions_${selectedId}`; }
 
-      const systemPrompt = `You are the user's brutally honest best friend helping them make decisions about people in their life. Be direct, real, no fluff. Talk like a close friend texting — casual, short, punchy. No markdown, no bullet points, no headers. Just give your honest take in 2-5 sentences. If there's not much data on this person, say so and give general advice based on what you do know.`;
+  function loadDmConvs() {
+    const convs = loadConversations(dmChatType());
+    setDmConversations(convs);
+    return convs;
+  }
 
-      const userPrompt = `Here's everything I know about this person:
+  function saveDmConv(msgs) {
+    if (!dmConvId) return;
+    const conv = { id: dmConvId, title: '', createdAt: Date.now(), updatedAt: Date.now(), messages: msgs };
+    saveConversation(dmChatType(), conv);
+    setDmConversations(loadConversations(dmChatType()));
+  }
 
-Name: ${selected.name}
+  function openDecisionChat() {
+    const convs = loadConversations(dmChatType());
+    setDmConversations(convs);
+    if (convs.length > 0) {
+      setDmConvId(convs[0].id);
+      setDmMessages(convs[0].messages);
+    } else {
+      const conv = newConversation();
+      setDmConvId(conv.id);
+      setDmMessages([]);
+      saveConversation(dmChatType(), conv);
+      setDmConversations(loadConversations(dmChatType()));
+    }
+    setShowDecisionChat(true);
+  }
+
+  function handleDmNewChat() {
+    const conv = newConversation();
+    setDmConvId(conv.id);
+    setDmMessages([]);
+    saveConversation(dmChatType(), conv);
+    setDmConversations(loadConversations(dmChatType()));
+    setShowDecisionHistory(false);
+  }
+
+  function handleDmSelectConv(conv) {
+    setDmConvId(conv.id);
+    setDmMessages(conv.messages);
+    setShowDecisionHistory(false);
+  }
+
+  function handleDmDeleteConv(id) {
+    deleteConversation(dmChatType(), id);
+    const remaining = loadConversations(dmChatType());
+    setDmConversations(remaining);
+    if (id === dmConvId) {
+      if (remaining.length > 0) {
+        setDmConvId(remaining[0].id);
+        setDmMessages(remaining[0].messages);
+      } else {
+        handleDmNewChat();
+      }
+    }
+  }
+
+  function buildPersonContext() {
+    return `Name: ${selected.name}
 Relationship: ${selected.relationship}
 ${selected.occupation ? `Occupation: ${selected.occupation}` : ''}
 ${selected.company ? `Company: ${selected.company}` : ''}
@@ -351,9 +402,31 @@ Lessons I learned from this relationship:
 ${(selected.lessons || []).length > 0 ? (selected.lessons || []).map(l => `- ${l.text}`).join('\n') : 'None yet'}
 
 ${selected.aiSummary ? `AI relationship summary: ${selected.aiSummary}` : ''}
-${(selected.aiRiskFlags || []).length > 0 ? `Risk flags: ${selected.aiRiskFlags.map(r => r.flag).join(', ')}` : ''}
-${historyContext}
-My question: ${questionText}`;
+${(selected.aiRiskFlags || []).length > 0 ? `Risk flags: ${selected.aiRiskFlags.map(r => r.flag).join(', ')}` : ''}`;
+  }
+
+  async function handleAskDecision(e) {
+    e.preventDefault();
+    if (!decisionQuestion.trim() || !selected) return;
+    setDecisionLoading(true);
+    const questionText = decisionQuestion;
+    setDecisionQuestion('');
+
+    const userMsg = { role: 'user', text: questionText };
+    const updatedMessages = [...dmMessages, userMsg];
+    setDmMessages(updatedMessages);
+    saveDmConv(updatedMessages);
+
+    try {
+      const systemPrompt = `You are the user's brutally honest best friend helping them make decisions about people in their life. Be direct, real, no fluff. Talk like a close friend texting — casual, short, punchy. No markdown, no bullet points, no headers. Just give your honest take in 2-5 sentences. If there's not much data on this person, say so and give general advice based on what you do know.
+
+Here's everything the user knows about this person:
+${buildPersonContext()}`;
+
+      const conversationHistory = updatedMessages.slice(-10).map(m => ({
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.text,
+      }));
 
       const response = await fetch('/api/claude', {
         method: 'POST',
@@ -362,7 +435,7 @@ My question: ${questionText}`;
           model: 'claude-sonnet-5',
           max_tokens: 1024,
           system: systemPrompt,
-          messages: [{ role: 'user', content: userPrompt }],
+          messages: conversationHistory,
         }),
       });
 
@@ -374,25 +447,26 @@ My question: ${questionText}`;
       const data = await response.json();
       const answer = data.content?.[0]?.text || data.content?.map(b => b.text).filter(Boolean).join('\n') || '';
 
-      if (!answer.trim()) {
-        throw new Error('AI returned an empty response');
-      }
+      if (!answer.trim()) throw new Error('AI returned an empty response');
 
-      const newEntry = { id: genId(), question: questionText, answer: answer.trim(), date: new Date().toISOString() };
-      updatePerson(selectedId, { aiDecisions: [...(selected.aiDecisions || []), newEntry] });
+      const assistantMsg = { role: 'assistant', text: answer.trim() };
+      setDmMessages(prev => {
+        const updated = [...prev, assistantMsg];
+        saveDmConv(updated);
+        return updated;
+      });
       setTimeout(() => decisionChatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     } catch (err) {
       console.error('Decision maker error:', err);
-      const errorEntry = { id: genId(), question: questionText, answer: `Error: ${err.message}. Try asking again.`, date: new Date().toISOString() };
-      updatePerson(selectedId, { aiDecisions: [...(selected.aiDecisions || []), errorEntry] });
+      const errorMsg = { role: 'assistant', text: `Error: ${err.message}. Try asking again.` };
+      setDmMessages(prev => {
+        const updated = [...prev, errorMsg];
+        saveDmConv(updated);
+        return updated;
+      });
     } finally {
       setDecisionLoading(false);
     }
-  }
-
-  function handleClearDecisionHistory() {
-    if (!window.confirm('Clear all decision history for this person?')) return;
-    updatePerson(selectedId, { aiDecisions: [] });
   }
 
   // ─── AI Analysis ────────────────────────────────────────────────────────
@@ -509,6 +583,10 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
     setMobileShowDetail(true);
     // Reset inline forms
     setDecisionQuestion('');
+    setDmMessages([]);
+    setDmConvId(null);
+    setShowDecisionChat(false);
+    setShowDecisionHistory(false);
     setShowMemoryForm(false);
     setShowTraitForm(false);
     setShowLessonForm(false);
@@ -629,9 +707,8 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
             </Section>
 
             {/* AI Decision Maker Button */}
-            <button className="hu-decision-open-btn" onClick={() => setShowDecisionChat(true)}>
+            <button className="hu-decision-open-btn" onClick={openDecisionChat}>
               AI Decision Maker
-              {(selected.aiDecisions || []).length > 0 && <span className="hu-decision-count">{(selected.aiDecisions || []).length}</span>}
             </button>
 
             {/* Behavioral Traits */}
@@ -859,14 +936,13 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
                 <span className="hu-dm-subtitle">Ask anything about {selected.name}</span>
               </div>
               <div className="hu-dm-header-actions">
-                {(selected.aiDecisions || []).length > 0 && (
-                  <button className="hu-dm-clear" onClick={handleClearDecisionHistory}>Clear</button>
-                )}
+                <button className="hu-dm-history-btn" onClick={() => setShowDecisionHistory(true)}>History</button>
+                <button className="hu-dm-new-btn" onClick={handleDmNewChat}>+ New</button>
                 <button className="hu-dm-close" onClick={() => setShowDecisionChat(false)}>&times;</button>
               </div>
             </div>
             <div className="hu-dm-messages">
-              {(selected.aiDecisions || []).length === 0 && !decisionLoading && (
+              {dmMessages.length === 0 && !decisionLoading && (
                 <div className="hu-dm-empty">
                   <p>Ask any question about {selected.name}.</p>
                   <p className="hu-muted">The AI will use all your data — traits, trust scores, memories, lessons, and risk flags — to give you a straight answer.</p>
@@ -877,15 +953,9 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
                   </div>
                 </div>
               )}
-              {(selected.aiDecisions || []).map(d => (
-                <div key={d.id} className="hu-dm-exchange">
-                  <div className="hu-dm-bubble hu-dm-user">
-                    <p>{d.question}</p>
-                    <span className="hu-dm-time">{formatDate(d.date)}</span>
-                  </div>
-                  <div className="hu-dm-bubble hu-dm-ai">
-                    <p>{d.answer}</p>
-                  </div>
+              {dmMessages.map((msg, i) => (
+                <div key={i} className={`hu-dm-bubble ${msg.role === 'user' ? 'hu-dm-user' : 'hu-dm-ai'}`}>
+                  <p>{msg.text}</p>
                 </div>
               ))}
               {decisionLoading && (
@@ -909,6 +979,14 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
               </button>
             </form>
           </div>
+          <ChatHistoryPanel
+            open={showDecisionHistory}
+            onClose={() => setShowDecisionHistory(false)}
+            conversations={dmConversations}
+            onSelect={handleDmSelectConv}
+            onDelete={handleDmDeleteConv}
+            onNewChat={handleDmNewChat}
+          />
         </div>
       )}
     </div>
