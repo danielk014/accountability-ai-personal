@@ -3941,61 +3941,100 @@
   flex: 1;
 }
 
-.day-tracker-root .hu-decision-answer {
+.day-tracker-root .hu-decision-chat {
   margin-top: 12px;
-  background: #f0f0ff;
-  border: 1px solid #c7d2fe;
-  border-radius: 10px;
-  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 500px;
+  overflow-y: auto;
 }
 
-.day-tracker-root .hu-decision-answer p {
+.day-tracker-root .hu-decision-chat-item {
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.day-tracker-root .hu-decision-chat-item:last-of-type {
+  border-bottom: none;
+}
+
+.day-tracker-root .hu-decision-chat-q {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.day-tracker-root .hu-decision-chat-a {
+  margin-top: 10px;
+  margin-bottom: 4px;
+}
+
+.day-tracker-root .hu-decision-chat-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.day-tracker-root .hu-decision-chat-q .hu-decision-chat-label {
+  background: #6366f11a;
+  color: #6366f1;
+}
+
+.day-tracker-root .hu-decision-chat-a .hu-decision-chat-label {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.day-tracker-root .hu-decision-chat-date {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.day-tracker-root .hu-decision-chat-question {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.day-tracker-root .hu-decision-chat-answer {
   font-size: 14px;
   color: #1e293b;
   line-height: 1.6;
   margin: 0;
   white-space: pre-wrap;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
 }
 
-.day-tracker-root .hu-decision-history {
-  margin-top: 16px;
-  border-top: 1px solid #e2e8f0;
-  padding-top: 12px;
-}
-
-.day-tracker-root .hu-decision-history-label {
-  font-size: 11px;
-  font-weight: 600;
+.day-tracker-root .hu-decision-clear-btn {
+  background: none;
+  border: none;
   color: #94a3b8;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  display: block;
-  margin-bottom: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 0;
+  text-align: left;
+  font-family: inherit;
 }
 
-.day-tracker-root .hu-decision-history-item {
-  padding: 8px 0;
-  border-bottom: 1px solid #f1f5f9;
+.day-tracker-root .hu-decision-clear-btn:hover {
+  color: #ef4444;
 }
 
-.day-tracker-root .hu-decision-history-item:last-child {
-  border-bottom: none;
-}
-
-.day-tracker-root .hu-decision-q {
+.day-tracker-root .hu-decision-loading {
+  margin-top: 10px;
   font-size: 13px;
-  font-weight: 600;
   color: #6366f1;
-  display: block;
-  margin-bottom: 4px;
-}
-
-.day-tracker-root .hu-decision-a {
-  font-size: 13px;
-  color: #475569;
-  line-height: 1.5;
-  margin: 0;
-  white-space: pre-wrap;
+  font-weight: 600;
 }
 
 /* ─── Traits ───────────────────────────────────────────────────────────────── */
