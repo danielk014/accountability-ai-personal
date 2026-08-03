@@ -22,12 +22,6 @@ const RELATIONSHIP_COLORS = {
   friend: '#3b82f6', family: '#ec4899', coworker: '#f97316', manager: '#ef4444',
   client: '#eab308', mentor: '#8b5cf6', partner: '#e11d48', acquaintance: '#64748b',
 };
-const INTERACTION_TYPES = ['meeting', 'call', 'text', 'email', 'hangout', 'work', 'other'];
-const INTERACTION_ICONS = {
-  meeting: '\u{1F91D}', call: '\u{1F4DE}', text: '\u{1F4AC}', email: '\u{1F4E7}',
-  hangout: '\u{1F37B}', work: '\u{1F4BC}', other: '\u{1F4CC}',
-};
-const SENTIMENT_OPTIONS = ['positive', 'neutral', 'negative', 'mixed'];
 const MEMORY_CATEGORIES = ['fact', 'preference', 'story', 'opinion', 'important', 'other'];
 const TRUST_DIMENSIONS = [
   { key: 'keepWord', label: 'Keeps Word' },
@@ -50,12 +44,6 @@ function daysSince(dateStr) {
   return Math.floor((Date.now() - d.getTime()) / 86400000);
 }
 
-function healthColor(days) {
-  if (days <= 14) return '#22c55e';
-  if (days <= 45) return '#eab308';
-  return '#ef4444';
-}
-
 function formatDate(dateStr) {
   if (!dateStr) return '';
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -70,7 +58,7 @@ function createEmptyPerson() {
   return {
     id: genId(), name: '', nickname: '', relationship: 'friend',
     company: '', occupation: '', birthday: '', location: '', contact: '', dateFirstMet: '',
-    interactions: [], memories: [], traits: [],
+    memories: [], traits: [],
     trust: { keepWord: null, confidentiality: null, financialTrust: null, emotionalTrust: null,
              professionalReliability: null, loyalty: null, consistency: null,
              boundaryRespect: null, conflictResolution: null },
@@ -192,12 +180,10 @@ export default function HumansView() {
   const [editingPerson, setEditingPerson] = useState(null);
   const [search, setSearch] = useState('');
   const [filterRel, setFilterRel] = useState('All');
-  const [sortBy, setSortBy] = useState('lastContact');
+  const [sortBy, setSortBy] = useState('name');
   const [mobileShowDetail, setMobileShowDetail] = useState(false);
 
   // Inline form states
-  const [interactionForm, setInteractionForm] = useState({ type: 'meeting', title: '', notes: '', sentiment: 'neutral' });
-  const [showInteractionForm, setShowInteractionForm] = useState(false);
   const [memoryForm, setMemoryForm] = useState({ text: '', category: 'fact' });
   const [showMemoryForm, setShowMemoryForm] = useState(false);
   const [traitForm, setTraitForm] = useState({ name: '', value: 50 });
@@ -245,25 +231,6 @@ export default function HumansView() {
     const updated = people.filter(p => p.id !== id);
     save(updated);
     if (selectedId === id) { setSelectedId(null); setMobileShowDetail(false); }
-  }
-
-  // ─── Interactions ───────────────────────────────────────────────────────
-
-  function handleAddInteraction(e) {
-    e.preventDefault();
-    if (!interactionForm.title.trim()) return;
-    const interaction = {
-      id: genId(), date: new Date().toISOString().split('T')[0],
-      type: interactionForm.type, title: interactionForm.title,
-      notes: interactionForm.notes, sentiment: interactionForm.sentiment,
-    };
-    updatePerson(selectedId, { interactions: [interaction, ...(selected.interactions || [])] });
-    setInteractionForm({ type: 'meeting', title: '', notes: '', sentiment: 'neutral' });
-    setShowInteractionForm(false);
-  }
-
-  function handleDeleteInteraction(intId) {
-    updatePerson(selectedId, { interactions: (selected.interactions || []).filter(i => i.id !== intId) });
   }
 
   // ─── Memories ───────────────────────────────────────────────────────────
@@ -350,16 +317,12 @@ export default function HumansView() {
     if (!selected) return;
     setAiLoading(true);
     try {
-      const recentInteractions = (selected.interactions || []).slice(0, 20);
       const prompt = `You are a relationship intelligence analyst. Analyze the following person data and return ONLY valid JSON.
 
 Person: ${selected.name}
 Relationship: ${selected.relationship}
 ${selected.occupation ? `Occupation: ${selected.occupation}` : ''}
 ${selected.company ? `Company: ${selected.company}` : ''}
-
-Recent Interactions (last 20):
-${recentInteractions.length > 0 ? recentInteractions.map(i => `- [${i.date}] ${i.type}: ${i.title}${i.notes ? ` — ${i.notes}` : ''} (sentiment: ${i.sentiment})`).join('\n') : 'No interactions logged yet.'}
 
 Memories:
 ${(selected.memories || []).length > 0 ? (selected.memories || []).map(m => `- [${m.category}] ${m.text}`).join('\n') : 'No memories logged yet.'}
@@ -445,8 +408,7 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
         p.name.toLowerCase().includes(s) ||
         (p.nickname || '').toLowerCase().includes(s) ||
         (p.company || '').toLowerCase().includes(s) ||
-        (p.memories || []).some(m => m.text.toLowerCase().includes(s)) ||
-        (p.interactions || []).some(i => i.title.toLowerCase().includes(s) || (i.notes || '').toLowerCase().includes(s))
+        (p.memories || []).some(m => m.text.toLowerCase().includes(s))
       );
     }
     return true;
@@ -455,21 +417,13 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
   const sorted = [...filtered].sort((a, b) => {
     if (sortBy === 'name') return a.name.localeCompare(b.name);
     if (sortBy === 'relationship') return (a.relationship || '').localeCompare(b.relationship || '');
-    // lastContact
-    const aLast = (a.interactions || [])[0]?.date || '';
-    const bLast = (b.interactions || [])[0]?.date || '';
-    return bLast.localeCompare(aLast);
+    return a.name.localeCompare(b.name);
   });
-
-  function getLastContactDate(person) {
-    return (person.interactions || [])[0]?.date || null;
-  }
 
   function selectPerson(id) {
     setSelectedId(id);
     setMobileShowDetail(true);
     // Reset inline forms
-    setShowInteractionForm(false);
     setShowMemoryForm(false);
     setShowTraitForm(false);
     setShowLessonForm(false);
@@ -508,7 +462,6 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
               ))}
             </div>
             <select className="hu-sort-select" value={sortBy} onChange={e => setSortBy(e.target.value)}>
-              <option value="lastContact">Last Contact</option>
               <option value="name">Name</option>
               <option value="relationship">Relationship</option>
             </select>
@@ -517,8 +470,6 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
 
         <div className="hu-people-list">
           {sorted.map(person => {
-            const lastContact = getLastContactDate(person);
-            const days = daysSince(lastContact);
             const relColor = RELATIONSHIP_COLORS[person.relationship] || '#64748b';
             return (
               <div
@@ -534,10 +485,6 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
                       {person.relationship}
                     </span>
                   </div>
-                </div>
-                <div className="hu-person-card-right">
-                  <div className="hu-health-dot" style={{ background: healthColor(days) }} title={lastContact ? `Last contact: ${formatDate(lastContact)}` : 'No contact logged'} />
-                  {lastContact && <span className="hu-last-contact">{formatDateShort(lastContact)}</span>}
                 </div>
               </div>
             );
@@ -575,7 +522,6 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
                 <button className="hu-edit-btn" onClick={() => { setEditingPerson(selected); setShowForm(true); }}>Edit</button>
               </div>
               <div className="hu-stats-row">
-                <span className="hu-stat">{(selected.interactions || []).length} interactions</span>
                 <span className="hu-stat">{(selected.memories || []).length} memories</span>
                 <span className="hu-stat">{(selected.traits || []).length} traits</span>
                 {selected.aiLastAnalyzed && <span className="hu-stat">AI: {formatDateShort(selected.aiLastAnalyzed)}</span>}
@@ -667,47 +613,6 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
                     </div>
                   );
                 })}
-              </div>
-            </Section>
-
-            {/* Interaction Timeline */}
-            <Section title="Interactions" count={(selected.interactions || []).length}>
-              {showInteractionForm ? (
-                <form className="hu-inline-form" onSubmit={handleAddInteraction}>
-                  <div className="hu-modal-row">
-                    <select className="hu-select" value={interactionForm.type} onChange={e => setInteractionForm(f => ({ ...f, type: e.target.value }))}>
-                      {INTERACTION_TYPES.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
-                    </select>
-                    <select className="hu-select" value={interactionForm.sentiment} onChange={e => setInteractionForm(f => ({ ...f, sentiment: e.target.value }))}>
-                      {SENTIMENT_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-                    </select>
-                  </div>
-                  <input className="hu-input" value={interactionForm.title} onChange={e => setInteractionForm(f => ({ ...f, title: e.target.value }))} placeholder="What happened?" />
-                  <textarea className="hu-input hu-textarea" value={interactionForm.notes} onChange={e => setInteractionForm(f => ({ ...f, notes: e.target.value }))} placeholder="Notes (optional)" rows={2} />
-                  <div className="hu-inline-actions">
-                    <button type="button" className="btn-cancel" onClick={() => setShowInteractionForm(false)}>Cancel</button>
-                    <button type="submit" className="btn-save">Log</button>
-                  </div>
-                </form>
-              ) : (
-                <button className="hu-inline-add-btn" onClick={() => setShowInteractionForm(true)}>+ Log Interaction</button>
-              )}
-              <div className="hu-timeline">
-                {(selected.interactions || []).map(int => (
-                  <div key={int.id} className="hu-timeline-item">
-                    <span className="hu-timeline-icon">{INTERACTION_ICONS[int.type] || '\u{1F4CC}'}</span>
-                    <div className="hu-timeline-content">
-                      <div className="hu-timeline-top">
-                        <span className="hu-timeline-title">{int.title}</span>
-                        <span className={`hu-sentiment hu-sentiment-${int.sentiment}`}>{int.sentiment}</span>
-                      </div>
-                      {int.notes && <p className="hu-timeline-notes">{int.notes}</p>}
-                      <span className="hu-timeline-date">{formatDate(int.date)}</span>
-                    </div>
-                    <button className="hu-inline-delete" onClick={() => handleDeleteInteraction(int.id)}>&times;</button>
-                  </div>
-                ))}
-                {(selected.interactions || []).length === 0 && <p className="hu-muted">No interactions logged yet.</p>}
               </div>
             </Section>
 
