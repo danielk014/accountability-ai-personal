@@ -194,6 +194,10 @@ export default function HumansView() {
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [editingTrustKey, setEditingTrustKey] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [decisionQuestion, setDecisionQuestion] = useState('');
+  const [decisionAnswer, setDecisionAnswer] = useState('');
+  const [decisionLoading, setDecisionLoading] = useState(false);
+  const [decisionHistory, setDecisionHistory] = useState([]);
 
   useEffect(() => { setPeople(loadPeople()); }, []);
 
@@ -311,6 +315,52 @@ export default function HumansView() {
     return days > (thresholds[goal.frequency] || Infinity);
   }
 
+  // ─── AI Decision Maker ──────────────────────────────────────────────────
+
+  async function handleAskDecision(e) {
+    e.preventDefault();
+    if (!decisionQuestion.trim() || !selected) return;
+    setDecisionLoading(true);
+    setDecisionAnswer('');
+    try {
+      const prompt = `You are a brutally honest relationship advisor. The user is asking a decision question about someone in their life. Use ALL the data below to give a direct, well-reasoned answer. Don't sugarcoat — be real, cite specific evidence from their data, and give a clear recommendation. Keep it concise (3-6 sentences).
+
+Person: ${selected.name}
+Relationship: ${selected.relationship}
+${selected.occupation ? `Occupation: ${selected.occupation}` : ''}
+${selected.company ? `Company: ${selected.company}` : ''}
+${selected.location ? `Location: ${selected.location}` : ''}
+
+Traits: ${(selected.traits || []).length > 0 ? (selected.traits || []).map(t => t.name + (t.source === 'ai' ? ' (AI-observed)' : '')).join(', ') : 'None set'}
+
+Trust Scores:
+${TRUST_DIMENSIONS.map(d => `- ${d.label}: ${selected.trust?.[d.key] != null ? selected.trust[d.key] + '/100' : 'not rated'}`).join('\n')}
+
+Memories:
+${(selected.memories || []).length > 0 ? (selected.memories || []).map(m => `- [${m.category}] ${m.text}`).join('\n') : 'None'}
+
+Lessons Learned:
+${(selected.lessons || []).length > 0 ? (selected.lessons || []).map(l => `- ${l.text}`).join('\n') : 'None'}
+
+${selected.aiSummary ? `AI Summary: ${selected.aiSummary}` : ''}
+${(selected.aiRiskFlags || []).length > 0 ? `Risk Flags: ${selected.aiRiskFlags.map(r => r.flag).join(', ')}` : ''}
+
+USER'S QUESTION: ${decisionQuestion}
+
+Give a direct answer. Start with your recommendation (YES/NO/CONDITIONAL), then explain why based on the data above.`;
+
+      const answer = await sendOneOffPrompt(prompt);
+      setDecisionAnswer(answer);
+      setDecisionHistory(prev => [{ question: decisionQuestion, answer, date: new Date().toISOString() }, ...prev]);
+      setDecisionQuestion('');
+    } catch (err) {
+      console.error('Decision maker error:', err);
+      setDecisionAnswer('Failed to get a response. Try again.');
+    } finally {
+      setDecisionLoading(false);
+    }
+  }
+
   // ─── AI Analysis ────────────────────────────────────────────────────────
 
   async function handleAiAnalysis() {
@@ -423,7 +473,10 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
   function selectPerson(id) {
     setSelectedId(id);
     setMobileShowDetail(true);
-    // Reset inline forms
+    // Reset inline forms and decision maker
+    setDecisionQuestion('');
+    setDecisionAnswer('');
+    setDecisionHistory([]);
     setShowMemoryForm(false);
     setShowTraitForm(false);
     setShowLessonForm(false);
@@ -541,6 +594,41 @@ Only include trust dimensions where you have evidence. Be honest and analytical,
                   <p className="hu-muted">No info added yet. Click Edit to add details.</p>
                 )}
               </div>
+            </Section>
+
+            {/* AI Decision Maker */}
+            <Section title="AI Decision Maker" defaultOpen={true}>
+              <form className="hu-decision-form" onSubmit={handleAskDecision}>
+                <input
+                  className="hu-input"
+                  value={decisionQuestion}
+                  onChange={e => setDecisionQuestion(e.target.value)}
+                  placeholder={`Ask about ${selected.name}... (e.g. Should I lend them money?)`}
+                  disabled={decisionLoading}
+                />
+                <button type="submit" className="hu-ai-btn" disabled={decisionLoading || !decisionQuestion.trim()}>
+                  {decisionLoading ? 'Thinking...' : 'Ask'}
+                </button>
+              </form>
+              {decisionAnswer && (
+                <div className="hu-decision-answer">
+                  <p>{decisionAnswer}</p>
+                </div>
+              )}
+              {decisionHistory.length > 1 && (
+                <div className="hu-decision-history">
+                  <span className="hu-decision-history-label">Previous questions</span>
+                  {decisionHistory.slice(1).map((d, i) => (
+                    <div key={i} className="hu-decision-history-item">
+                      <span className="hu-decision-q">{d.question}</span>
+                      <p className="hu-decision-a">{d.answer}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {!decisionAnswer && decisionHistory.length === 0 && (
+                <p className="hu-muted" style={{ marginTop: 8 }}>Ask any question about this person. The AI will use all your data — traits, trust scores, memories, lessons, and risk flags — to give you a straight answer.</p>
+              )}
             </Section>
 
             {/* Behavioral Traits */}

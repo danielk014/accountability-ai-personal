@@ -3929,6 +3929,75 @@
   color: #1e293b;
 }
 
+/* ─── AI Decision Maker ────────────────────────────────────────────────────── */
+
+.day-tracker-root .hu-decision-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.day-tracker-root .hu-decision-form .hu-input {
+  flex: 1;
+}
+
+.day-tracker-root .hu-decision-answer {
+  margin-top: 12px;
+  background: #f0f0ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.day-tracker-root .hu-decision-answer p {
+  font-size: 14px;
+  color: #1e293b;
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.day-tracker-root .hu-decision-history {
+  margin-top: 16px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 12px;
+}
+
+.day-tracker-root .hu-decision-history-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.day-tracker-root .hu-decision-history-item {
+  padding: 8px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.day-tracker-root .hu-decision-history-item:last-child {
+  border-bottom: none;
+}
+
+.day-tracker-root .hu-decision-q {
+  font-size: 13px;
+  font-weight: 600;
+  color: #6366f1;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.day-tracker-root .hu-decision-a {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
 /* ─── Traits ───────────────────────────────────────────────────────────────── */
 
 .day-tracker-root .hu-traits-list {
