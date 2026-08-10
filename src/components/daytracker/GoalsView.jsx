@@ -300,6 +300,7 @@ function GoalsView() {
                 onUpdateGoal={(goalId, updates) => updateGoal(selected.id, goalId, updates)}
                 onAddGoal={(title) => addGoal(selected.id, title)}
                 onRemoveGoal={(goalId) => removeGoal(selected.id, goalId)}
+                onUpdateField={(chapterId, updates) => save(chapters.map(c => c.id === chapterId ? { ...c, ...updates } : c))}
               />
             )}
           </div>
@@ -388,7 +389,7 @@ function ChapterTimeline({ chapters, selectedId, onSelect }) {
 }
 
 // ── ChapterCard ─────────────────────────────────────────────────────────────
-function ChapterCard({ chapter, index, total, onToggleCondition, onEdit, onClose, onUpdateGoal, onAddGoal, onRemoveGoal }) {
+function ChapterCard({ chapter, index, total, onToggleCondition, onEdit, onClose, onUpdateGoal, onAddGoal, onRemoveGoal, onUpdateField }) {
   const ch = chapter;
   const isActive = ch.status === 'active';
   const isClosed = ch.status === 'closed';
@@ -398,6 +399,55 @@ function ChapterCard({ chapter, index, total, onToggleCondition, onEdit, onClose
   const progressPct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
   const elapsed = isActive ? daysSince(ch.startDate) : (isClosed && ch.startDate ? daysSince(ch.startDate) - daysSince(ch.closedDate) : 0);
   const elapsedFromStart = ch.startDate ? daysSince(ch.startDate) : 0;
+  const [expandedField, setExpandedField] = useState(null);
+  const [editText, setEditText] = useState('');
+  const textareaRef = useRef(null);
+
+  function startEdit(field) {
+    setExpandedField(field);
+    setEditText(ch[field] || '');
+    setTimeout(() => textareaRef.current?.focus(), 50);
+  }
+
+  function saveField() {
+    if (expandedField && onUpdateField) {
+      onUpdateField(ch.id, { [expandedField]: editText.trim() || null });
+    }
+    setExpandedField(null);
+  }
+
+  function renderField(field, label) {
+    const value = ch[field];
+    const isExpanded = expandedField === field;
+
+    if (isExpanded) {
+      return (
+        <div className="ch-card-field ch-card-field-editing">
+          <span className="ch-card-field-label">{label}</span>
+          <textarea
+            ref={textareaRef}
+            className="ch-card-field-textarea"
+            value={editText}
+            onChange={e => setEditText(e.target.value)}
+            onBlur={saveField}
+            onKeyDown={e => { if (e.key === 'Escape') { setExpandedField(null); } }}
+            rows={5}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div className="ch-card-field ch-card-field-clickable" onClick={() => startEdit(field)}>
+        <span className="ch-card-field-label">{label}</span>
+        {value ? (
+          <p className="ch-card-field-text">{value}</p>
+        ) : (
+          <p className="ch-card-field-placeholder">Click to add {label.toLowerCase()}...</p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="ch-card ch-card-enter">
@@ -426,23 +476,13 @@ function ChapterCard({ chapter, index, total, onToggleCondition, onEdit, onClose
       </div>
 
       {/* Description */}
-      {ch.purpose && <p className="ch-card-purpose">{ch.purpose}</p>}
+      {renderField('purpose', 'Description')}
 
       {/* Main outcome */}
-      {ch.mainOutcome && (
-        <div className="ch-card-field">
-          <span className="ch-card-field-label">Primary Outcome</span>
-          <p className="ch-card-field-text">{ch.mainOutcome}</p>
-        </div>
-      )}
+      {renderField('mainOutcome', 'Primary Outcome')}
 
       {/* Why it matters */}
-      {ch.whyItMatters && (
-        <div className="ch-card-field">
-          <span className="ch-card-field-label">Why It Matters</span>
-          <p className="ch-card-field-text">{ch.whyItMatters}</p>
-        </div>
-      )}
+      {renderField('whyItMatters', 'Why It Matters')}
 
       {/* Exit Criteria */}
       {ch.conditions.length > 0 && (
@@ -471,12 +511,7 @@ function ChapterCard({ chapter, index, total, onToggleCondition, onEdit, onClose
       )}
 
       {/* Priorities */}
-      {ch.priorities && (
-        <div className="ch-card-field">
-          <span className="ch-card-field-label">Current Priorities</span>
-          <p className="ch-card-field-text">{ch.priorities}</p>
-        </div>
-      )}
+      {renderField('priorities', 'Current Priorities')}
 
       {/* Goals (active chapter only) */}
       {isActive && (
