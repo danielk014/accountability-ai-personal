@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { initStorage, cleanupStorage, migrateLocalToSupabase, pullFromSupabase, pushAllToSupabase } from '@/components/daytracker/storage';
 import DailyView from '@/components/daytracker/DailyView';
-import CombinedCalendarView from '@/components/daytracker/CombinedCalendarView';
 import GoalsView from '@/components/daytracker/GoalsView';
 import ProjectsView from '@/components/daytracker/ProjectsView';
 import NotesView from '@/components/daytracker/NotesView';
@@ -12,13 +11,14 @@ import LifeLessonsView from '@/components/daytracker/LifeLessonsView';
 import HumansView from '@/components/daytracker/HumansView';
 import '@/components/daytracker/daytracker.css';
 
-const TABS = ['Schedule', 'Calendar', 'Chapters', 'Projects', 'Notes', 'Lessons', 'People', 'Nutrition', 'Coach'];
+const TABS = ['Schedule', 'Chapters', 'Projects', 'Notes', 'Lessons', 'People', 'Nutrition', 'Coach'];
 
 export default function DayTracker() {
   const { user } = useAuth();
   const [dataReady, setDataReady] = useState(false);
   const [tab, setTab] = useState('Schedule');
   const [selectedDate, setSelectedDate] = useState(null);
+  const [scheduleView, setScheduleView] = useState('day');
 
   useEffect(() => {
     if (!user) return;
@@ -49,6 +49,7 @@ export default function DayTracker() {
 
   function handleDaySelect(date) {
     setSelectedDate(date);
+    setScheduleView('day');
     setTab('Schedule');
   }
 
@@ -68,8 +69,7 @@ export default function DayTracker() {
         </nav>
 
         <main className="content">
-          {tab === 'Schedule' && <DailyView overrideDate={selectedDate} />}
-          {tab === 'Calendar' && <CombinedCalendarView onDaySelect={handleDaySelect} />}
+          {tab === 'Schedule' && <DailyView overrideDate={selectedDate} scheduleView={scheduleView} onViewChange={setScheduleView} onDaySelect={handleDaySelect} />}
           {tab === 'Chapters' && <GoalsView />}
           {tab === 'Projects' && <ProjectsView />}
           {tab === 'Notes' && <NotesView />}

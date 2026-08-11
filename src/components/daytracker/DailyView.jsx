@@ -8,6 +8,7 @@ import {
   loadRecurringTasks, saveRecurringTasks,
   loadBlocks, saveBlocks
 } from './storage';
+import CombinedCalendarView from './CombinedCalendarView';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
@@ -151,7 +152,7 @@ function getY(e) {
   return e.clientY;
 }
 
-function DailyView({ overrideDate }) {
+function DailyView({ overrideDate, scheduleView = 'day', onViewChange, onDaySelect }) {
   const today = getDateStr();
   const [date, setDate] = useState(overrideDate || today);
   const [tasks, setTasks] = useState([]);
@@ -682,8 +683,46 @@ function DailyView({ overrideDate }) {
     .filter(b => b.blockCategory === 'work')
     .reduce((sum, b) => sum + (b.endHour - b.startHour), 0);
 
+  // View toggle bar for Day / Week / Month
+  const viewToggle = onViewChange ? (
+    <div className="schedule-view-toggle" style={{ display: 'flex', gap: 0, marginBottom: 12, background: '#f1f5f9', borderRadius: 12, padding: 3, width: 'fit-content' }}>
+      {['day', 'week', 'month'].map(v => (
+        <button
+          key={v}
+          onClick={() => onViewChange(v)}
+          style={{
+            padding: '6px 16px',
+            borderRadius: 10,
+            border: 'none',
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: 'pointer',
+            textTransform: 'capitalize',
+            transition: 'all 0.15s',
+            background: scheduleView === v ? '#fff' : 'transparent',
+            color: scheduleView === v ? '#1e293b' : '#64748b',
+            boxShadow: scheduleView === v ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+          }}
+        >
+          {v}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
+  // For week/month views, render CombinedCalendarView with forceView
+  if (scheduleView === 'week' || scheduleView === 'month') {
+    return (
+      <div>
+        {viewToggle}
+        <CombinedCalendarView forceView={scheduleView} onDaySelect={onDaySelect} />
+      </div>
+    );
+  }
+
   return (
     <div>
+      {viewToggle}
       <div className="date-nav" style={{ position: 'relative' }}>
         <button onClick={() => shiftDate(-1)}>&larr;</button>
         <span className="date-nav-label" onClick={openDatePicker} style={{ cursor: 'pointer' }}>

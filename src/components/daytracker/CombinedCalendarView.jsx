@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format, startOfWeek, addDays, isSameDay } from "date-fns";
@@ -11,13 +11,23 @@ import TaskSidebar from "@/components/schedule/TaskSidebar.jsx";
 import TaskFormDialog from "@/components/tasks/TaskFormDialog.jsx";
 import CalendarPicker from "@/components/schedule/CalendarPicker.jsx";
 import CalendarView from "./CalendarView";
+import { loadBlocks, getDateStr } from "./storage";
 
-export default function CombinedCalendarView({ onDaySelect }) {
-  const [view, setView] = useState("day");
+export default function CombinedCalendarView({ onDaySelect, forceView }) {
+  const [internalView, setInternalView] = useState("day");
+  const view = forceView || internalView;
+  const setView = forceView ? () => {} : setInternalView;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [mobileDrag, setMobileDrag] = useState(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [blockRefreshKey, setBlockRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const handler = () => setBlockRefreshKey(k => k + 1);
+    window.addEventListener('daytracker-data-refreshed', handler);
+    return () => window.removeEventListener('daytracker-data-refreshed', handler);
+  }, []);
 
   const queryClient = useQueryClient();
 
@@ -113,6 +123,36 @@ export default function CombinedCalendarView({ onDaySelect }) {
   });
 
   const activeTasks = tasks.filter(t => t.is_active !== false);
+
+  // Convert daily schedule blocks into pseudo-tasks for the week view
+  const dailyBlockTasks = React.useMemo(() => {
+    if (view !== "week") return [];
+    const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+    const blockTasks = [];
+    const categoryMap = { work: "work", sleep: "other", personal: "personal", other: "other" };
+    for (let i = 0; i < 7; i++) {
+      const day = addDays(weekStart, i);
+      const dateStr = format(day, "yyyy-MM-dd");
+      const blocks = loadBlocks(dateStr);
+      for (const block of blocks) {
+        const hour = Math.floor(block.startHour);
+        const min = Math.round((block.startHour % 1) * 60);
+        const durationMin = Math.round((block.endHour - block.startHour) * 60);
+        blockTasks.push({
+          id: `block-${dateStr}-${block.id}`,
+          name: block.text,
+          scheduled_time: `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`,
+          scheduled_date: dateStr,
+          duration_minutes: durationMin,
+          category: categoryMap[block.blockCategory] || "other",
+          frequency: "once",
+          is_active: true,
+          _isDailyBlock: true,
+        });
+      }
+    }
+    return blockTasks;
+  }, [view, currentDate, blockRefreshKey]);
 
   const taskAppliesOnDate = (t, date) => {
     const dateStr = format(date, "yyyy-MM-dd");
@@ -235,21 +275,23 @@ export default function CombinedCalendarView({ onDaySelect }) {
             <h2 className="text-lg font-bold text-slate-800">Calendar</h2>
           </div>
         </div>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center bg-slate-100 rounded-xl p-1">
-            {["day", "week", "month"].map(v => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all capitalize ${
-                  view === v ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                {v}
-              </button>
-            ))}
+        {!forceView && (
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center bg-slate-100 rounded-xl p-1">
+              {["day", "week", "month"].map(v => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all capitalize ${
+                    view === v ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
         <CalendarView onDaySelect={(dateStr) => {
           if (onDaySelect) onDaySelect(dateStr);
         }} />
@@ -291,19 +333,21 @@ export default function CombinedCalendarView({ onDaySelect }) {
 
       {/* View toggle + navigation */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center bg-slate-100 rounded-xl p-1">
-          {["day", "week", "month"].map(v => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all capitalize ${
-                view === v ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              {v}
-            </button>
-          ))}
-        </div>
+        {!forceView && (
+          <div className="flex items-center bg-slate-100 rounded-xl p-1">
+            {["day", "week", "month"].map(v => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all capitalize ${
+                  view === v ? "bg-white text-slate-800 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex items-center gap-1 sm:gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="rounded-xl h-8 w-8 sm:h-9 sm:w-9">
             <ChevronLeft className="w-4 h-4" />
@@ -338,16 +382,17 @@ export default function CombinedCalendarView({ onDaySelect }) {
           ) : (
             <WeekView
               date={currentDate}
-              tasks={activeTasks}
+              tasks={[...activeTasks, ...dailyBlockTasks]}
               completions={completions}
-              onToggle={(task, date) => toggleCompletionMutation.mutate({ task, date })}
+              onToggle={(task, date) => { if (!task._isDailyBlock) toggleCompletionMutation.mutate({ task, date }); }}
               onDropTask={(taskId, time, dayStr) => {
+                if (String(taskId).startsWith("block-")) return;
                 base44.entities.Task.update(taskId, { scheduled_time: time, scheduled_date: dayStr });
                 queryClient.invalidateQueries({ queryKey: ["tasks"] });
               }}
-              onRemoveTask={(task) => unscheduleTaskMutation.mutate(task)}
+              onRemoveTask={(task) => { if (!task._isDailyBlock) unscheduleTaskMutation.mutate(task); }}
               timezone={timezone}
-              onDateClick={(day) => { setCurrentDate(day); setView("day"); }}
+              onDateClick={(day) => { setCurrentDate(day); if (onDaySelect) onDaySelect(format(day, "yyyy-MM-dd")); else setView("day"); }}
             />
           )}
         </div>
