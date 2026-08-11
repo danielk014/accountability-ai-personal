@@ -385,9 +385,12 @@ export default function CombinedCalendarView({ onDaySelect, forceView }) {
               tasks={[...activeTasks, ...dailyBlockTasks]}
               completions={completions}
               onToggle={(task, date) => { if (!task._isDailyBlock) toggleCompletionMutation.mutate({ task, date }); }}
-              onDropTask={(taskId, time, dayStr) => {
+              onDropTask={async (taskId, time, dayStr, durationMin) => {
                 if (String(taskId).startsWith("block-")) return;
-                base44.entities.Task.update(taskId, { scheduled_time: time, scheduled_date: dayStr });
+                const id = isNaN(Number(taskId)) ? taskId : Number(taskId);
+                const updates = { scheduled_time: time, scheduled_date: dayStr };
+                if (durationMin !== undefined) updates.duration_minutes = durationMin;
+                await base44.entities.Task.update(id, updates);
                 queryClient.invalidateQueries({ queryKey: ["tasks"] });
               }}
               onRemoveTask={(task) => { if (!task._isDailyBlock) unscheduleTaskMutation.mutate(task); }}

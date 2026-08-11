@@ -336,8 +336,9 @@ export default function WeekView({ date, tasks, completions, onToggle, onDropTas
   const handleDrop = (e, day) => {
     e.preventDefault();
     const dayStr = format(day, "yyyy-MM-dd");
-    const sidebarId = e.dataTransfer.getData("taskId");
-    if (sidebarId) {
+    const rawId = e.dataTransfer.getData("taskId");
+    if (rawId) {
+      const sidebarId = isNaN(Number(rawId)) ? rawId : Number(rawId);
       const el = gridRefs.current[dayStr];
       const top = el ? Math.max(0, e.clientY - el.getBoundingClientRect().top) : 0;
       const newTime = topToTime(top);
