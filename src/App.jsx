@@ -34,8 +34,8 @@ const AuthenticatedApp = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+      <div className="min-h-screen flex items-center justify-center bg-[hsl(220,14%,97%)]">
+        <Loader2 className="w-5 h-5 animate-spin text-[hsl(211,100%,50%)]" />
       </div>
     );
   }

@@ -111,17 +111,21 @@ export default function Login() {
     }
   };
 
+  const inputCls = "w-full px-4 py-3 rounded-xl border border-[hsl(220,13%,89%)] bg-white text-sm text-[hsl(220,13%,10%)] outline-none transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)] focus:border-[hsl(211,100%,50%)] focus:ring-2 focus:ring-[hsl(211,100%,50%)]/15 placeholder:text-[hsl(220,9%,60%)]";
+  const labelCls = "block text-xs font-semibold text-[hsl(220,9%,40%)] mb-1.5 tracking-wide";
+  const btnCls = "w-full py-3 rounded-xl bg-[hsl(211,100%,50%)] hover:bg-[hsl(211,100%,45%)] text-white font-semibold text-sm transition-all duration-200 ease-[cubic-bezier(0.25,0.1,0.25,1)] disabled:opacity-40 flex items-center justify-center gap-2 mt-2 shadow-sm shadow-[hsl(211,100%,50%)]/20 active:scale-[0.98]";
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-violet-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-[hsl(220,14%,97%)] flex items-center justify-center p-4">
+      <div className="w-full max-w-[400px]">
 
         {/* Config error banner */}
         {supabaseMisconfigured && (
-          <div className="mb-6 flex gap-3 items-start bg-red-50 border border-red-300 rounded-2xl px-4 py-3">
-            <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div className="mb-6 flex gap-3 items-start bg-[hsl(0,80%,97%)] border border-[hsl(0,60%,88%)] rounded-2xl px-4 py-3">
+            <AlertTriangle className="w-5 h-5 text-[hsl(0,72%,51%)] flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-red-700">App not configured</p>
-              <p className="text-xs text-red-600 mt-0.5">
+              <p className="text-sm font-semibold text-[hsl(0,60%,35%)]">App not configured</p>
+              <p className="text-xs text-[hsl(0,50%,45%)] mt-0.5">
                 <code className="font-mono">VITE_SUPABASE_URL</code> and <code className="font-mono">VITE_SUPABASE_ANON_KEY</code> are missing.
                 Add them to <code className="font-mono">.env.local</code> or your deployment platform's environment settings.
               </p>
@@ -131,29 +135,29 @@ export default function Login() {
 
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-[#1e2228] flex items-center justify-center mx-auto mb-4 overflow-hidden shadow-lg">
+          <div className="w-16 h-16 rounded-[18px] bg-[#1e2228] flex items-center justify-center mx-auto mb-5 overflow-hidden shadow-lg shadow-black/[0.12]">
             <img
               src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/699863bb9965c7b81ed00428/8af80c917_c05151408_logo.png"
               alt="Accountable"
-              className="w-12 h-12 object-contain"
+              className="w-13 h-13 object-contain"
             />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Accountable</h1>
-          <p className="text-slate-500 mt-1 text-sm">Your personal accountability partner</p>
+          <h1 className="text-[28px] font-bold text-[hsl(220,13%,10%)] tracking-tight">Accountable</h1>
+          <p className="text-[hsl(220,9%,46%)] mt-1.5 text-[15px]">Your personal accountability partner</p>
         </div>
 
-        <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-8">
+        <div className="bg-white rounded-2xl shadow-sm shadow-black/[0.04] border border-[hsl(220,13%,93%)] p-7">
 
           {/* ── Reset password mode ────────────────────────────────────────── */}
           {mode === "reset" && (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="mb-2">
-                <h2 className="text-lg font-bold text-slate-800">Set new password</h2>
-                <p className="text-sm text-slate-500 mt-1">Choose a new password for your account.</p>
+                <h2 className="text-lg font-semibold text-[hsl(220,13%,10%)]">Set new password</h2>
+                <p className="text-sm text-[hsl(220,9%,46%)] mt-1">Choose a new password for your account.</p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">New password</label>
+                <label className={labelCls}>New password</label>
                 <div className="relative">
                   <input
                     type={showNewPw ? "text" : "password"}
@@ -161,21 +165,20 @@ export default function Login() {
                     onChange={e => setNewPassword(e.target.value)}
                     placeholder="Min. 6 characters"
                     autoFocus
-                    className="w-full px-4 py-3 pr-11 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition"
+                    className={cn(inputCls, "pr-11")}
                   />
                   <button type="button" onClick={() => setShowNewPw(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition">
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(220,9%,55%)] hover:text-[hsl(220,13%,30%)] transition">
                     {showNewPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
               {error && (
-                <div className="px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-600 font-medium">{error}</div>
+                <div className="px-4 py-2.5 rounded-xl bg-[hsl(0,80%,97%)] border border-[hsl(0,60%,88%)] text-xs text-[hsl(0,72%,45%)] font-medium">{error}</div>
               )}
 
-              <button type="submit" disabled={loading}
-                className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2">
+              <button type="submit" disabled={loading} className={btnCls}>
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 Update password
               </button>
@@ -186,37 +189,36 @@ export default function Login() {
           {mode === "forgot" && (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="mb-2">
-                <h2 className="text-lg font-bold text-slate-800">Reset your password</h2>
-                <p className="text-sm text-slate-500 mt-1">We'll send a reset link to your email.</p>
+                <h2 className="text-lg font-semibold text-[hsl(220,13%,10%)]">Reset your password</h2>
+                <p className="text-sm text-[hsl(220,9%,46%)] mt-1">We'll send a reset link to your email.</p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Email address</label>
+                <label className={labelCls}>Email address</label>
                 <input
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   autoFocus
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition"
+                  className={inputCls}
                 />
               </div>
 
               {error && (
-                <div className="px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-600 font-medium">{error}</div>
+                <div className="px-4 py-2.5 rounded-xl bg-[hsl(0,80%,97%)] border border-[hsl(0,60%,88%)] text-xs text-[hsl(0,72%,45%)] font-medium">{error}</div>
               )}
               {info && (
-                <div className="px-4 py-2.5 rounded-xl bg-green-50 border border-green-200 text-xs text-green-700 font-medium">{info}</div>
+                <div className="px-4 py-2.5 rounded-xl bg-[hsl(152,50%,96%)] border border-[hsl(152,40%,82%)] text-xs text-[hsl(152,50%,30%)] font-medium">{info}</div>
               )}
 
-              <button type="submit" disabled={loading}
-                className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2">
+              <button type="submit" disabled={loading} className={btnCls}>
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 Send reset email
               </button>
 
               <button type="button" onClick={() => { setMode("login"); setError(""); setInfo(""); }}
-                className="w-full text-center text-xs text-slate-500 hover:text-slate-700 transition">
+                className="w-full text-center text-xs text-[hsl(220,9%,46%)] hover:text-[hsl(220,13%,18%)] transition">
                 Back to sign in
               </button>
             </form>
@@ -226,26 +228,26 @@ export default function Login() {
           {mode === "register" && (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="mb-2">
-                <h2 className="text-lg font-bold text-slate-800">Create your account</h2>
-                <p className="text-sm text-slate-500 mt-1">Start your accountability journey.</p>
+                <h2 className="text-lg font-semibold text-[hsl(220,13%,10%)]">Create your account</h2>
+                <p className="text-sm text-[hsl(220,9%,46%)] mt-1">Start your accountability journey.</p>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Full name</label>
+                <label className={labelCls}>Full name</label>
                 <input type="text" value={name} onChange={e => setName(e.target.value)}
                   placeholder="Your name" autoComplete="name" autoFocus
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition" />
+                  className={inputCls} />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Email address</label>
+                <label className={labelCls}>Email address</label>
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                   placeholder="you@example.com" autoComplete="email"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition" />
+                  className={inputCls} />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Password</label>
+                <label className={labelCls}>Password</label>
                 <div className="relative">
                   <input
                     type={showPw ? "text" : "password"}
@@ -253,47 +255,46 @@ export default function Login() {
                     onChange={e => setPassword(e.target.value)}
                     placeholder="Min. 6 characters"
                     autoComplete="new-password"
-                    className="w-full px-4 py-3 pr-11 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition"
+                    className={cn(inputCls, "pr-11")}
                   />
                   <button type="button" onClick={() => setShowPw(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition">
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(220,9%,55%)] hover:text-[hsl(220,13%,30%)] transition">
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Confirm password</label>
+                <label className={labelCls}>Confirm password</label>
                 <div className="relative">
                   <input
                     type={showConfirmPw ? "text" : "password"}
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Re-enter password"
                     autoComplete="new-password"
-                    className="w-full px-4 py-3 pr-11 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition"
+                    className={cn(inputCls, "pr-11")}
                   />
                   <button type="button" onClick={() => setShowConfirmPw(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition">
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(220,9%,55%)] hover:text-[hsl(220,13%,30%)] transition">
                     {showConfirmPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
 
               {error && (
-                <div className="px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-600 font-medium">{error}</div>
+                <div className="px-4 py-2.5 rounded-xl bg-[hsl(0,80%,97%)] border border-[hsl(0,60%,88%)] text-xs text-[hsl(0,72%,45%)] font-medium">{error}</div>
               )}
 
-              <button type="submit" disabled={loading}
-                className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2">
+              <button type="submit" disabled={loading} className={btnCls}>
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 Create account
               </button>
 
-              <p className="text-center text-xs text-slate-500 pt-1">
+              <p className="text-center text-xs text-[hsl(220,9%,46%)] pt-1">
                 Already have an account?{" "}
                 <button type="button" onClick={() => switchMode("login")}
-                  className="text-indigo-600 font-semibold hover:underline">
+                  className="text-[hsl(211,100%,50%)] font-semibold hover:underline">
                   Sign in
                 </button>
               </p>
@@ -304,25 +305,25 @@ export default function Login() {
           {mode === "login" && (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Email address</label>
+                <label className={labelCls}>Email address</label>
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                   placeholder="you@example.com" autoComplete="email"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition" />
+                  className={inputCls} />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1.5">Password</label>
+                <label className={labelCls}>Password</label>
                 <div className="relative">
                   <input
                     type={showPw ? "text" : "password"}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder="Enter your password"
                     autoComplete="current-password"
-                    className="w-full px-4 py-3 pr-11 rounded-xl border border-slate-200 bg-slate-50 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition"
+                    className={cn(inputCls, "pr-11")}
                   />
                   <button type="button" onClick={() => setShowPw(v => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition">
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(220,9%,55%)] hover:text-[hsl(220,13%,30%)] transition">
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
@@ -330,25 +331,24 @@ export default function Login() {
 
               <div className="text-right -mt-1">
                 <button type="button" onClick={() => switchMode("forgot")}
-                  className="text-xs text-indigo-600 hover:underline font-medium">
+                  className="text-xs text-[hsl(211,100%,50%)] hover:underline font-medium">
                   Forgot password?
                 </button>
               </div>
 
               {error && (
-                <div className="px-4 py-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-600 font-medium">{error}</div>
+                <div className="px-4 py-2.5 rounded-xl bg-[hsl(0,80%,97%)] border border-[hsl(0,60%,88%)] text-xs text-[hsl(0,72%,45%)] font-medium">{error}</div>
               )}
 
-              <button type="submit" disabled={loading}
-                className="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2">
+              <button type="submit" disabled={loading} className={btnCls}>
                 {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                 Sign in
               </button>
 
-              <p className="text-center text-xs text-slate-500 pt-1">
+              <p className="text-center text-xs text-[hsl(220,9%,46%)] pt-1">
                 Don't have an account?{" "}
                 <button type="button" onClick={() => switchMode("register")}
-                  className="text-indigo-600 font-semibold hover:underline">
+                  className="text-[hsl(211,100%,50%)] font-semibold hover:underline">
                   Create one
                 </button>
               </p>
@@ -356,7 +356,7 @@ export default function Login() {
           )}
         </div>
 
-        <p className="text-center text-xs text-slate-400 mt-6">
+        <p className="text-center text-xs text-[hsl(220,9%,60%)] mt-6">
           Your data is stored securely in the cloud.
         </p>
       </div>

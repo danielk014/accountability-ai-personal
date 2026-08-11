@@ -23,10 +23,10 @@ const PRIORITIES = ["urgent", "high", "medium", "low"];
 const CATEGORIES = ["health", "work", "learning", "personal", "social", "mindfulness", "other"];
 
 const priorityConfig = {
-  urgent: { label: "Urgent", bg: "bg-red-50 border-red-200 text-red-600" },
-  high:   { label: "High",   bg: "bg-orange-50 border-orange-200 text-orange-600" },
-  medium: { label: "Medium", bg: "bg-yellow-50 border-yellow-200 text-yellow-600" },
-  low:    { label: "Low",    bg: "bg-slate-50 border-slate-200 text-slate-500" },
+  urgent: { label: "Urgent", bg: "bg-[#FF3B30]/[0.08] border-[#FF3B30]/20 text-[#FF3B30]" },
+  high:   { label: "High",   bg: "bg-[#FF9500]/[0.08] border-[#FF9500]/20 text-[#FF9500]" },
+  medium: { label: "Medium", bg: "bg-[#FFCC00]/[0.08] border-[#FFCC00]/20 text-[#A68A00]" },
+  low:    { label: "Low",    bg: "bg-[hsl(220,14%,96%)] border-[hsl(220,13%,93%)] text-[hsl(220,9%,46%)]" },
 };
 
 function TodoFormDialog({ open, onOpenChange, onSubmit, item }) {
@@ -61,7 +61,7 @@ function TodoFormDialog({ open, onOpenChange, onSubmit, item }) {
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div>
-            <label className="text-sm font-medium text-slate-700 mb-1 block">Task name</label>
+            <label className="text-sm font-medium text-[hsl(220,9%,30%)] mb-1 block">Task name</label>
             <Input
               autoFocus
               placeholder="What do you need to do?"
@@ -72,7 +72,7 @@ function TodoFormDialog({ open, onOpenChange, onSubmit, item }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-sm font-medium text-slate-700 mb-1 block">Priority</label>
+              <label className="text-sm font-medium text-[hsl(220,9%,30%)] mb-1 block">Priority</label>
               <Select value={form.priority} onValueChange={v => setForm(f => ({ ...f, priority: v }))}>
                 <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -81,7 +81,7 @@ function TodoFormDialog({ open, onOpenChange, onSubmit, item }) {
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium text-slate-700 mb-1 block">Category</label>
+              <label className="text-sm font-medium text-[hsl(220,9%,30%)] mb-1 block">Category</label>
               <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v }))}>
                 <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -91,7 +91,7 @@ function TodoFormDialog({ open, onOpenChange, onSubmit, item }) {
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-slate-700 mb-1 block">Due date (optional)</label>
+            <label className="text-sm font-medium text-[hsl(220,9%,30%)] mb-1 block">Due date (optional)</label>
             <Input
               type="date"
               value={form.due_date}
@@ -101,7 +101,7 @@ function TodoFormDialog({ open, onOpenChange, onSubmit, item }) {
           </div>
           <DialogFooter className="pt-2">
             <Button type="button" variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" className="rounded-xl bg-indigo-600 hover:bg-indigo-700">
+            <Button type="submit" className="rounded-xl bg-[hsl(211,100%,50%)] hover:bg-[hsl(211,100%,45%)]">
               {item ? "Save" : "Add"}
             </Button>
           </DialogFooter>
@@ -113,9 +113,9 @@ function TodoFormDialog({ open, onOpenChange, onSubmit, item }) {
 
 // ── Pomodoro Widget ──────────────────────────────────────────────────────────
 const POMO_MODES = [
-  { key: "focus", label: "Focus", color: "from-rose-500 to-orange-500", text: "text-rose-600", defaultMin: 25 },
-  { key: "short", label: "Short Break", color: "from-emerald-500 to-teal-500", text: "text-emerald-600", defaultMin: 5 },
-  { key: "long", label: "Long Break", color: "from-blue-500 to-indigo-500", text: "text-blue-600", defaultMin: 15 },
+  { key: "focus", label: "Focus", color: "from-[#FF3B30] to-[#FF9500]", text: "text-[#FF3B30]", defaultMin: 25 },
+  { key: "short", label: "Short Break", color: "from-[#34C759] to-[#30D158]", text: "text-[#34C759]", defaultMin: 5 },
+  { key: "long", label: "Long Break", color: "from-[#007AFF] to-[#5856D6]", text: "text-[#007AFF]", defaultMin: 15 },
 ];
 function padTwo(n) { return String(n).padStart(2, "0"); }
 
@@ -291,27 +291,27 @@ function PomodoroWidget({ onComplete }) {
   const dash = circ * (1 - progress);
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl p-5">
+    <div className="bg-white border border-[hsl(220,13%,93%)] rounded-2xl p-5 shadow-sm shadow-black/[0.04]">
       <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-slate-500">{sessions} session{sessions !== 1 ? "s" : ""} completed</p>
+        <p className="text-sm text-[hsl(220,9%,46%)]">{sessions} session{sessions !== 1 ? "s" : ""} completed</p>
         <button onClick={() => { setShowSettings(s => !s); setSettingDraft({ ...durations }); }}
-          className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition">
+          className="p-1.5 rounded-lg hover:bg-[hsl(220,14%,96%)] text-[hsl(220,9%,55%)] hover:text-[hsl(220,9%,30%)] transition-all duration-200">
           <Settings2 className="w-4 h-4" />
         </button>
       </div>
 
       {showSettings && (
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
-          <p className="text-xs font-bold text-slate-700 mb-3">Timer Settings (minutes)</p>
+        <div className="bg-[hsl(220,14%,96%)] border border-[hsl(220,13%,93%)] rounded-xl p-4 mb-4">
+          <p className="text-xs font-bold text-[hsl(220,9%,30%)] mb-3">Timer Settings (minutes)</p>
           {[{ key: "focus", label: "Focus" }, { key: "short", label: "Short Break" }, { key: "long", label: "Long Break" }].map(({ key, label }) => (
             <div key={key} className="flex items-center justify-between mb-2">
-              <span className="text-sm text-slate-600">{label}</span>
+              <span className="text-sm text-[hsl(220,9%,40%)]">{label}</span>
               <div className="flex items-center gap-2">
                 <button onClick={() => setSettingDraft(d => ({ ...d, [key]: Math.max(1, d[key] - 1) }))}
-                  className="w-6 h-6 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold flex items-center justify-center text-sm transition">−</button>
-                <span className="w-7 text-center text-sm font-bold text-slate-800">{settingDraft[key]}</span>
+                  className="w-6 h-6 rounded-lg bg-[hsl(220,13%,90%)] hover:bg-[hsl(220,13%,85%)] text-[hsl(220,9%,30%)] font-bold flex items-center justify-center text-sm transition">−</button>
+                <span className="w-7 text-center text-sm font-bold text-[hsl(220,13%,10%)]">{settingDraft[key]}</span>
                 <button onClick={() => setSettingDraft(d => ({ ...d, [key]: Math.min(90, d[key] + 1) }))}
-                  className="w-6 h-6 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold flex items-center justify-center text-sm transition">+</button>
+                  className="w-6 h-6 rounded-lg bg-[hsl(220,13%,90%)] hover:bg-[hsl(220,13%,85%)] text-[hsl(220,9%,30%)] font-bold flex items-center justify-center text-sm transition">+</button>
               </div>
             </div>
           ))}
@@ -323,11 +323,11 @@ function PomodoroWidget({ onComplete }) {
       )}
 
       {/* Mode tabs */}
-      <div className="flex gap-1.5 mb-5 bg-slate-50 border border-slate-200 rounded-xl p-1">
+      <div className="flex gap-1.5 mb-5 bg-[hsl(220,14%,96%)] border border-[hsl(220,13%,93%)] rounded-xl p-1">
         {POMO_MODES.map(m => (
           <button key={m.key} onClick={() => switchMode(m.key)}
             className={cn("flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all",
-              modeKey === m.key ? `bg-gradient-to-r ${m.color} text-white shadow-sm` : "text-slate-500 hover:text-slate-700"
+              modeKey === m.key ? `bg-gradient-to-r ${m.color} text-white shadow-sm` : "text-[hsl(220,9%,46%)] hover:text-[hsl(220,9%,30%)]"
             )}>{m.label}</button>
         ))}
       </div>
@@ -347,13 +347,13 @@ function PomodoroWidget({ onComplete }) {
             />
             <defs>
               <linearGradient id="pgrd" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor={modeKey === "focus" ? "#f43f5e" : modeKey === "short" ? "#10b981" : "#6366f1"} />
-                <stop offset="100%" stopColor={modeKey === "focus" ? "#f97316" : modeKey === "short" ? "#14b8a6" : "#3b82f6"} />
+                <stop offset="0%" stopColor={modeKey === "focus" ? "#FF3B30" : modeKey === "short" ? "#34C759" : "#007AFF"} />
+                <stop offset="100%" stopColor={modeKey === "focus" ? "#FF9500" : modeKey === "short" ? "#30D158" : "#5856D6"} />
               </linearGradient>
             </defs>
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-4xl font-bold text-slate-800 tabular-nums">{padTwo(mins)}:{padTwo(secs)}</span>
+            <span className="text-4xl font-bold text-[hsl(220,13%,10%)] tabular-nums">{padTwo(mins)}:{padTwo(secs)}</span>
             <span className={cn("text-xs font-semibold mt-0.5", mode.text)}>{mode.label}</span>
           </div>
         </div>
@@ -362,7 +362,7 @@ function PomodoroWidget({ onComplete }) {
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
             <button onClick={reset}
-              className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition">
+              className="w-9 h-9 rounded-full bg-[hsl(220,14%,94%)] hover:bg-[hsl(220,13%,90%)] flex items-center justify-center text-[hsl(220,9%,46%)] transition">
               <RotateCcw className="w-4 h-4" />
             </button>
             <button onClick={() => setRunning(r => !r)}
@@ -370,18 +370,18 @@ function PomodoroWidget({ onComplete }) {
               {running ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-0.5" />}
             </button>
             <button onClick={skip}
-              className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition">
+              className="w-9 h-9 rounded-full bg-[hsl(220,14%,94%)] hover:bg-[hsl(220,13%,90%)] flex items-center justify-center text-[hsl(220,9%,46%)] transition">
               <SkipForward className="w-4 h-4" />
             </button>
           </div>
           <div className="flex gap-1.5">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className={cn("w-2.5 h-2.5 rounded-full transition-all",
-                i < sessions % 4 ? `bg-gradient-to-br ${mode.color}` : "bg-slate-200"
+                i < sessions % 4 ? `bg-gradient-to-br ${mode.color}` : "bg-[hsl(220,13%,90%)]"
               )} />
             ))}
           </div>
-          <p className="text-xs text-slate-400">{4 - (sessions % 4)} more until long break</p>
+          <p className="text-xs text-[hsl(220,9%,55%)]">{4 - (sessions % 4)} more until long break</p>
         </div>
       </div>
     </div>
@@ -631,7 +631,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
+    <div className="max-w-2xl mx-auto px-5 py-10">
       <GreetingHeader
         userName={user?.full_name}
         overallStreak={profile?.overall_streak || 0}
@@ -645,8 +645,8 @@ export default function Dashboard() {
           onClick={handlePomoToggle}
           className="flex items-center gap-2 mb-4 group"
         >
-          <h2 className="text-lg font-bold text-slate-800">Pomodoro Timer</h2>
-          <span className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-rose-50 text-rose-600 text-xs font-semibold border border-rose-200 hover:bg-rose-100 transition">
+          <h2 className="text-lg font-semibold text-[hsl(220,13%,10%)]">Pomodoro Timer</h2>
+          <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#FF3B30]/[0.08] text-[#FF3B30] text-xs font-semibold border border-[#FF3B30]/15 hover:bg-[#FF3B30]/[0.12] transition-all duration-200">
             <Timer className="w-3.5 h-3.5" />
             {showPomodoro ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </span>
@@ -654,11 +654,11 @@ export default function Dashboard() {
 
         {/* Completion notification banner */}
         {pomoFinished && (
-          <div className="flex items-center justify-between gap-3 mb-3 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">
+          <div className="flex items-center justify-between gap-3 mb-3 px-4 py-3 rounded-xl bg-[#34C759]/[0.08] border border-[#34C759]/15 text-[#248A3D] text-sm font-medium">
             <span>
               {pomoFinished.mode === 'focus' ? '🎉 Focus session complete! Time for a break.' : '⏰ Break finished — ready to focus?'}
             </span>
-            <button onClick={dismissPomoNotif} className="text-emerald-500 hover:text-emerald-700 transition flex-shrink-0">
+            <button onClick={dismissPomoNotif} className="text-[#34C759] hover:text-[#248A3D] transition-all duration-200 flex-shrink-0">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -677,12 +677,12 @@ export default function Dashboard() {
 
       {/* ── Today's Tasks ── */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-slate-800">Today's tasks</h2>
+        <h2 className="text-lg font-semibold text-[hsl(220,13%,10%)]">Today's tasks</h2>
         <Button
           onClick={() => setShowHabitForm(true)}
           variant="outline"
           size="sm"
-          className="rounded-xl border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+          className="rounded-xl border-[hsl(211,100%,85%)] text-[hsl(211,100%,50%)] hover:bg-[hsl(211,100%,97%)]"
         >
           <Plus className="w-4 h-4 mr-1" />
           Add
@@ -692,8 +692,8 @@ export default function Dashboard() {
       {/* Overdue tasks */}
       {overdueTasks.length > 0 && (
         <div className="mb-4">
-          <p className="text-xs font-semibold text-red-500 uppercase tracking-wide mb-2 flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
+          <p className="text-xs font-semibold text-[#FF3B30] uppercase tracking-wide mb-2 flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full bg-[#FF3B30] inline-block" />
             Overdue
           </p>
           <div className="space-y-2">
@@ -726,7 +726,7 @@ export default function Dashboard() {
         </AnimatePresence>
 
         {sortedTasks.length === 0 && (
-          <div className="text-center py-10 text-slate-400">
+          <div className="text-center py-10 text-[hsl(220,9%,55%)]">
             <p className="text-base font-medium">No habits yet</p>
             <p className="text-sm mt-1">Add your first habit to get started!</p>
           </div>
@@ -736,22 +736,22 @@ export default function Dashboard() {
       {/* ── Tomorrow's Tasks ── */}
       {tomorrowsTasks.length > 0 && (
         <div className="mb-10">
-          <h2 className="text-lg font-bold text-slate-800 mb-4">
+          <h2 className="text-lg font-semibold text-[hsl(220,13%,10%)] mb-4">
             Tomorrow's tasks
-            <span className="ml-2 text-xs font-semibold text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">{tomorrowsTasks.length}</span>
+            <span className="ml-2 text-xs font-semibold text-[hsl(220,9%,55%)] bg-[hsl(220,14%,94%)] rounded-full px-2 py-0.5">{tomorrowsTasks.length}</span>
           </h2>
           <div className="space-y-2">
             {tomorrowsTasks.map(task => (
-              <div key={task.id} className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-2xl opacity-75">
-                <div className="w-4 h-4 rounded-full border-2 border-slate-200 flex-shrink-0" />
+              <div key={task.id} className="flex items-center gap-3 p-3 bg-white border border-[hsl(220,13%,95%)] rounded-2xl opacity-75">
+                <div className="w-4 h-4 rounded-full border-2 border-[hsl(220,13%,93%)] flex-shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-600">{task.name}</p>
+                  <p className="text-sm font-medium text-[hsl(220,9%,40%)]">{task.name}</p>
                   {task.scheduled_time && (
-                    <p className="text-xs text-slate-400 mt-0.5">{task.scheduled_time}</p>
+                    <p className="text-xs text-[hsl(220,9%,55%)] mt-0.5">{task.scheduled_time}</p>
                   )}
                 </div>
                 {task.category && (
-                  <span className="text-xs text-slate-400 capitalize">{task.category}</span>
+                  <span className="text-xs text-[hsl(220,9%,55%)] capitalize">{task.category}</span>
                 )}
               </div>
             ))}
@@ -761,12 +761,12 @@ export default function Dashboard() {
 
       {/* ── To-Do List ── */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-slate-800">To-Do List</h2>
+        <h2 className="text-lg font-semibold text-[hsl(220,13%,10%)]">To-Do List</h2>
         <Button
           onClick={() => { setEditingTodo(null); setShowTodoForm(true); }}
           variant="outline"
           size="sm"
-          className="rounded-xl border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+          className="rounded-xl border-[hsl(211,100%,85%)] text-[hsl(211,100%,50%)] hover:bg-[hsl(211,100%,97%)]"
         >
           <Plus className="w-4 h-4 mr-1" />
           Add
@@ -784,36 +784,36 @@ export default function Dashboard() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="flex items-center gap-4 p-4 bg-white border border-slate-200 rounded-2xl hover:shadow-md transition-all group"
+                className="flex items-center gap-4 p-4 bg-white border border-[hsl(220,13%,93%)] rounded-2xl hover:shadow-md transition-all group"
               >
                 <button
                   onClick={() => updateTodoMutation.mutate({ id: item.id, data: { is_done: true, completed_at: new Date().toISOString() } })}
-                  className="w-5 h-5 rounded-full border-2 border-slate-300 hover:border-indigo-500 flex items-center justify-center transition-colors flex-shrink-0"
+                  className="w-5 h-5 rounded-full border-2 border-[hsl(220,13%,85%)] hover:border-[hsl(211,100%,50%)] flex items-center justify-center transition-colors flex-shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm text-slate-800">{item.name}</p>
+                  <p className="font-semibold text-sm text-[hsl(220,13%,10%)]">{item.name}</p>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <span className={cn("text-xs px-2 py-0.5 rounded-full border", pc.bg)}>
                       <Flag className="w-2.5 h-2.5 inline mr-1" />{pc.label}
                     </span>
                     {item.category && (
-                      <span className="text-xs text-slate-400 capitalize">{item.category}</span>
+                      <span className="text-xs text-[hsl(220,9%,55%)] capitalize">{item.category}</span>
                     )}
                     {item.due_date && (
-                      <span className="text-xs text-slate-400">Due {item.due_date}</span>
+                      <span className="text-xs text-[hsl(220,9%,55%)]">Due {item.due_date}</span>
                     )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingTodo(item); setShowTodoForm(true); }}>
-                    <Pencil className="w-4 h-4 text-slate-400" />
+                    <Pencil className="w-4 h-4 text-[hsl(220,9%,55%)]" />
                   </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
                     if (!window.confirm(`Delete "${item.name}"?`)) return;
                     if (!window.confirm("This is permanent and cannot be undone. Delete anyway?")) return;
                     deleteTodoMutation.mutate(item.id);
                   }}>
-                    <Trash2 className="w-4 h-4 text-red-400" />
+                    <Trash2 className="w-4 h-4 text-[#FF3B30]/70" />
                   </Button>
                 </div>
               </motion.div>
@@ -821,7 +821,7 @@ export default function Dashboard() {
           })}
         </AnimatePresence>
         {pendingTodos.length === 0 && (
-          <div className="text-center py-10 text-slate-400">
+          <div className="text-center py-10 text-[hsl(220,9%,55%)]">
             <p className="text-base font-medium">All clear!</p>
             <p className="text-sm mt-1">Add a to-do item to get started.</p>
           </div>
@@ -830,12 +830,12 @@ export default function Dashboard() {
 
       {/* ── Reminders ── */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-          <Bell className="w-5 h-5 text-indigo-500" />
+        <h2 className="text-lg font-semibold text-[hsl(220,13%,10%)] flex items-center gap-2">
+          <Bell className="w-5 h-5 text-[hsl(211,100%,50%)]" />
           Reminders
         </h2>
       </div>
-      <div className="mb-8 bg-white border border-slate-200 rounded-2xl overflow-hidden" style={{ minHeight: 180 }}>
+      <div className="mb-8 bg-white border border-[hsl(220,13%,93%)] rounded-2xl overflow-hidden" style={{ minHeight: 180 }}>
         <RemindersPanel />
       </div>
 

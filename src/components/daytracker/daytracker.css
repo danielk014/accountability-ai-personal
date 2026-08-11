@@ -1,7 +1,7 @@
 .day-tracker-root {
   background: transparent;
-  color: #1e293b;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #1d1d1f;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
   min-height: calc(100vh - 64px);
   padding: 0;
 }
@@ -21,11 +21,13 @@
 .day-tracker-root .tabs {
   display: flex;
   gap: 2px;
-  padding: 8px 10px;
-  border-bottom: 1px solid #e2e8f0;
+  padding: 6px 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
   position: sticky;
-  top: 56px;
-  background: #f8fafc;
+  top: 48px;
+  background: rgba(249,249,251,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   z-index: 10;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -38,25 +40,27 @@
 
 .day-tracker-root .tab {
   flex: 1;
-  padding: 8px 0;
+  padding: 7px 0;
   border: none;
   background: transparent;
-  color: #64748b;
+  color: #86868b;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   border-radius: 8px;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.25, 0.1, 0.25, 1);
+  letter-spacing: -0.01em;
 }
 
 .day-tracker-root .tab.active {
   background: #ffffff;
-  color: #0f172a;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  color: #1d1d1f;
+  box-shadow: 0 0.5px 1px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.04);
+  font-weight: 600;
 }
 
 .day-tracker-root .tab:hover:not(.active) {
-  color: #475569;
+  color: #1d1d1f;
 }
 
 .day-tracker-root .content {
@@ -85,7 +89,7 @@
   max-height: calc(100dvh - 140px);
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: #c7c7cc transparent;
 }
 
 @media (max-width: 700px) {
@@ -102,7 +106,7 @@
 /* Daily Tasks */
 .day-tracker-root .daily-tasks-section {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 12px;
   padding: 14px;
   margin-bottom: 8px;
@@ -121,16 +125,16 @@
   gap: 6px;
   font-size: 15px;
   font-weight: 700;
-  color: #1e293b;
+  color: #1d1d1f;
 }
 
 .day-tracker-root .daily-tasks-icon {
-  color: #6366f1;
+  color: #007AFF;
   font-size: 16px;
 }
 
 .day-tracker-root .daily-tasks-badge {
-  background: #6366f1;
+  background: #007AFF;
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -144,7 +148,7 @@
 }
 
 .day-tracker-root .daily-tasks-add-btn {
-  background: #6366f1;
+  background: #007AFF;
   color: #fff;
   border: none;
   padding: 6px 12px;
@@ -155,7 +159,7 @@
 }
 
 .day-tracker-root .daily-tasks-add-btn:hover {
-  background: #4f46e5;
+  background: #0062CC;
 }
 
 .day-tracker-root .daily-task-add-form {
@@ -165,9 +169,9 @@
 .day-tracker-root .daily-task-add-input {
   width: 100%;
   background: #ffffff;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #c7c7cc;
   border-radius: 8px;
-  color: #1e293b;
+  color: #1d1d1f;
   padding: 10px;
   font-size: 14px;
   font-family: inherit;
@@ -176,7 +180,7 @@
 
 .day-tracker-root .daily-task-add-input:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: #007AFF;
 }
 
 .day-tracker-root .daily-task-add-row {
@@ -200,7 +204,7 @@
 
 .day-tracker-root .daily-task-color-btn.selected {
   transform: scale(1.25);
-  box-shadow: 0 0 0 2px #1e293b;
+  box-shadow: 0 0 0 2px #1d1d1f;
 }
 
 .day-tracker-root .daily-tasks-list {
@@ -211,7 +215,7 @@
 
 .day-tracker-root .daily-tasks-progress-text {
   font-size: 11px;
-  color: #94a3b8;
+  color: #86868b;
   margin-bottom: 4px;
 }
 
@@ -235,7 +239,7 @@
 }
 
 .day-tracker-root .daily-task-grip {
-  color: #94a3b8;
+  color: #86868b;
   font-size: 12px;
   cursor: grab;
   user-select: none;
@@ -247,7 +251,7 @@
   width: 20px;
   height: 20px;
   border-radius: 6px;
-  border: 2px solid #94a3b8;
+  border: 2px solid #86868b;
   background: transparent;
   color: #fff;
   font-size: 11px;
@@ -259,8 +263,8 @@
 }
 
 .day-tracker-root .daily-task-check.checked {
-  background: #6366f1;
-  border-color: #6366f1;
+  background: #007AFF;
+  border-color: #007AFF;
 }
 
 .day-tracker-root .daily-task-text {
@@ -277,7 +281,7 @@
 .day-tracker-root .daily-task-delete {
   background: none;
   border: none;
-  color: #94a3b8;
+  color: #86868b;
   font-size: 16px;
   cursor: pointer;
   padding: 2px 4px;
@@ -290,12 +294,12 @@
 }
 
 .day-tracker-root .daily-task-delete:hover {
-  color: #ef4444;
+  color: #FF3B30;
 }
 
 .day-tracker-root .daily-task-delete.confirm {
   opacity: 1;
-  color: #ef4444;
+  color: #FF3B30;
   font-size: 11px;
   font-weight: 600;
   background: rgba(239, 68, 68, 0.12);
@@ -305,15 +309,15 @@
 
 .day-tracker-root .daily-tasks-empty {
   font-size: 13px;
-  color: #94a3b8;
+  color: #86868b;
   text-align: center;
   padding: 8px 0;
 }
 
 .day-tracker-root .recurring-toggle {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  color: #475569;
+  background: #f2f2f7;
+  border: 1px solid #c7c7cc;
+  color: #48484a;
   padding: 4px 10px;
   border-radius: 6px;
   font-size: 11px;
@@ -323,13 +327,13 @@
 
 .day-tracker-root .recurring-toggle.active {
   background: rgba(99, 102, 241, 0.1);
-  border-color: #6366f1;
-  color: #818cf8;
+  border-color: #007AFF;
+  color: #4DA3FF;
 }
 
 .day-tracker-root .recurring-badge {
   font-size: 12px;
-  color: #6366f1;
+  color: #007AFF;
   flex-shrink: 0;
 }
 
@@ -434,7 +438,7 @@
 .day-tracker-root .touch-drag-ghost {
   position: fixed;
   z-index: 1000;
-  background: #6366f1;
+  background: #007AFF;
   color: #fff;
   padding: 8px 16px;
   border-radius: 8px;
@@ -462,8 +466,8 @@
   flex-direction: column;
   gap: 4px;
   padding: 4px;
-  background: #eef2ff;
-  border: 1px solid #6366f1;
+  background: #EBF5FF;
+  border: 1px solid #007AFF;
   border-radius: 6px;
 }
 
@@ -471,7 +475,7 @@
   flex: 1;
   background: transparent;
   border: none;
-  color: #1e293b;
+  color: #1d1d1f;
   font-size: 13px;
   font-family: inherit;
   padding: 4px 6px;
@@ -479,11 +483,11 @@
 }
 
 .day-tracker-root .inline-block-input::placeholder {
-  color: #64748b;
+  color: #6e6e73;
 }
 
 .day-tracker-root .inline-block-add {
-  background: #6366f1;
+  background: #007AFF;
   border: none;
   color: #fff;
   width: 28px;
@@ -496,7 +500,7 @@
 
 .day-tracker-root .daily-tasks-drag-hint {
   font-size: 12px;
-  color: #94a3b8;
+  color: #86868b;
   margin-bottom: 6px;
   font-style: italic;
 }
@@ -505,7 +509,7 @@
 .day-tracker-root .hour-row {
   display: flex;
   gap: 8px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e5e5ea;
   align-items: center;
   cursor: pointer;
   transition: background 0.15s;
@@ -516,30 +520,30 @@
 }
 
 .day-tracker-root .hour-row:hover {
-  background: #f1f5f9;
+  background: #f2f2f7;
 }
 
 .day-tracker-root .hour-row.drop-target {
-  background: #eef2ff;
-  border: 1px dashed #6366f1;
+  background: #EBF5FF;
+  border: 1px dashed #007AFF;
 }
 
 .day-tracker-root .hour-row.current {
-  background: #eef2ff;
-  border-left: 3px solid #6366f1;
+  background: #EBF5FF;
+  border-left: 3px solid #007AFF;
 }
 
 .day-tracker-root .hour-label {
   font-size: 13px;
   font-weight: 600;
-  color: #94a3b8;
+  color: #86868b;
   min-width: 44px;
   padding-top: 2px;
   font-variant-numeric: tabular-nums;
 }
 
 .day-tracker-root .hour-row.current .hour-label {
-  color: #6366f1;
+  color: #007AFF;
 }
 
 .day-tracker-root .hour-content {
@@ -549,7 +553,7 @@
 
 .day-tracker-root .hour-empty {
   font-size: 13px;
-  color: #cbd5e1;
+  color: #c7c7cc;
 }
 
 /* Date nav */
@@ -561,9 +565,9 @@
 }
 
 .day-tracker-root .date-nav button {
-  background: #f1f5f9;
+  background: #f2f2f7;
   border: none;
-  color: #64748b;
+  color: #6e6e73;
   font-size: 18px;
   width: 32px;
   height: 32px;
@@ -574,7 +578,7 @@
 .day-tracker-root .date-nav span {
   font-size: 15px;
   font-weight: 600;
-  color: #334155;
+  color: #3a3a3c;
 }
 
 /* Week view */
@@ -582,7 +586,7 @@
   display: flex;
   align-items: center;
   padding: 14px 12px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e5e5ea;
   cursor: pointer;
   border-radius: 8px;
   margin: 0 -12px;
@@ -590,30 +594,30 @@
 }
 
 .day-tracker-root .week-day:hover {
-  background: #f1f5f9;
+  background: #f2f2f7;
 }
 
 .day-tracker-root .week-day.today {
-  background: #eef2ff;
-  border-left: 3px solid #6366f1;
+  background: #EBF5FF;
+  border-left: 3px solid #007AFF;
 }
 
 .day-tracker-root .week-day-name {
   font-size: 14px;
   font-weight: 600;
-  color: #334155;
+  color: #3a3a3c;
   min-width: 100px;
 }
 
 .day-tracker-root .week-day-date {
   font-size: 12px;
-  color: #94a3b8;
+  color: #86868b;
   min-width: 60px;
 }
 
 .day-tracker-root .week-stat {
   font-size: 13px;
-  color: #475569;
+  color: #48484a;
   margin-left: auto;
 }
 
@@ -634,7 +638,7 @@
   margin-bottom: 16px;
 }
 .day-tracker-root .ch-title {
-  font-size: 13px; font-weight: 700; color: #334155;
+  font-size: 13px; font-weight: 700; color: #3a3a3c;
   text-transform: uppercase; letter-spacing: 0.4px;
 }
 .day-tracker-root .ch-header-actions {
@@ -642,19 +646,19 @@
 }
 .day-tracker-root .ch-view-toggle {
   padding: 5px 12px; border-radius: 8px; background: none;
-  border: 1px solid transparent; color: #94a3b8;
+  border: 1px solid transparent; color: #86868b;
   font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s;
 }
-.day-tracker-root .ch-view-toggle:hover { color: #64748b; }
+.day-tracker-root .ch-view-toggle:hover { color: #6e6e73; }
 .day-tracker-root .ch-view-toggle-active {
-  background: #eef2ff; color: #6366f1; border-color: #c7d2fe;
+  background: #EBF5FF; color: #007AFF; border-color: #B3D7FF;
 }
 .day-tracker-root .ch-manage-btn {
-  padding: 5px 14px; border-radius: 8px; background: #f1f5f9;
-  border: 1px solid #e2e8f0; color: #64748b; font-size: 12px;
+  padding: 5px 14px; border-radius: 8px; background: #f2f2f7;
+  border: 1px solid #e5e5ea; color: #6e6e73; font-size: 12px;
   font-weight: 600; cursor: pointer; transition: all 0.15s;
 }
-.day-tracker-root .ch-manage-btn:hover { background: #e2e8f0; color: #334155; }
+.day-tracker-root .ch-manage-btn:hover { background: #e5e5ea; color: #3a3a3c; }
 
 /* Navigation */
 .day-tracker-root .ch-nav {
@@ -662,17 +666,17 @@
   gap: 12px; margin-bottom: 16px;
 }
 .day-tracker-root .ch-nav-btn {
-  width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e2e8f0;
-  background: #fff; color: #64748b; cursor: pointer;
+  width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e5e5ea;
+  background: #fff; color: #6e6e73; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: all 0.15s;
 }
 .day-tracker-root .ch-nav-btn:hover:not(:disabled) {
-  background: #f1f5f9; color: #334155; border-color: #cbd5e1;
+  background: #f2f2f7; color: #3a3a3c; border-color: #c7c7cc;
 }
 .day-tracker-root .ch-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .day-tracker-root .ch-nav-label {
-  font-size: 13px; font-weight: 600; color: #64748b;
+  font-size: 13px; font-weight: 600; color: #6e6e73;
   font-variant-numeric: tabular-nums;
 }
 
@@ -696,20 +700,20 @@
   position: relative; padding: 0;
 }
 .day-tracker-root .ch-tl-done {
-  background: #dcfce7; color: #16a34a;
+  background: #E8F8ED; color: #34C759;
 }
-.day-tracker-root .ch-tl-done:hover { background: #bbf7d0; }
+.day-tracker-root .ch-tl-done:hover { background: #C6F0D0; }
 .day-tracker-root .ch-tl-active {
-  background: #6366f1; color: #fff;
-  box-shadow: 0 0 0 4px rgba(99,102,241,0.15);
+  background: #007AFF; color: #fff;
+  box-shadow: 0 0 0 4px rgba(0,122,255,0.15);
 }
-.day-tracker-root .ch-tl-active:hover { background: #4f46e5; }
+.day-tracker-root .ch-tl-active:hover { background: #0062CC; }
 .day-tracker-root .ch-tl-future {
-  background: #f8fafc; border: 2px solid #e2e8f0; color: #94a3b8;
+  background: #f9f9fb; border: 2px solid #e5e5ea; color: #86868b;
 }
-.day-tracker-root .ch-tl-future:hover { border-color: #cbd5e1; background: #f1f5f9; }
+.day-tracker-root .ch-tl-future:hover { border-color: #c7c7cc; background: #f2f2f7; }
 .day-tracker-root .ch-tl-selected {
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.3);
+  box-shadow: 0 0 0 3px rgba(0,122,255,0.3);
 }
 .day-tracker-root .ch-tl-pulse {
   width: 8px; height: 8px; border-radius: 50%;
@@ -722,13 +726,13 @@
 .day-tracker-root .ch-tl-line {
   width: 2px; height: 20px; flex-shrink: 0;
 }
-.day-tracker-root .ch-tl-line-done { background: #86efac; }
-.day-tracker-root .ch-tl-line-future { background: #e2e8f0; }
+.day-tracker-root .ch-tl-line-done { background: #A8E6B8; }
+.day-tracker-root .ch-tl-line-future { background: #e5e5ea; }
 
 /* Card */
 .day-tracker-root .ch-card {
   flex: 1; min-width: 0;
-  background: #fff; border: 1px solid #e2e8f0;
+  background: #fff; border: 1px solid #e5e5ea;
   border-radius: 16px; padding: 24px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.02);
 }
@@ -747,7 +751,7 @@
   margin-bottom: 6px; flex-wrap: wrap;
 }
 .day-tracker-root .ch-card-name {
-  font-size: 18px; font-weight: 700; color: #1e293b; margin: 0;
+  font-size: 18px; font-weight: 700; color: #1d1d1f; margin: 0;
 }
 .day-tracker-root .ch-badge {
   font-size: 10px; font-weight: 700; padding: 3px 10px;
@@ -755,28 +759,28 @@
   white-space: nowrap;
 }
 .day-tracker-root .ch-badge-active {
-  color: #6366f1; background: #eef2ff; border: 1px solid #c7d2fe;
+  color: #007AFF; background: #EBF5FF; border: 1px solid #B3D7FF;
 }
 .day-tracker-root .ch-badge-closed {
-  color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0;
+  color: #34C759; background: #f0fdf4; border: 1px solid #C6F0D0;
 }
 .day-tracker-root .ch-badge-future {
-  color: #64748b; background: #f1f5f9; border: 1px solid #e2e8f0;
+  color: #6e6e73; background: #f2f2f7; border: 1px solid #e5e5ea;
 }
 .day-tracker-root .ch-badge-sm { font-size: 9px; padding: 2px 7px; }
 .day-tracker-root .ch-card-meta {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
 }
 .day-tracker-root .ch-card-dates {
-  font-size: 12px; color: #64748b; font-weight: 500;
+  font-size: 12px; color: #6e6e73; font-weight: 500;
 }
 .day-tracker-root .ch-card-elapsed {
-  font-size: 11px; color: #94a3b8; font-weight: 500;
+  font-size: 11px; color: #86868b; font-weight: 500;
 }
 
 /* Card purpose */
 .day-tracker-root .ch-card-purpose {
-  font-size: 13px; color: #475569; line-height: 1.6;
+  font-size: 13px; color: #48484a; line-height: 1.6;
   margin: 0 0 16px; padding: 0;
 }
 
@@ -789,66 +793,66 @@
   transition: background 0.15s;
 }
 .day-tracker-root .ch-card-field-clickable:hover {
-  background: #f1f5f9;
+  background: #f2f2f7;
 }
 .day-tracker-root .ch-card-field-label {
   display: block; font-size: 10px; font-weight: 700;
-  color: #94a3b8; text-transform: uppercase; letter-spacing: 0.4px;
+  color: #86868b; text-transform: uppercase; letter-spacing: 0.4px;
   margin-bottom: 4px;
 }
 .day-tracker-root .ch-card-field-text {
-  font-size: 13px; color: #475569; line-height: 1.5;
+  font-size: 13px; color: #48484a; line-height: 1.5;
   margin: 0; white-space: pre-wrap;
 }
 .day-tracker-root .ch-card-field-placeholder {
-  font-size: 13px; color: #cbd5e1; line-height: 1.5;
+  font-size: 13px; color: #c7c7cc; line-height: 1.5;
   margin: 0; font-style: italic;
 }
 .day-tracker-root .ch-card-field-editing {
   padding: 8px 10px;
-  background: #f8fafc;
+  background: #f9f9fb;
   border-radius: 8px;
-  border: 1px solid #6366f1;
+  border: 1px solid #007AFF;
 }
 .day-tracker-root .ch-card-field-textarea {
   width: 100%; box-sizing: border-box;
   padding: 8px 10px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 6px;
   font-size: 13px; font-family: inherit;
-  line-height: 1.6; color: #1e293b;
+  line-height: 1.6; color: #1d1d1f;
   resize: vertical; min-height: 80px;
   outline: none;
 }
 .day-tracker-root .ch-card-field-textarea:focus {
-  border-color: #6366f1;
+  border-color: #007AFF;
 }
 
 /* Card sections (exit criteria, goals) */
 .day-tracker-root .ch-card-section {
   margin-bottom: 16px; padding: 14px;
-  background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9;
+  background: #f9f9fb; border-radius: 12px; border: 1px solid #f2f2f7;
 }
 .day-tracker-root .ch-card-section-header {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 10px;
 }
 .day-tracker-root .ch-card-section-label {
-  font-size: 11px; font-weight: 700; color: #64748b;
+  font-size: 11px; font-weight: 700; color: #6e6e73;
   text-transform: uppercase; letter-spacing: 0.3px;
 }
 .day-tracker-root .ch-card-section-count {
-  font-size: 12px; font-weight: 600; color: #94a3b8;
+  font-size: 12px; font-weight: 600; color: #86868b;
   font-variant-numeric: tabular-nums;
 }
 
 /* Progress bar */
 .day-tracker-root .ch-progress-bar-track {
-  height: 6px; background: #e2e8f0; border-radius: 3px;
+  height: 6px; background: #e5e5ea; border-radius: 3px;
   overflow: hidden; margin-bottom: 12px;
 }
 .day-tracker-root .ch-progress-bar-fill {
-  height: 100%; background: #6366f1; border-radius: 3px;
+  height: 100%; background: #007AFF; border-radius: 3px;
   transition: width 0.3s ease;
 }
 
@@ -858,103 +862,103 @@
 }
 .day-tracker-root .ch-condition {
   display: flex; align-items: flex-start; gap: 10px;
-  font-size: 13px; color: #334155; cursor: pointer; padding: 5px 0;
+  font-size: 13px; color: #3a3a3c; cursor: pointer; padding: 5px 0;
 }
 .day-tracker-root .ch-condition input[type="checkbox"] {
-  width: 16px; height: 16px; accent-color: #6366f1;
+  width: 16px; height: 16px; accent-color: #007AFF;
   margin-top: 1px; flex-shrink: 0; cursor: pointer;
 }
 .day-tracker-root .ch-condition input[type="checkbox"]:disabled {
   cursor: default; opacity: 0.7;
 }
-.day-tracker-root .ch-cond-done { color: #475569; }
+.day-tracker-root .ch-cond-done { color: #48484a; }
 
 /* Card actions */
 .day-tracker-root .ch-card-actions {
   display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap;
 }
 .day-tracker-root .ch-card-edit-btn {
-  padding: 9px 18px; border-radius: 10px; border: 1px solid #e2e8f0;
-  background: #fff; color: #64748b; font-size: 13px; font-weight: 600;
+  padding: 9px 18px; border-radius: 10px; border: 1px solid #e5e5ea;
+  background: #fff; color: #6e6e73; font-size: 13px; font-weight: 600;
   cursor: pointer; transition: all 0.15s;
 }
-.day-tracker-root .ch-card-edit-btn:hover { background: #f1f5f9; color: #334155; }
+.day-tracker-root .ch-card-edit-btn:hover { background: #f2f2f7; color: #3a3a3c; }
 .day-tracker-root .ch-card-close-btn {
   padding: 9px 18px; border-radius: 10px; border: none;
-  background: #6366f1; color: #fff; font-size: 13px; font-weight: 600;
+  background: #007AFF; color: #fff; font-size: 13px; font-weight: 600;
   cursor: pointer; transition: background 0.15s; flex: 1;
 }
-.day-tracker-root .ch-card-close-btn:hover { background: #4f46e5; }
+.day-tracker-root .ch-card-close-btn:hover { background: #0062CC; }
 
 /* Goals section */
 .day-tracker-root .ch-goals-empty {
-  font-size: 12px; color: #94a3b8; margin: 0; padding: 4px 0;
+  font-size: 12px; color: #86868b; margin: 0; padding: 4px 0;
 }
 .day-tracker-root .ch-goal-item {
-  padding: 10px 12px; background: #fff; border: 1px solid #e2e8f0;
+  padding: 10px 12px; background: #fff; border: 1px solid #e5e5ea;
   border-radius: 10px; margin-bottom: 6px; cursor: pointer;
   transition: all 0.15s;
 }
-.day-tracker-root .ch-goal-item:hover { border-color: #cbd5e1; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.day-tracker-root .ch-goal-item:hover { border-color: #c7c7cc; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
 .day-tracker-root .ch-goal-completed { opacity: 0.7; }
 .day-tracker-root .ch-goal-editing {
-  cursor: default; border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+  cursor: default; border-color: #007AFF;
+  box-shadow: 0 0 0 3px rgba(0,122,255,0.1);
 }
 .day-tracker-root .ch-goal-top {
   display: flex; align-items: center; gap: 8px;
 }
 .day-tracker-root .ch-goal-check {
   width: 18px; height: 18px; border-radius: 50%;
-  border: 2px solid #cbd5e1; background: #fff;
+  border: 2px solid #c7c7cc; background: #fff;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; flex-shrink: 0; padding: 0;
   transition: all 0.15s;
 }
-.day-tracker-root .ch-goal-check:hover { border-color: #6366f1; }
+.day-tracker-root .ch-goal-check:hover { border-color: #007AFF; }
 .day-tracker-root .ch-goal-check-done {
-  background: #6366f1; border-color: #6366f1; color: #fff;
+  background: #007AFF; border-color: #007AFF; color: #fff;
 }
 .day-tracker-root .ch-goal-title {
-  font-size: 13px; font-weight: 500; color: #334155;
+  font-size: 13px; font-weight: 500; color: #3a3a3c;
 }
 .day-tracker-root .ch-goal-title-done {
-  color: #94a3b8; text-decoration: line-through;
+  color: #86868b; text-decoration: line-through;
 }
 .day-tracker-root .ch-goal-bar-track {
-  height: 4px; background: #e2e8f0; border-radius: 2px;
+  height: 4px; background: #e5e5ea; border-radius: 2px;
   overflow: hidden; margin-top: 8px;
 }
 .day-tracker-root .ch-goal-bar-fill {
-  height: 100%; background: #6366f1; border-radius: 2px;
+  height: 100%; background: #007AFF; border-radius: 2px;
   transition: width 0.3s ease;
 }
 .day-tracker-root .ch-goal-next {
-  display: block; font-size: 11px; color: #94a3b8;
+  display: block; font-size: 11px; color: #86868b;
   margin-top: 6px; font-style: italic;
 }
 
 /* Goal editing */
 .day-tracker-root .ch-goal-edit-input {
-  width: 100%; padding: 7px 10px; border: 1px solid #e2e8f0;
+  width: 100%; padding: 7px 10px; border: 1px solid #e5e5ea;
   border-radius: 8px; font-size: 13px; background: #fff;
   box-sizing: border-box; margin-bottom: 6px;
 }
-.day-tracker-root .ch-goal-edit-input:focus { outline: none; border-color: #6366f1; }
+.day-tracker-root .ch-goal-edit-input:focus { outline: none; border-color: #007AFF; }
 .day-tracker-root .ch-goal-progress-edit {
   margin-bottom: 6px;
 }
 .day-tracker-root .ch-goal-progress-label {
-  font-size: 11px; color: #64748b; font-weight: 500;
+  font-size: 11px; color: #6e6e73; font-weight: 500;
   display: block; margin-bottom: 4px;
 }
 .day-tracker-root .ch-goal-slider {
   width: 100%; height: 6px; -webkit-appearance: none; appearance: none;
-  background: #e2e8f0; border-radius: 3px; outline: none;
+  background: #e5e5ea; border-radius: 3px; outline: none;
 }
 .day-tracker-root .ch-goal-slider::-webkit-slider-thumb {
   -webkit-appearance: none; width: 16px; height: 16px;
-  border-radius: 50%; background: #6366f1; cursor: pointer;
+  border-radius: 50%; background: #007AFF; cursor: pointer;
   border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 .day-tracker-root .ch-goal-edit-actions {
@@ -962,18 +966,18 @@
 }
 .day-tracker-root .ch-goal-edit-save {
   padding: 5px 14px; border-radius: 8px; border: none;
-  background: #6366f1; color: #fff; font-size: 12px;
+  background: #007AFF; color: #fff; font-size: 12px;
   font-weight: 600; cursor: pointer;
 }
-.day-tracker-root .ch-goal-edit-save:hover { background: #4f46e5; }
+.day-tracker-root .ch-goal-edit-save:hover { background: #0062CC; }
 .day-tracker-root .ch-goal-edit-cancel {
-  padding: 5px 14px; border-radius: 8px; border: 1px solid #e2e8f0;
-  background: #fff; color: #64748b; font-size: 12px;
+  padding: 5px 14px; border-radius: 8px; border: 1px solid #e5e5ea;
+  background: #fff; color: #6e6e73; font-size: 12px;
   font-weight: 600; cursor: pointer;
 }
 .day-tracker-root .ch-goal-edit-delete {
   padding: 5px 14px; border-radius: 8px; border: 1px solid #fecaca;
-  background: #fff; color: #ef4444; font-size: 12px;
+  background: #fff; color: #FF3B30; font-size: 12px;
   font-weight: 600; cursor: pointer; margin-left: auto;
 }
 .day-tracker-root .ch-goal-edit-delete:hover { background: #fef2f2; }
@@ -981,33 +985,33 @@
 /* Goal add */
 .day-tracker-root .ch-goal-add-btn {
   width: 100%; padding: 8px; border-radius: 8px;
-  border: 1px dashed #cbd5e1; background: none;
-  color: #94a3b8; font-size: 12px; font-weight: 600;
+  border: 1px dashed #c7c7cc; background: none;
+  color: #86868b; font-size: 12px; font-weight: 600;
   cursor: pointer; transition: all 0.15s; margin-top: 4px;
 }
-.day-tracker-root .ch-goal-add-btn:hover { border-color: #6366f1; color: #6366f1; }
+.day-tracker-root .ch-goal-add-btn:hover { border-color: #007AFF; color: #007AFF; }
 .day-tracker-root .ch-goal-add-form { margin-top: 6px; }
 .day-tracker-root .ch-goal-add-input {
-  width: 100%; padding: 7px 10px; border: 1px solid #e2e8f0;
+  width: 100%; padding: 7px 10px; border: 1px solid #e5e5ea;
   border-radius: 8px; font-size: 13px; background: #fff;
   box-sizing: border-box; margin-bottom: 6px;
 }
-.day-tracker-root .ch-goal-add-input:focus { outline: none; border-color: #6366f1; }
+.day-tracker-root .ch-goal-add-input:focus { outline: none; border-color: #007AFF; }
 .day-tracker-root .ch-goal-add-actions { display: flex; gap: 6px; }
 .day-tracker-root .ch-goal-add-save {
   padding: 5px 14px; border-radius: 8px; border: none;
-  background: #6366f1; color: #fff; font-size: 12px;
+  background: #007AFF; color: #fff; font-size: 12px;
   font-weight: 600; cursor: pointer;
 }
 .day-tracker-root .ch-goal-add-save:disabled { opacity: 0.4; cursor: not-allowed; }
 .day-tracker-root .ch-goal-add-cancel {
-  padding: 5px 14px; border-radius: 8px; border: 1px solid #e2e8f0;
-  background: #fff; color: #64748b; font-size: 12px;
+  padding: 5px 14px; border-radius: 8px; border: 1px solid #e5e5ea;
+  background: #fff; color: #6e6e73; font-size: 12px;
   font-weight: 600; cursor: pointer;
 }
 .day-tracker-root .ch-goals-completed-group { margin-top: 8px; }
 .day-tracker-root .ch-goals-completed-label {
-  font-size: 10px; font-weight: 600; color: #94a3b8;
+  font-size: 10px; font-weight: 600; color: #86868b;
   text-transform: uppercase; letter-spacing: 0.3px;
   display: block; margin-bottom: 6px;
 }
@@ -1025,32 +1029,32 @@
   box-shadow: 0 20px 60px rgba(0,0,0,0.15);
 }
 .day-tracker-root .ch-modal-title {
-  font-size: 16px; font-weight: 700; color: #1e293b; margin: 0 0 8px;
+  font-size: 16px; font-weight: 700; color: #1d1d1f; margin: 0 0 8px;
 }
 .day-tracker-root .ch-modal-body {
-  font-size: 13px; color: #475569; line-height: 1.5; margin: 0 0 20px;
+  font-size: 13px; color: #48484a; line-height: 1.5; margin: 0 0 20px;
 }
 .day-tracker-root .ch-modal-actions {
   display: flex; gap: 8px; justify-content: flex-end;
 }
 .day-tracker-root .ch-modal-cancel {
-  padding: 8px 16px; border-radius: 8px; border: 1px solid #e2e8f0;
+  padding: 8px 16px; border-radius: 8px; border: 1px solid #e5e5ea;
   background: #fff; font-size: 13px; font-weight: 600;
-  color: #64748b; cursor: pointer;
+  color: #6e6e73; cursor: pointer;
 }
-.day-tracker-root .ch-modal-cancel:hover { background: #f8fafc; }
+.day-tracker-root .ch-modal-cancel:hover { background: #f9f9fb; }
 .day-tracker-root .ch-modal-confirm {
   padding: 8px 16px; border-radius: 8px; border: none;
-  background: #6366f1; font-size: 13px; font-weight: 600;
+  background: #007AFF; font-size: 13px; font-weight: 600;
   color: #fff; cursor: pointer;
 }
-.day-tracker-root .ch-modal-confirm:hover { background: #4f46e5; }
+.day-tracker-root .ch-modal-confirm:hover { background: #0062CC; }
 .day-tracker-root .ch-modal-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* Close chapter modal extras */
 .day-tracker-root .ch-close-next { margin-bottom: 16px; }
 .day-tracker-root .ch-close-next-label {
-  font-size: 11px; font-weight: 700; color: #64748b;
+  font-size: 11px; font-weight: 700; color: #6e6e73;
   text-transform: uppercase; letter-spacing: 0.3px;
   display: block; margin-bottom: 8px;
 }
@@ -1059,13 +1063,13 @@
 }
 .day-tracker-root .ch-close-next-option {
   display: flex; align-items: center; gap: 8px;
-  font-size: 13px; color: #334155; cursor: pointer;
-  padding: 8px 10px; background: #f8fafc;
-  border: 1px solid #e2e8f0; border-radius: 8px;
+  font-size: 13px; color: #3a3a3c; cursor: pointer;
+  padding: 8px 10px; background: #f9f9fb;
+  border: 1px solid #e5e5ea; border-radius: 8px;
   transition: all 0.15s;
 }
-.day-tracker-root .ch-close-next-option:hover { background: #eef2ff; border-color: #c7d2fe; }
-.day-tracker-root .ch-close-next-option input[type="radio"] { accent-color: #6366f1; }
+.day-tracker-root .ch-close-next-option:hover { background: #EBF5FF; border-color: #B3D7FF; }
+.day-tracker-root .ch-close-next-option input[type="radio"] { accent-color: #007AFF; }
 
 /* Edit modal (full form) */
 .day-tracker-root .ch-edit-modal {
@@ -1076,43 +1080,43 @@
 }
 .day-tracker-root .ch-edit-modal-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 24px 16px; border-bottom: 1px solid #f1f5f9;
+  padding: 20px 24px 16px; border-bottom: 1px solid #f2f2f7;
 }
 .day-tracker-root .ch-edit-modal-title {
-  font-size: 16px; font-weight: 700; color: #1e293b; margin: 0;
+  font-size: 16px; font-weight: 700; color: #1d1d1f; margin: 0;
 }
 .day-tracker-root .ch-edit-modal-close {
   width: 28px; height: 28px; border-radius: 6px; border: none;
-  background: none; color: #94a3b8; font-size: 20px;
+  background: none; color: #86868b; font-size: 20px;
   cursor: pointer; display: flex; align-items: center;
   justify-content: center;
 }
-.day-tracker-root .ch-edit-modal-close:hover { background: #f1f5f9; color: #334155; }
+.day-tracker-root .ch-edit-modal-close:hover { background: #f2f2f7; color: #3a3a3c; }
 .day-tracker-root .ch-edit-modal-body {
   padding: 20px 24px; overflow-y: auto; flex: 1;
 }
 .day-tracker-root .ch-edit-modal-footer {
   display: flex; gap: 8px; justify-content: flex-end;
-  padding: 16px 24px 20px; border-top: 1px solid #f1f5f9;
+  padding: 16px 24px 20px; border-top: 1px solid #f2f2f7;
 }
 .day-tracker-root .ch-edit-field { margin-bottom: 14px; }
 .day-tracker-root .ch-edit-label {
   display: block; font-size: 11px; font-weight: 700;
-  color: #64748b; margin-bottom: 4px;
+  color: #6e6e73; margin-bottom: 4px;
   text-transform: uppercase; letter-spacing: 0.3px;
 }
 .day-tracker-root .ch-edit-input {
-  width: 100%; padding: 8px 12px; border: 1px solid #e2e8f0;
+  width: 100%; padding: 8px 12px; border: 1px solid #e5e5ea;
   border-radius: 8px; font-size: 13px; background: #fff;
   box-sizing: border-box; font-family: inherit;
 }
-.day-tracker-root .ch-edit-input:focus { outline: none; border-color: #6366f1; }
+.day-tracker-root .ch-edit-input:focus { outline: none; border-color: #007AFF; }
 .day-tracker-root .ch-edit-textarea {
-  width: 100%; padding: 8px 12px; border: 1px solid #e2e8f0;
+  width: 100%; padding: 8px 12px; border: 1px solid #e5e5ea;
   border-radius: 8px; font-size: 13px; background: #fff;
   resize: vertical; box-sizing: border-box; font-family: inherit;
 }
-.day-tracker-root .ch-edit-textarea:focus { outline: none; border-color: #6366f1; }
+.day-tracker-root .ch-edit-textarea:focus { outline: none; border-color: #007AFF; }
 .day-tracker-root .ch-edit-row {
   display: flex; gap: 12px;
 }
@@ -1122,16 +1126,16 @@
 }
 .day-tracker-root .ch-edit-cond-remove {
   width: 24px; height: 24px; border-radius: 6px; border: none;
-  background: none; color: #94a3b8; font-size: 18px;
+  background: none; color: #86868b; font-size: 18px;
   cursor: pointer; flex-shrink: 0;
 }
-.day-tracker-root .ch-edit-cond-remove:hover { color: #ef4444; }
+.day-tracker-root .ch-edit-cond-remove:hover { color: #FF3B30; }
 .day-tracker-root .ch-edit-cond-add {
-  padding: 4px 10px; border-radius: 6px; border: 1px dashed #cbd5e1;
-  background: none; color: #94a3b8; font-size: 11px;
+  padding: 4px 10px; border-radius: 6px; border: 1px dashed #c7c7cc;
+  background: none; color: #86868b; font-size: 11px;
   font-weight: 600; cursor: pointer; margin-top: 2px;
 }
-.day-tracker-root .ch-edit-cond-add:hover { border-color: #6366f1; color: #6366f1; }
+.day-tracker-root .ch-edit-cond-add:hover { border-color: #007AFF; color: #007AFF; }
 
 /* Date picker */
 .day-tracker-root .ch-datepicker {
@@ -1140,25 +1144,25 @@
 .day-tracker-root .ch-datepicker-trigger {
   display: flex; align-items: center; gap: 8px;
   width: 100%; padding: 8px 12px;
-  border: 1px solid #e2e8f0; border-radius: 8px;
-  background: #fff; color: #1e293b; font-size: 13px;
+  border: 1px solid #e5e5ea; border-radius: 8px;
+  background: #fff; color: #1d1d1f; font-size: 13px;
   font-family: inherit; cursor: pointer; text-align: left;
   transition: border-color 0.15s;
 }
-.day-tracker-root .ch-datepicker-trigger:hover { border-color: #cbd5e1; }
-.day-tracker-root .ch-datepicker-trigger:focus { outline: none; border-color: #6366f1; }
-.day-tracker-root .ch-datepicker-empty { color: #94a3b8; }
-.day-tracker-root .ch-datepicker-icon { color: #94a3b8; flex-shrink: 0; }
+.day-tracker-root .ch-datepicker-trigger:hover { border-color: #c7c7cc; }
+.day-tracker-root .ch-datepicker-trigger:focus { outline: none; border-color: #007AFF; }
+.day-tracker-root .ch-datepicker-empty { color: #86868b; }
+.day-tracker-root .ch-datepicker-icon { color: #86868b; flex-shrink: 0; }
 .day-tracker-root .ch-datepicker-clear {
-  margin-left: auto; color: #94a3b8; font-size: 16px;
+  margin-left: auto; color: #86868b; font-size: 16px;
   line-height: 1; padding: 0 2px; cursor: pointer;
   flex-shrink: 0;
 }
-.day-tracker-root .ch-datepicker-clear:hover { color: #ef4444; }
+.day-tracker-root .ch-datepicker-clear:hover { color: #FF3B30; }
 .day-tracker-root .ch-datepicker-dropdown {
   position: absolute; top: calc(100% + 4px); left: 0;
   z-index: 50; background: #fff;
-  border: 1px solid #e2e8f0; border-radius: 12px;
+  border: 1px solid #e5e5ea; border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.12);
   padding: 12px; width: 264px;
   animation: ch-card-fade 0.15s ease-out;
@@ -1169,13 +1173,13 @@
 }
 .day-tracker-root .ch-datepicker-nav {
   width: 28px; height: 28px; border-radius: 6px; border: none;
-  background: none; color: #64748b; cursor: pointer;
+  background: none; color: #6e6e73; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   transition: all 0.15s;
 }
-.day-tracker-root .ch-datepicker-nav:hover { background: #f1f5f9; color: #334155; }
+.day-tracker-root .ch-datepicker-nav:hover { background: #f2f2f7; color: #3a3a3c; }
 .day-tracker-root .ch-datepicker-month {
-  font-size: 13px; font-weight: 600; color: #1e293b;
+  font-size: 13px; font-weight: 600; color: #1d1d1f;
 }
 .day-tracker-root .ch-datepicker-weekdays {
   display: grid; grid-template-columns: repeat(7, 1fr);
@@ -1183,7 +1187,7 @@
 }
 .day-tracker-root .ch-datepicker-weekday {
   text-align: center; font-size: 10px; font-weight: 600;
-  color: #94a3b8; padding: 4px 0;
+  color: #86868b; padding: 4px 0;
   text-transform: uppercase; letter-spacing: 0.3px;
 }
 .day-tracker-root .ch-datepicker-grid {
@@ -1192,40 +1196,40 @@
 }
 .day-tracker-root .ch-datepicker-day {
   width: 32px; height: 32px; border-radius: 8px; border: none;
-  background: none; color: #334155; font-size: 12px; font-weight: 500;
+  background: none; color: #3a3a3c; font-size: 12px; font-weight: 500;
   cursor: pointer; display: flex; align-items: center;
   justify-content: center; transition: all 0.1s;
   margin: 0 auto;
 }
 .day-tracker-root .ch-datepicker-day:hover {
-  background: #f1f5f9; color: #1e293b;
+  background: #f2f2f7; color: #1d1d1f;
 }
 .day-tracker-root .ch-datepicker-outside {
-  color: #cbd5e1;
+  color: #c7c7cc;
 }
-.day-tracker-root .ch-datepicker-outside:hover { color: #94a3b8; }
+.day-tracker-root .ch-datepicker-outside:hover { color: #86868b; }
 .day-tracker-root .ch-datepicker-today {
-  background: #f1f5f9; font-weight: 700; color: #6366f1;
+  background: #f2f2f7; font-weight: 700; color: #007AFF;
 }
 .day-tracker-root .ch-datepicker-selected {
-  background: #6366f1 !important; color: #fff !important;
+  background: #007AFF !important; color: #fff !important;
   font-weight: 600;
 }
 .day-tracker-root .ch-datepicker-selected:hover {
-  background: #4f46e5 !important;
+  background: #0062CC !important;
 }
 .day-tracker-root .ch-datepicker-footer {
   display: flex; justify-content: center;
   margin-top: 6px; padding-top: 6px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid #f2f2f7;
 }
 .day-tracker-root .ch-datepicker-today-btn {
   padding: 4px 12px; border-radius: 6px; border: none;
-  background: none; color: #6366f1; font-size: 12px;
+  background: none; color: #007AFF; font-size: 12px;
   font-weight: 600; cursor: pointer;
 }
 .day-tracker-root .ch-datepicker-today-btn:hover {
-  background: #eef2ff;
+  background: #EBF5FF;
 }
 
 /* Roadmap view */
@@ -1238,7 +1242,7 @@
   width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
 }
 .day-tracker-root .ch-roadmap-group-label {
-  font-size: 12px; font-weight: 700; color: #64748b;
+  font-size: 12px; font-weight: 700; color: #6e6e73;
   text-transform: uppercase; letter-spacing: 0.4px;
 }
 .day-tracker-root .ch-roadmap-cards {
@@ -1246,41 +1250,41 @@
 }
 .day-tracker-root .ch-roadmap-card {
   display: flex; flex-direction: column; gap: 6px;
-  padding: 14px 16px; background: #fff; border: 1px solid #e2e8f0;
+  padding: 14px 16px; background: #fff; border: 1px solid #e5e5ea;
   border-radius: 12px; cursor: pointer; text-align: left;
   transition: all 0.15s; width: 100;
   font-family: inherit;
 }
 .day-tracker-root .ch-roadmap-card:hover {
-  border-color: #c7d2fe; box-shadow: 0 2px 8px rgba(99,102,241,0.08);
+  border-color: #B3D7FF; box-shadow: 0 2px 8px rgba(0,122,255,0.08);
 }
 .day-tracker-root .ch-roadmap-card-name {
-  font-size: 14px; font-weight: 600; color: #1e293b;
+  font-size: 14px; font-weight: 600; color: #1d1d1f;
 }
 .day-tracker-root .ch-roadmap-card-outcome {
-  font-size: 12px; color: #64748b; line-height: 1.4;
+  font-size: 12px; color: #6e6e73; line-height: 1.4;
 }
 .day-tracker-root .ch-roadmap-card-footer {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
 }
 .day-tracker-root .ch-roadmap-card-dates {
-  font-size: 11px; color: #94a3b8; font-weight: 500;
+  font-size: 11px; color: #86868b; font-weight: 500;
 }
 .day-tracker-root .ch-roadmap-card-progress {
-  font-size: 11px; color: #94a3b8; font-weight: 600;
+  font-size: 11px; color: #86868b; font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
 /* Manage panel */
 .day-tracker-root .ch-manage {
-  margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 16px;
+  margin-top: 20px; border-top: 1px solid #e5e5ea; padding-top: 16px;
 }
 .day-tracker-root .ch-manage-header {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 10px;
 }
 .day-tracker-root .ch-manage-title {
-  font-size: 11px; font-weight: 700; color: #94a3b8;
+  font-size: 11px; font-weight: 700; color: #86868b;
   text-transform: uppercase; letter-spacing: 0.3px;
 }
 .day-tracker-root .ch-manage-list {
@@ -1288,102 +1292,102 @@
 }
 .day-tracker-root .ch-manage-item {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 10px; background: #f8fafc;
-  border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 8px 10px; background: #f9f9fb;
+  border: 1px solid #e5e5ea; border-radius: 8px;
 }
 .day-tracker-root .ch-manage-item-info {
   display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;
 }
 .day-tracker-root .ch-manage-order {
-  font-size: 11px; font-weight: 700; color: #cbd5e1; min-width: 16px;
+  font-size: 11px; font-weight: 700; color: #c7c7cc; min-width: 16px;
 }
 .day-tracker-root .ch-manage-name {
-  font-size: 13px; font-weight: 500; color: #334155;
+  font-size: 13px; font-weight: 500; color: #3a3a3c;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .day-tracker-root .ch-manage-status {
   font-size: 9px; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.3px; padding: 1px 6px; border-radius: 4px;
 }
-.day-tracker-root .ch-manage-status-active { color: #6366f1; background: #eef2ff; }
-.day-tracker-root .ch-manage-status-closed { color: #94a3b8; background: #f1f5f9; }
+.day-tracker-root .ch-manage-status-active { color: #007AFF; background: #EBF5FF; }
+.day-tracker-root .ch-manage-status-closed { color: #86868b; background: #f2f2f7; }
 .day-tracker-root .ch-manage-item-actions {
   display: flex; gap: 2px; flex-shrink: 0;
 }
 .day-tracker-root .ch-manage-item-actions button {
   width: 26px; height: 26px; border-radius: 6px; border: none;
-  background: none; color: #94a3b8; font-size: 13px;
+  background: none; color: #86868b; font-size: 13px;
   cursor: pointer; display: flex; align-items: center;
   justify-content: center;
 }
-.day-tracker-root .ch-manage-item-actions button:hover { background: #e2e8f0; color: #334155; }
+.day-tracker-root .ch-manage-item-actions button:hover { background: #e5e5ea; color: #3a3a3c; }
 .day-tracker-root .ch-manage-item-actions button:disabled { opacity: 0.3; cursor: not-allowed; }
-.day-tracker-root .ch-manage-delete:hover { color: #ef4444 !important; background: #fef2f2 !important; }
+.day-tracker-root .ch-manage-delete:hover { color: #FF3B30 !important; background: #fef2f2 !important; }
 
 /* Form inputs (manage + add) */
 .day-tracker-root .ch-manage-input {
-  width: 100%; padding: 7px 10px; border: 1px solid #e2e8f0;
+  width: 100%; padding: 7px 10px; border: 1px solid #e5e5ea;
   border-radius: 8px; font-size: 13px; background: #fff;
   box-sizing: border-box;
 }
-.day-tracker-root .ch-manage-input:focus { outline: none; border-color: #6366f1; }
+.day-tracker-root .ch-manage-input:focus { outline: none; border-color: #007AFF; }
 .day-tracker-root .ch-manage-textarea {
-  width: 100%; padding: 7px 10px; border: 1px solid #e2e8f0;
+  width: 100%; padding: 7px 10px; border: 1px solid #e5e5ea;
   border-radius: 8px; font-size: 12px; background: #fff;
   resize: vertical; box-sizing: border-box; font-family: inherit;
 }
-.day-tracker-root .ch-manage-textarea:focus { outline: none; border-color: #6366f1; }
+.day-tracker-root .ch-manage-textarea:focus { outline: none; border-color: #007AFF; }
 .day-tracker-root .ch-manage-edit-actions { display: flex; gap: 6px; }
 .day-tracker-root .ch-manage-save {
   padding: 5px 14px; border-radius: 8px; border: none;
-  background: #6366f1; color: #fff; font-size: 12px;
+  background: #007AFF; color: #fff; font-size: 12px;
   font-weight: 600; cursor: pointer;
 }
 .day-tracker-root .ch-manage-save:disabled { opacity: 0.4; cursor: not-allowed; }
-.day-tracker-root .ch-manage-save:hover { background: #4f46e5; }
+.day-tracker-root .ch-manage-save:hover { background: #0062CC; }
 .day-tracker-root .ch-manage-cancel-btn {
-  padding: 5px 14px; border-radius: 8px; border: 1px solid #e2e8f0;
-  background: #fff; color: #64748b; font-size: 12px;
+  padding: 5px 14px; border-radius: 8px; border: 1px solid #e5e5ea;
+  background: #fff; color: #6e6e73; font-size: 12px;
   font-weight: 600; cursor: pointer;
 }
 
 /* Add chapter */
 .day-tracker-root .ch-add-btn {
   width: 100%; padding: 10px; border-radius: 8px;
-  border: 1px dashed #cbd5e1; background: #f8fafc;
-  color: #64748b; font-size: 13px; font-weight: 600;
+  border: 1px dashed #c7c7cc; background: #f9f9fb;
+  color: #6e6e73; font-size: 13px; font-weight: 600;
   cursor: pointer; transition: all 0.15s;
 }
-.day-tracker-root .ch-add-btn:hover { border-color: #6366f1; color: #6366f1; background: #eef2ff; }
+.day-tracker-root .ch-add-btn:hover { border-color: #007AFF; color: #007AFF; background: #EBF5FF; }
 .day-tracker-root .ch-add-form {
-  background: #f8fafc; border: 1px solid #e2e8f0;
+  background: #f9f9fb; border: 1px solid #e5e5ea;
   border-radius: 10px; padding: 14px;
   display: flex; flex-direction: column; gap: 8px;
 }
 .day-tracker-root .ch-add-conditions { display: flex; flex-direction: column; gap: 4px; }
 .day-tracker-root .ch-add-cond-label {
-  font-size: 10px; font-weight: 700; color: #94a3b8;
+  font-size: 10px; font-weight: 700; color: #86868b;
   text-transform: uppercase; letter-spacing: 0.3px;
 }
 .day-tracker-root .ch-add-cond-row { display: flex; align-items: center; gap: 4px; }
 .day-tracker-root .ch-add-cond-remove {
   width: 24px; height: 24px; border-radius: 6px; border: none;
-  background: none; color: #94a3b8; font-size: 16px; cursor: pointer;
+  background: none; color: #86868b; font-size: 16px; cursor: pointer;
 }
-.day-tracker-root .ch-add-cond-remove:hover { color: #ef4444; }
+.day-tracker-root .ch-add-cond-remove:hover { color: #FF3B30; }
 .day-tracker-root .ch-add-cond-add {
-  padding: 4px 10px; border-radius: 6px; border: 1px dashed #cbd5e1;
-  background: none; color: #94a3b8; font-size: 11px;
+  padding: 4px 10px; border-radius: 6px; border: 1px dashed #c7c7cc;
+  background: none; color: #86868b; font-size: 11px;
   font-weight: 600; cursor: pointer; align-self: flex-start;
 }
-.day-tracker-root .ch-add-cond-add:hover { border-color: #6366f1; color: #6366f1; }
+.day-tracker-root .ch-add-cond-add:hover { border-color: #007AFF; color: #007AFF; }
 
 /* Legacy (keep for backwards compat) */
 .day-tracker-root .add-goal {
   margin-top: 12px;
-  background: #f1f5f9;
-  border: 1px dashed #cbd5e1;
-  color: #64748b;
+  background: #f2f2f7;
+  border: 1px dashed #c7c7cc;
+  color: #6e6e73;
   padding: 10px;
   border-radius: 8px;
   width: 100%;
@@ -1392,8 +1396,8 @@
 }
 
 .day-tracker-root .add-goal:hover {
-  border-color: #94a3b8;
-  color: #475569;
+  border-color: #86868b;
+  color: #48484a;
 }
 
 /* Coach */
@@ -1413,15 +1417,16 @@
 }
 
 .day-tracker-root .coach-msg.user {
-  background: #6366f1;
+  background: #007AFF;
   color: #fff;
   align-self: flex-end;
   border-bottom-right-radius: 4px;
+  font-weight: 400;
 }
 
 .day-tracker-root .coach-msg.assistant {
-  background: #f1f5f9;
-  color: #334155;
+  background: #f2f2f7;
+  color: #1d1d1f;
   align-self: flex-start;
   border-bottom-left-radius: 4px;
 }
@@ -1436,7 +1441,7 @@
 
 .day-tracker-root .coach-msg-content strong {
   font-weight: 700;
-  color: #0f172a;
+  color: #1d1d1f;
 }
 
 .day-tracker-root .coach-msg-content em {
@@ -1446,7 +1451,7 @@
 .day-tracker-root .coach-msg-content h3,
 .day-tracker-root .coach-msg-content h4 {
   font-weight: 700;
-  color: #0f172a;
+  color: #1d1d1f;
   margin: 10px 0 4px 0;
   font-size: 14px;
 }
@@ -1485,8 +1490,8 @@
   left: 0;
   right: 0;
   padding: 12px 16px;
-  background: #f8fafc;
-  border-top: 1px solid #e2e8f0;
+  background: #f9f9fb;
+  border-top: 1px solid #e5e5ea;
   display: flex;
   gap: 8px;
 }
@@ -1494,9 +1499,9 @@
 .day-tracker-root .coach-input {
   flex: 1;
   background: #ffffff;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #c7c7cc;
   border-radius: 10px;
-  color: #1e293b;
+  color: #1d1d1f;
   padding: 10px 14px;
   font-size: 14px;
   font-family: inherit;
@@ -1504,11 +1509,11 @@
 
 .day-tracker-root .coach-input:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: #007AFF;
 }
 
 .day-tracker-root .coach-send {
-  background: #6366f1;
+  background: #007AFF;
   border: none;
   color: #fff;
   width: 40px;
@@ -1524,7 +1529,7 @@
 }
 
 .day-tracker-root .coach-loading {
-  color: #64748b;
+  color: #6e6e73;
   font-size: 13px;
   font-style: italic;
   padding: 8px 12px;
@@ -1541,12 +1546,12 @@
 .day-tracker-root .coach-empty {
   text-align: center;
   padding: 40px 20px;
-  color: #94a3b8;
+  color: #86868b;
 }
 
 .day-tracker-root .coach-empty h3 {
   font-size: 16px;
-  color: #64748b;
+  color: #6e6e73;
   margin-bottom: 8px;
 }
 
@@ -1558,7 +1563,7 @@
 /* Section headers */
 .day-tracker-root .section-header {
   font-size: 13px;
-  color: #94a3b8;
+  color: #86868b;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 8px;
@@ -1574,9 +1579,9 @@
 }
 
 .day-tracker-root .cal-nav-btn {
-  background: #f1f5f9;
+  background: #f2f2f7;
   border: none;
-  color: #64748b;
+  color: #6e6e73;
   font-size: 18px;
   width: 36px;
   height: 36px;
@@ -1585,8 +1590,8 @@
 }
 
 .day-tracker-root .cal-nav-btn:hover {
-  background: #e2e8f0;
-  color: #0f172a;
+  background: #e5e5ea;
+  color: #1d1d1f;
 }
 
 .day-tracker-root .cal-title {
@@ -1598,20 +1603,20 @@
 .day-tracker-root .cal-month {
   font-size: 18px;
   font-weight: 700;
-  color: #0f172a;
+  color: #1d1d1f;
 }
 
 .day-tracker-root .cal-year {
   font-size: 12px;
-  color: #94a3b8;
+  color: #86868b;
 }
 
 .day-tracker-root .cal-today-btn {
   display: block;
   margin: 0 auto 14px;
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  color: #64748b;
+  background: #f2f2f7;
+  border: 1px solid #c7c7cc;
+  color: #6e6e73;
   padding: 4px 14px;
   border-radius: 6px;
   font-size: 12px;
@@ -1619,8 +1624,8 @@
 }
 
 .day-tracker-root .cal-today-btn:hover {
-  color: #0f172a;
-  border-color: #6366f1;
+  color: #1d1d1f;
+  border-color: #007AFF;
 }
 
 .day-tracker-root .cal-grid {
@@ -1631,7 +1636,7 @@
 
 .day-tracker-root .cal-day-name {
   font-size: 11px;
-  color: #94a3b8;
+  color: #86868b;
   text-align: center;
   padding: 4px 0;
   font-weight: 600;
@@ -1660,37 +1665,37 @@
 }
 
 .day-tracker-root .cal-cell:not(.empty):hover {
-  background: #eef2ff;
-  border-color: #cbd5e1;
+  background: #EBF5FF;
+  border-color: #c7c7cc;
 }
 
 .day-tracker-root .cal-cell.today {
-  background: #eef2ff;
-  border-color: #6366f1;
+  background: #EBF5FF;
+  border-color: #007AFF;
 }
 
 .day-tracker-root .cal-cell.has-logs {
   background: #f0fdf4;
-  border-color: #86efac;
+  border-color: #A8E6B8;
 }
 
 .day-tracker-root .cal-cell.today.has-logs {
-  background: #eef2ff;
-  border-color: #6366f1;
+  background: #EBF5FF;
+  border-color: #007AFF;
 }
 
 .day-tracker-root .cal-day-num {
   font-size: 13px;
   font-weight: 600;
-  color: #475569;
+  color: #48484a;
 }
 
 .day-tracker-root .cal-cell.today .cal-day-num {
-  color: #6366f1;
+  color: #007AFF;
 }
 
 .day-tracker-root .cal-cell.has-logs .cal-day-num {
-  color: #334155;
+  color: #3a3a3c;
 }
 
 .day-tracker-root .cal-cell-info {
@@ -1708,7 +1713,7 @@
 }
 
 .day-tracker-root .cal-cell-sleep {
-  color: #6366f1;
+  color: #007AFF;
 }
 
 .day-tracker-root .cal-cell-work {
@@ -1730,7 +1735,7 @@
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #e2e8f0;
+  background: #e5e5ea;
 }
 
 .day-tracker-root .cal-energy-pip.filled {
@@ -1748,18 +1753,18 @@
 .day-tracker-root .projects-title {
   font-size: 20px;
   font-weight: 700;
-  color: #0f172a;
+  color: #1d1d1f;
   margin: 0;
 }
 
 .day-tracker-root .projects-subtitle {
   font-size: 13px;
-  color: #94a3b8;
+  color: #86868b;
   margin-top: 2px;
 }
 
 .day-tracker-root .new-project-btn {
-  background: #6366f1;
+  background: #007AFF;
   color: #fff;
   border: none;
   padding: 8px 14px;
@@ -1779,8 +1784,8 @@
 
 .day-tracker-root .filter-select {
   background: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #334155;
+  border: 1px solid #c7c7cc;
+  color: #3a3a3c;
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 13px;
@@ -1790,7 +1795,7 @@
 .day-tracker-root .projects-count {
   margin-left: auto;
   font-size: 13px;
-  color: #94a3b8;
+  color: #86868b;
 }
 
 .day-tracker-root .projects-grid {
@@ -1801,7 +1806,7 @@
 
 .day-tracker-root .project-card {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 10px;
   padding: 14px;
   cursor: pointer;
@@ -1809,7 +1814,7 @@
 }
 
 .day-tracker-root .project-card:hover {
-  border-color: #cbd5e1;
+  border-color: #c7c7cc;
 }
 
 .day-tracker-root .project-card-top {
@@ -1835,12 +1840,12 @@
 
 .day-tracker-root .project-tag.category {
   background: rgba(99, 102, 241, 0.1);
-  color: #818cf8;
+  color: #4DA3FF;
   border: 1px solid rgba(99, 102, 241, 0.3);
 }
 
 .day-tracker-root .project-tag.status {
-  border: 1px solid #cbd5e1;
+  border: 1px solid #c7c7cc;
 }
 
 .day-tracker-root .project-tag.status.active {
@@ -1864,7 +1869,7 @@
 .day-tracker-root .project-name {
   font-size: 15px;
   font-weight: 600;
-  color: #1e293b;
+  color: #1d1d1f;
   margin-bottom: 10px;
   line-height: 1.3;
 }
@@ -1878,18 +1883,18 @@
 
 .day-tracker-root .project-tasks-count {
   font-size: 12px;
-  color: #475569;
+  color: #48484a;
 }
 
 .day-tracker-root .project-pct {
   font-size: 12px;
-  color: #475569;
+  color: #48484a;
   font-weight: 600;
 }
 
 .day-tracker-root .project-progress-bar {
   height: 4px;
-  background: #e2e8f0;
+  background: #e5e5ea;
   border-radius: 2px;
   overflow: hidden;
   margin-bottom: 10px;
@@ -1909,12 +1914,12 @@
 
 .day-tracker-root .project-deadline {
   font-size: 12px;
-  color: #94a3b8;
+  color: #86868b;
 }
 
 .day-tracker-root .project-open-link {
   font-size: 12px;
-  color: #6366f1;
+  color: #007AFF;
   font-weight: 500;
 }
 
@@ -1934,13 +1939,13 @@
 .day-tracker-root .project-detail-name {
   font-size: 18px;
   font-weight: 700;
-  color: #0f172a;
+  color: #1d1d1f;
 }
 
 .day-tracker-root .icon-btn {
-  background: #e2e8f0;
+  background: #e5e5ea;
   border: none;
-  color: #64748b;
+  color: #6e6e73;
   font-size: 12px;
   padding: 4px 10px;
   border-radius: 6px;
@@ -1949,11 +1954,11 @@
 }
 
 .day-tracker-root .icon-btn:hover {
-  color: #334155;
+  color: #3a3a3c;
 }
 
 .day-tracker-root .icon-btn.delete {
-  color: #ef4444;
+  color: #FF3B30;
 }
 
 .day-tracker-root .icon-btn.delete:hover {
@@ -1969,16 +1974,16 @@
   align-items: center;
   gap: 8px;
   padding: 8px 0;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e5e5ea;
 }
 
 .day-tracker-root .task-check {
   width: 22px;
   height: 22px;
   border-radius: 6px;
-  border: 2px solid #cbd5e1;
+  border: 2px solid #c7c7cc;
   background: transparent;
-  color: #6366f1;
+  color: #007AFF;
   font-size: 12px;
   cursor: pointer;
   display: flex;
@@ -1988,20 +1993,20 @@
 }
 
 .day-tracker-root .task-check.checked {
-  background: #6366f1;
-  border-color: #6366f1;
+  background: #007AFF;
+  border-color: #007AFF;
   color: #fff;
 }
 
 .day-tracker-root .task-text {
   flex: 1;
   font-size: 14px;
-  color: #334155;
+  color: #3a3a3c;
 }
 
 .day-tracker-root .task-text.done {
   text-decoration: line-through;
-  color: #94a3b8;
+  color: #86868b;
 }
 
 .day-tracker-root .add-task-row {
@@ -2041,14 +2046,14 @@
 
 .day-tracker-root .modal h3 {
   font-size: 16px;
-  color: #0f172a;
+  color: #1d1d1f;
   margin-bottom: 16px;
 }
 
 .day-tracker-root .modal label {
   display: block;
   font-size: 12px;
-  color: #64748b;
+  color: #6e6e73;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -2058,9 +2063,9 @@
 .day-tracker-root .modal-input {
   width: 100%;
   background: #ffffff;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #c7c7cc;
   border-radius: 8px;
-  color: #1e293b;
+  color: #1d1d1f;
   padding: 10px;
   font-size: 14px;
   font-family: inherit;
@@ -2068,15 +2073,15 @@
 
 .day-tracker-root .modal-input:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: #007AFF;
 }
 
 .day-tracker-root .modal-select {
   width: 100%;
   background: #ffffff;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #c7c7cc;
   border-radius: 8px;
-  color: #1e293b;
+  color: #1d1d1f;
   padding: 10px;
   font-size: 14px;
   font-family: inherit;
@@ -2085,7 +2090,7 @@
 
 .day-tracker-root .modal-select:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: #007AFF;
 }
 
 .day-tracker-root .color-picker {
@@ -2104,7 +2109,7 @@
 }
 
 .day-tracker-root .color-btn.selected {
-  border-color: #1e293b;
+  border-color: #1d1d1f;
   transform: scale(1.15);
 }
 
@@ -2129,19 +2134,19 @@
 }
 
 .day-tracker-root .btn-cancel {
-  background: #f1f5f9;
-  color: #64748b;
+  background: #f2f2f7;
+  color: #6e6e73;
 }
 
 .day-tracker-root .btn-save {
-  background: #6366f1;
+  background: #007AFF;
   color: #fff;
 }
 
 .day-tracker-root .btn-clear {
   background: transparent;
-  color: #ef4444;
-  border: 1px solid #ef4444;
+  color: #FF3B30;
+  border: 1px solid #FF3B30;
 }
 
 /* Board / Vision Board */
@@ -2158,7 +2163,7 @@
   justify-content: space-between;
   padding: 8px 12px;
   background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e5e5ea;
   gap: 8px;
   flex-shrink: 0;
   flex-wrap: wrap;
@@ -2172,9 +2177,9 @@
 }
 
 .day-tracker-root .board-tool-btn {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  color: #334155;
+  background: #f2f2f7;
+  border: 1px solid #c7c7cc;
+  color: #3a3a3c;
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 12px;
@@ -2184,8 +2189,8 @@
 }
 
 .day-tracker-root .board-tool-btn:hover {
-  background: #e2e8f0;
-  color: #0f172a;
+  background: #e5e5ea;
+  color: #1d1d1f;
 }
 
 .day-tracker-root .board-tool-btn.small {
@@ -2210,13 +2215,13 @@
 }
 
 .day-tracker-root .board-color-dot.selected {
-  border-color: #1e293b;
+  border-color: #1d1d1f;
   transform: scale(1.2);
 }
 
 .day-tracker-root .board-zoom-label {
   font-size: 11px;
-  color: #64748b;
+  color: #6e6e73;
   font-variant-numeric: tabular-nums;
   min-width: 32px;
   text-align: right;
@@ -2227,7 +2232,7 @@
   position: relative;
   overflow: hidden;
   cursor: grab;
-  background: #f1f5f9;
+  background: #f2f2f7;
   touch-action: none;
 }
 
@@ -2279,7 +2284,7 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #ef4444;
+  background: #FF3B30;
   color: #fff;
   border: none;
   font-size: 14px;
@@ -2358,7 +2363,7 @@
   width: 100%;
   background: transparent;
   border: none;
-  border-bottom: 1px solid #cbd5e1;
+  border-bottom: 1px solid #c7c7cc;
   color: #333;
   font-size: 11px;
   font-family: inherit;
@@ -2383,11 +2388,11 @@
 .day-tracker-root .notes-list-title {
   font-size: 20px;
   font-weight: 700;
-  color: #0f172a;
+  color: #1d1d1f;
 }
 
 .day-tracker-root .notes-new-btn {
-  background: #6366f1;
+  background: #007AFF;
   color: #fff;
   border: none;
   width: 36px;
@@ -2402,15 +2407,15 @@
 }
 
 .day-tracker-root .notes-new-btn:hover {
-  background: #4f46e5;
+  background: #0062CC;
 }
 
 .day-tracker-root .notes-search {
   width: 100%;
   background: #ffffff;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #c7c7cc;
   border-radius: 10px;
-  color: #1e293b;
+  color: #1d1d1f;
   padding: 10px 14px;
   font-size: 14px;
   font-family: inherit;
@@ -2419,12 +2424,12 @@
 
 .day-tracker-root .notes-search:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: #007AFF;
 }
 
 .day-tracker-root .notes-count {
   font-size: 12px;
-  color: #94a3b8;
+  color: #86868b;
   margin-bottom: 10px;
 }
 
@@ -2446,7 +2451,7 @@
 }
 
 .day-tracker-root .notes-list-item:hover {
-  background: #f1f5f9;
+  background: #f2f2f7;
 }
 
 .day-tracker-root .notes-item-color {
@@ -2464,7 +2469,7 @@
 .day-tracker-root .notes-item-title {
   font-size: 15px;
   font-weight: 600;
-  color: #1e293b;
+  color: #1d1d1f;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2472,7 +2477,7 @@
 
 .day-tracker-root .notes-item-preview {
   font-size: 13px;
-  color: #64748b;
+  color: #6e6e73;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2481,7 +2486,7 @@
 
 .day-tracker-root .notes-item-date {
   font-size: 12px;
-  color: #94a3b8;
+  color: #86868b;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -2489,7 +2494,7 @@
 .day-tracker-root .notes-empty {
   text-align: center;
   padding: 40px 20px;
-  color: #94a3b8;
+  color: #86868b;
   font-size: 14px;
 }
 
@@ -2510,7 +2515,7 @@
 .day-tracker-root .notes-back-btn {
   background: none;
   border: none;
-  color: #6366f1;
+  color: #007AFF;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -2539,14 +2544,14 @@
 }
 
 .day-tracker-root .notes-color-dot.selected {
-  border-color: #1e293b;
+  border-color: #1d1d1f;
   transform: scale(1.2);
 }
 
 .day-tracker-root .notes-delete-btn {
   background: none;
-  border: 1px solid #cbd5e1;
-  color: #ef4444;
+  border: 1px solid #c7c7cc;
+  color: #FF3B30;
   font-size: 12px;
   padding: 4px 10px;
   border-radius: 6px;
@@ -2562,7 +2567,7 @@
   width: 100%;
   background: transparent;
   border: none;
-  color: #0f172a;
+  color: #1d1d1f;
   font-size: 22px;
   font-weight: 700;
   font-family: inherit;
@@ -2575,7 +2580,7 @@
 }
 
 .day-tracker-root .notes-title-input::placeholder {
-  color: #94a3b8;
+  color: #86868b;
 }
 
 .day-tracker-root .notes-body-input {
@@ -2583,7 +2588,7 @@
   flex: 1;
   background: transparent;
   border: none;
-  color: #1e293b;
+  color: #1d1d1f;
   font-size: 15px;
   font-family: inherit;
   line-height: 1.7;
@@ -2596,12 +2601,12 @@
 }
 
 .day-tracker-root .notes-body-input::placeholder {
-  color: #cbd5e1;
+  color: #c7c7cc;
 }
 
 /* Schedule Date Picker Dropdown */
 .day-tracker-root .date-nav-label:hover {
-  color: #6366f1;
+  color: #007AFF;
 }
 
 .day-tracker-root .schedule-date-picker {
@@ -2611,7 +2616,7 @@
   transform: translateX(-50%);
   z-index: 100;
   background: #fff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 14px;
   box-shadow: 0 8px 24px rgba(0,0,0,0.12);
   padding: 12px;
@@ -2629,22 +2634,22 @@
 .day-tracker-root .sdp-title {
   font-size: 14px;
   font-weight: 700;
-  color: #1e293b;
+  color: #1d1d1f;
 }
 
 .day-tracker-root .sdp-nav {
   background: none;
   border: none;
   font-size: 16px;
-  color: #64748b;
+  color: #6e6e73;
   cursor: pointer;
   padding: 4px 8px;
   border-radius: 6px;
 }
 
 .day-tracker-root .sdp-nav:hover {
-  background: #f1f5f9;
-  color: #1e293b;
+  background: #f2f2f7;
+  color: #1d1d1f;
 }
 
 .day-tracker-root .sdp-days-header {
@@ -2658,7 +2663,7 @@
   text-align: center;
   font-size: 11px;
   font-weight: 600;
-  color: #94a3b8;
+  color: #86868b;
   padding: 2px 0;
 }
 
@@ -2672,7 +2677,7 @@
   text-align: center;
   font-size: 13px;
   font-weight: 500;
-  color: #334155;
+  color: #3a3a3c;
   padding: 6px 0;
   border-radius: 8px;
   cursor: pointer;
@@ -2680,7 +2685,7 @@
 }
 
 .day-tracker-root .sdp-cell:hover {
-  background: #f1f5f9;
+  background: #f2f2f7;
 }
 
 .day-tracker-root .sdp-cell.empty {
@@ -2688,18 +2693,18 @@
 }
 
 .day-tracker-root .sdp-cell.today {
-  color: #6366f1;
+  color: #007AFF;
   font-weight: 700;
 }
 
 .day-tracker-root .sdp-cell.selected {
-  background: #6366f1;
+  background: #007AFF;
   color: #fff;
   font-weight: 700;
 }
 
 .day-tracker-root .sdp-cell.selected:hover {
-  background: #4f46e5;
+  background: #0062CC;
 }
 
 .day-tracker-root .sdp-today-btn {
@@ -2707,10 +2712,10 @@
   width: 100%;
   margin-top: 8px;
   padding: 6px 0;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 8px;
-  background: #f8fafc;
-  color: #6366f1;
+  background: #f9f9fb;
+  color: #007AFF;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -2718,8 +2723,8 @@
 }
 
 .day-tracker-root .sdp-today-btn:hover {
-  background: #eef2ff;
-  border-color: #c7d2fe;
+  background: #EBF5FF;
+  border-color: #B3D7FF;
 }
 
 /* Inline Block Category Buttons */
@@ -2738,9 +2743,9 @@
 .day-tracker-root .inline-cat-btn {
   padding: 3px 10px;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #64748b;
+  border: 1px solid #e5e5ea;
+  background: #f9f9fb;
+  color: #6e6e73;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
@@ -2749,8 +2754,8 @@
 }
 
 .day-tracker-root .inline-cat-btn:hover {
-  border-color: #cbd5e1;
-  color: #334155;
+  border-color: #c7c7cc;
+  color: #3a3a3c;
 }
 
 .day-tracker-root .inline-cat-btn.active {
@@ -2771,24 +2776,24 @@
   gap: 6px;
   padding: 8px 14px;
   border-radius: 10px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   background: #ffffff;
   font-size: 13px;
 }
 
 .day-tracker-root .daily-stat-chip.sleep {
-  background: #eef2ff;
-  border-color: #c7d2fe;
+  background: #EBF5FF;
+  border-color: #B3D7FF;
 }
 
 .day-tracker-root .daily-stat-chip.work {
   background: #f0fdf4;
-  border-color: #bbf7d0;
+  border-color: #C6F0D0;
 }
 
 .day-tracker-root .daily-stat-chip.total {
-  background: #f8fafc;
-  border-color: #e2e8f0;
+  background: #f9f9fb;
+  border-color: #e5e5ea;
 }
 
 .day-tracker-root .daily-stat-icon {
@@ -2797,18 +2802,18 @@
 
 .day-tracker-root .daily-stat-value {
   font-weight: 700;
-  color: #1e293b;
+  color: #1d1d1f;
 }
 
 .day-tracker-root .daily-stat-label {
-  color: #64748b;
+  color: #6e6e73;
   font-weight: 500;
 }
 
 /* Dashboard Tasks in Sidebar */
 .day-tracker-root .dashboard-tasks-section {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 12px;
   padding: 14px;
   margin-bottom: 8px;
@@ -2820,7 +2825,7 @@
   gap: 6px;
   font-size: 14px;
   font-weight: 700;
-  color: #1e293b;
+  color: #1d1d1f;
   margin-bottom: 8px;
 }
 
@@ -2830,7 +2835,7 @@
   gap: 8px;
   padding: 8px 10px;
   border-radius: 8px;
-  background: #f8fafc;
+  background: #f9f9fb;
   margin-bottom: 4px;
   font-size: 13px;
   cursor: pointer;
@@ -2838,7 +2843,7 @@
 }
 
 .day-tracker-root .dashboard-task-item:hover {
-  background: #f1f5f9;
+  background: #f2f2f7;
 }
 
 .day-tracker-root .dashboard-task-item.completed {
@@ -2850,7 +2855,7 @@
   width: 18px;
   height: 18px;
   border-radius: 5px;
-  border: 2px solid #94a3b8;
+  border: 2px solid #86868b;
   background: transparent;
   color: #fff;
   font-size: 10px;
@@ -2869,7 +2874,7 @@
 .day-tracker-root .dashboard-task-name {
   flex: 1;
   font-weight: 500;
-  color: #334155;
+  color: #3a3a3c;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2877,13 +2882,13 @@
 
 .day-tracker-root .dashboard-task-time {
   font-size: 11px;
-  color: #94a3b8;
+  color: #86868b;
   flex-shrink: 0;
 }
 
 .day-tracker-root .dashboard-task-category {
   font-size: 10px;
-  color: #6366f1;
+  color: #007AFF;
   text-transform: capitalize;
   flex-shrink: 0;
 }
@@ -2903,18 +2908,18 @@
 .day-tracker-root .ll-title {
   font-size: 20px;
   font-weight: 700;
-  color: #0f172a;
+  color: #1d1d1f;
   margin: 0;
 }
 
 .day-tracker-root .ll-subtitle {
   font-size: 13px;
-  color: #94a3b8;
+  color: #86868b;
   margin-top: 2px;
 }
 
 .day-tracker-root .ll-add-btn {
-  background: #6366f1;
+  background: #007AFF;
   color: #fff;
   border: none;
   padding: 8px 16px;
@@ -2926,13 +2931,13 @@
 }
 
 .day-tracker-root .ll-add-btn:hover {
-  background: #4f46e5;
+  background: #0062CC;
 }
 
 /* Form */
 .day-tracker-root .ll-form {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 16px;
@@ -2941,9 +2946,9 @@
 .day-tracker-root .ll-form-input {
   width: 100%;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 8px;
-  color: #1e293b;
+  color: #1d1d1f;
   padding: 10px 12px;
   font-size: 14px;
   font-family: inherit;
@@ -2952,7 +2957,7 @@
 
 .day-tracker-root .ll-form-input:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: #007AFF;
 }
 
 .day-tracker-root .ll-form-title {
@@ -2970,7 +2975,7 @@
   resize: vertical;
   min-height: 50px;
   font-size: 13px;
-  color: #475569;
+  color: #48484a;
 }
 
 .day-tracker-root .ll-form-row {
@@ -2986,7 +2991,7 @@
 .day-tracker-root .ll-form-label {
   display: block;
   font-size: 11px;
-  color: #64748b;
+  color: #6e6e73;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 4px;
@@ -2996,9 +3001,9 @@
 .day-tracker-root .ll-form-select {
   width: 100%;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 8px;
-  color: #1e293b;
+  color: #1d1d1f;
   padding: 10px 12px;
   font-size: 14px;
   font-family: inherit;
@@ -3007,7 +3012,7 @@
 
 .day-tracker-root .ll-form-select:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: #007AFF;
 }
 
 .day-tracker-root .ll-form-actions {
@@ -3024,9 +3029,9 @@
 .day-tracker-root .ll-search {
   width: 100%;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 10px;
-  color: #1e293b;
+  color: #1d1d1f;
   padding: 10px 14px;
   font-size: 14px;
   font-family: inherit;
@@ -3035,7 +3040,7 @@
 
 .day-tracker-root .ll-search:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: #007AFF;
 }
 
 .day-tracker-root .ll-filters {
@@ -3045,9 +3050,9 @@
 }
 
 .day-tracker-root .ll-filter-chip {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  color: #64748b;
+  background: #f9f9fb;
+  border: 1px solid #e5e5ea;
+  color: #6e6e73;
   padding: 4px 12px;
   border-radius: 16px;
   font-size: 12px;
@@ -3057,14 +3062,14 @@
 }
 
 .day-tracker-root .ll-filter-chip:hover {
-  border-color: #cbd5e1;
-  color: #334155;
+  border-color: #c7c7cc;
+  color: #3a3a3c;
 }
 
 .day-tracker-root .ll-filter-chip.active {
-  background: #eef2ff;
-  border-color: #6366f1;
-  color: #6366f1;
+  background: #EBF5FF;
+  border-color: #007AFF;
+  color: #007AFF;
   font-weight: 600;
 }
 
@@ -3078,7 +3083,7 @@
 .day-tracker-root .ll-card {
   display: flex;
   background: #ffffff;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
@@ -3086,7 +3091,7 @@
 }
 
 .day-tracker-root .ll-card:hover {
-  border-color: #cbd5e1;
+  border-color: #c7c7cc;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
 }
 
@@ -3118,21 +3123,21 @@
 
 .day-tracker-root .ll-card-reviews {
   font-size: 11px;
-  color: #94a3b8;
+  color: #86868b;
   font-weight: 500;
 }
 
 .day-tracker-root .ll-card-title {
   font-size: 15px;
   font-weight: 700;
-  color: #0f172a;
+  color: #1d1d1f;
   margin: 0 0 6px 0;
   line-height: 1.3;
 }
 
 .day-tracker-root .ll-card-lesson {
   font-size: 14px;
-  color: #475569;
+  color: #48484a;
   line-height: 1.6;
   margin: 0;
   white-space: pre-wrap;
@@ -3147,7 +3152,7 @@
 
 .day-tracker-root .ll-card-expand-hint {
   font-size: 11px;
-  color: #94a3b8;
+  color: #86868b;
   font-style: italic;
   margin-top: 4px;
   display: block;
@@ -3156,29 +3161,29 @@
 .day-tracker-root .ll-card-expanded {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid #f2f2f7;
 }
 
 .day-tracker-root .ll-card-context {
   font-size: 13px;
-  color: #64748b;
+  color: #6e6e73;
   line-height: 1.5;
   margin-bottom: 8px;
   padding: 10px 12px;
-  background: #f8fafc;
+  background: #f9f9fb;
   border-radius: 8px;
-  border-left: 3px solid #e2e8f0;
+  border-left: 3px solid #e5e5ea;
 }
 
 .day-tracker-root .ll-card-context-label {
   font-weight: 600;
-  color: #475569;
+  color: #48484a;
   margin-right: 4px;
 }
 
 .day-tracker-root .ll-card-source {
   font-size: 12px;
-  color: #94a3b8;
+  color: #86868b;
   font-style: italic;
   margin-bottom: 8px;
 }
@@ -3191,7 +3196,7 @@
 
 .day-tracker-root .ll-card-date {
   font-size: 11px;
-  color: #94a3b8;
+  color: #86868b;
 }
 
 .day-tracker-root .ll-card-actions {
@@ -3200,9 +3205,9 @@
 }
 
 .day-tracker-root .ll-action-btn {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  color: #64748b;
+  background: #f9f9fb;
+  border: 1px solid #e5e5ea;
+  color: #6e6e73;
   padding: 5px 12px;
   border-radius: 6px;
   font-size: 12px;
@@ -3212,14 +3217,14 @@
 }
 
 .day-tracker-root .ll-action-btn:hover {
-  background: #f1f5f9;
-  color: #334155;
+  background: #f2f2f7;
+  color: #3a3a3c;
 }
 
 .day-tracker-root .ll-action-btn.review {
-  background: #eef2ff;
-  border-color: #c7d2fe;
-  color: #6366f1;
+  background: #EBF5FF;
+  border-color: #B3D7FF;
+  color: #007AFF;
 }
 
 .day-tracker-root .ll-action-btn.review:hover {
@@ -3229,26 +3234,26 @@
 .day-tracker-root .ll-action-btn.delete:hover {
   background: #fef2f2;
   border-color: #fecaca;
-  color: #ef4444;
+  color: #FF3B30;
 }
 
 /* Empty states */
 .day-tracker-root .ll-empty {
   text-align: center;
   padding: 30px 20px;
-  color: #94a3b8;
+  color: #86868b;
   font-size: 14px;
 }
 
 .day-tracker-root .ll-empty-start {
   text-align: center;
   padding: 50px 20px;
-  color: #94a3b8;
+  color: #86868b;
 }
 
 .day-tracker-root .ll-empty-start h3 {
   font-size: 16px;
-  color: #64748b;
+  color: #6e6e73;
   margin-bottom: 8px;
 }
 
@@ -3663,7 +3668,7 @@
   min-width: 280px;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #e2e8f0;
+  border-right: 1px solid #e5e5ea;
   padding-right: 16px;
 }
 
@@ -3677,18 +3682,18 @@
 .day-tracker-root .hu-title {
   font-size: 24px;
   font-weight: 700;
-  color: #1e293b;
+  color: #1d1d1f;
   margin: 0;
 }
 
 .day-tracker-root .hu-subtitle {
   font-size: 13px;
-  color: #64748b;
+  color: #6e6e73;
   margin: 2px 0 0;
 }
 
 .day-tracker-root .hu-add-btn {
-  background: #6366f1;
+  background: #007AFF;
   color: #fff;
   border: none;
   padding: 8px 16px;
@@ -3700,7 +3705,7 @@
 }
 
 .day-tracker-root .hu-add-btn:hover {
-  background: #4f46e5;
+  background: #0062CC;
 }
 
 .day-tracker-root .hu-controls {
@@ -3712,7 +3717,7 @@
 
 .day-tracker-root .hu-search {
   padding: 8px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 8px;
   font-size: 13px;
   font-family: inherit;
@@ -3722,7 +3727,7 @@
 
 .day-tracker-root .hu-search:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: #007AFF;
 }
 
 .day-tracker-root .hu-filters {
@@ -3733,29 +3738,29 @@
 
 .day-tracker-root .hu-filter-chip {
   padding: 4px 10px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 20px;
   background: transparent;
   font-size: 11px;
   font-weight: 500;
-  color: #64748b;
+  color: #6e6e73;
   cursor: pointer;
   font-family: inherit;
 }
 
 .day-tracker-root .hu-filter-chip.active {
-  background: #6366f11a;
-  border-color: #6366f1;
-  color: #6366f1;
+  background: #007AFF1a;
+  border-color: #007AFF;
+  color: #007AFF;
 }
 
 .day-tracker-root .hu-sort-select {
   padding: 6px 10px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 8px;
   font-size: 12px;
   font-family: inherit;
-  color: #64748b;
+  color: #6e6e73;
   background: #fff;
 }
 
@@ -3779,12 +3784,12 @@
 }
 
 .day-tracker-root .hu-person-card:hover {
-  background: #f1f5f9;
+  background: #f2f2f7;
 }
 
 .day-tracker-root .hu-person-card.active {
-  background: #6366f10d;
-  border-color: #6366f140;
+  background: #007AFF0d;
+  border-color: #007AFF40;
 }
 
 .day-tracker-root .hu-person-card-left {
@@ -3798,8 +3803,8 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: #6366f11a;
-  color: #6366f1;
+  background: #007AFF1a;
+  color: #007AFF;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3811,7 +3816,7 @@
 .day-tracker-root .hu-person-name {
   font-size: 14px;
   font-weight: 600;
-  color: #1e293b;
+  color: #1d1d1f;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3843,7 +3848,7 @@
   display: none;
   background: none;
   border: none;
-  color: #6366f1;
+  color: #007AFF;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -3866,24 +3871,24 @@
 .day-tracker-root .hu-detail-name {
   font-size: 22px;
   font-weight: 700;
-  color: #1e293b;
+  color: #1d1d1f;
   margin: 0 0 6px;
 }
 
 .day-tracker-root .hu-edit-btn {
   background: none;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   padding: 6px 14px;
   border-radius: 8px;
   font-size: 13px;
   cursor: pointer;
-  color: #64748b;
+  color: #6e6e73;
   font-family: inherit;
 }
 
 .day-tracker-root .hu-edit-btn:hover {
-  border-color: #6366f1;
-  color: #6366f1;
+  border-color: #007AFF;
+  color: #007AFF;
 }
 
 .day-tracker-root .hu-stats-row {
@@ -3894,7 +3899,7 @@
 
 .day-tracker-root .hu-stat {
   font-size: 12px;
-  color: #64748b;
+  color: #6e6e73;
   font-weight: 500;
 }
 
@@ -3902,7 +3907,7 @@
 
 .day-tracker-root .hu-section {
   margin-bottom: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 12px;
   overflow: hidden;
 }
@@ -3914,7 +3919,7 @@
   width: 100%;
   padding: 12px 16px;
   border: none;
-  background: #f8fafc;
+  background: #f9f9fb;
   cursor: pointer;
   font-family: inherit;
 }
@@ -3922,12 +3927,12 @@
 .day-tracker-root .hu-section-title {
   font-size: 14px;
   font-weight: 700;
-  color: #1e293b;
+  color: #1d1d1f;
 }
 
 .day-tracker-root .hu-section-chevron {
   font-size: 10px;
-  color: #94a3b8;
+  color: #86868b;
 }
 
 .day-tracker-root .hu-section-body {
@@ -3951,14 +3956,14 @@
 .day-tracker-root .hu-info-label {
   font-size: 11px;
   font-weight: 600;
-  color: #94a3b8;
+  color: #86868b;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 
 .day-tracker-root .hu-info-item > span:last-child {
   font-size: 14px;
-  color: #1e293b;
+  color: #1d1d1f;
 }
 
 /* ─── AI Decision Maker Button ─────────────────────────────────────────────── */
@@ -3966,7 +3971,7 @@
 .day-tracker-root .hu-decision-open-btn {
   width: 100%;
   padding: 14px 20px;
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  background: linear-gradient(135deg, #007AFF, #0062CC);
   color: #fff;
   border: none;
   border-radius: 12px;
@@ -4022,20 +4027,20 @@
   justify-content: space-between;
   align-items: center;
   padding: 18px 24px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e5e5ea;
   flex-shrink: 0;
 }
 
 .day-tracker-root .hu-dm-title {
   font-size: 18px;
   font-weight: 700;
-  color: #1e293b;
+  color: #1d1d1f;
   margin: 0;
 }
 
 .day-tracker-root .hu-dm-subtitle {
   font-size: 13px;
-  color: #64748b;
+  color: #6e6e73;
 }
 
 .day-tracker-root .hu-dm-header-actions {
@@ -4047,8 +4052,8 @@
 .day-tracker-root .hu-dm-history-btn,
 .day-tracker-root .hu-dm-new-btn {
   background: none;
-  border: 1px solid #e2e8f0;
-  color: #64748b;
+  border: 1px solid #e5e5ea;
+  color: #6e6e73;
   padding: 5px 12px;
   border-radius: 6px;
   font-size: 12px;
@@ -4059,18 +4064,18 @@
 
 .day-tracker-root .hu-dm-history-btn:hover,
 .day-tracker-root .hu-dm-new-btn:hover {
-  border-color: #6366f1;
-  color: #6366f1;
+  border-color: #007AFF;
+  color: #007AFF;
 }
 
 .day-tracker-root .hu-dm-new-btn {
-  background: #6366f1;
+  background: #007AFF;
   color: #fff;
-  border-color: #6366f1;
+  border-color: #007AFF;
 }
 
 .day-tracker-root .hu-dm-new-btn:hover {
-  background: #4f46e5;
+  background: #0062CC;
   color: #fff;
 }
 
@@ -4078,14 +4083,14 @@
   background: none;
   border: none;
   font-size: 24px;
-  color: #94a3b8;
+  color: #86868b;
   cursor: pointer;
   padding: 0 4px;
   line-height: 1;
 }
 
 .day-tracker-root .hu-dm-close:hover {
-  color: #1e293b;
+  color: #1d1d1f;
 }
 
 .day-tracker-root .hu-dm-messages {
@@ -4110,7 +4115,7 @@
 .day-tracker-root .hu-dm-empty p {
   margin: 0;
   font-size: 15px;
-  color: #1e293b;
+  color: #1d1d1f;
   font-weight: 600;
 }
 
@@ -4123,12 +4128,12 @@
 }
 
 .day-tracker-root .hu-dm-suggestion {
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
+  background: #f2f2f7;
+  border: 1px solid #e5e5ea;
   border-radius: 20px;
   padding: 8px 14px;
   font-size: 13px;
-  color: #6366f1;
+  color: #007AFF;
   cursor: pointer;
   font-family: inherit;
   transition: background 0.15s;
@@ -4136,7 +4141,7 @@
 
 .day-tracker-root .hu-dm-suggestion:hover {
   background: #e0e7ff;
-  border-color: #c7d2fe;
+  border-color: #B3D7FF;
 }
 
 .day-tracker-root .hu-dm-exchange {
@@ -4160,7 +4165,7 @@
 }
 
 .day-tracker-root .hu-dm-user {
-  background: #6366f1;
+  background: #007AFF;
   color: #fff;
   align-self: flex-end;
   border-bottom-right-radius: 4px;
@@ -4178,14 +4183,14 @@
 }
 
 .day-tracker-root .hu-dm-ai {
-  background: #f1f5f9;
-  color: #1e293b;
+  background: #f2f2f7;
+  color: #1d1d1f;
   align-self: flex-start;
   border-bottom-left-radius: 4px;
 }
 
 .day-tracker-root .hu-dm-typing {
-  color: #6366f1;
+  color: #007AFF;
   font-weight: 600;
 }
 
@@ -4197,7 +4202,7 @@
   display: flex;
   gap: 8px;
   padding: 16px 24px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #e5e5ea;
   flex-shrink: 0;
   background: #fff;
 }
@@ -4205,7 +4210,7 @@
 .day-tracker-root .hu-dm-input {
   flex: 1;
   padding: 12px 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 24px;
   font-size: 14px;
   font-family: inherit;
@@ -4213,11 +4218,11 @@
 }
 
 .day-tracker-root .hu-dm-input:focus {
-  border-color: #6366f1;
+  border-color: #007AFF;
 }
 
 .day-tracker-root .hu-dm-send {
-  background: #6366f1;
+  background: #007AFF;
   color: #fff;
   border: none;
   padding: 12px 20px;
@@ -4230,11 +4235,11 @@
 }
 
 .day-tracker-root .hu-dm-send:hover {
-  background: #4f46e5;
+  background: #0062CC;
 }
 
 .day-tracker-root .hu-dm-send:disabled {
-  background: #94a3b8;
+  background: #86868b;
   cursor: not-allowed;
 }
 
@@ -4271,36 +4276,36 @@
 
 .day-tracker-root .hu-trait-name {
   font-size: 13px;
-  color: #1e293b;
+  color: #1d1d1f;
   font-weight: 500;
 }
 
 .day-tracker-root .hu-trait-ai-badge {
   font-size: 9px;
   font-weight: 700;
-  background: #6366f11a;
-  color: #6366f1;
+  background: #007AFF1a;
+  color: #007AFF;
   padding: 1px 5px;
   border-radius: 3px;
 }
 
 .day-tracker-root .hu-trait-value {
   font-size: 11px;
-  color: #94a3b8;
+  color: #86868b;
   margin-left: auto;
 }
 
 .day-tracker-root .hu-trait-bar-bg {
   flex: 1;
   height: 6px;
-  background: #e2e8f0;
+  background: #e5e5ea;
   border-radius: 3px;
   overflow: hidden;
 }
 
 .day-tracker-root .hu-trait-bar-fill {
   height: 100%;
-  background: #6366f1;
+  background: #007AFF;
   border-radius: 3px;
   transition: width 0.3s;
 }
@@ -4314,8 +4319,8 @@
 }
 
 .day-tracker-root .hu-trust-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: #f9f9fb;
+  border: 1px solid #e5e5ea;
   border-radius: 8px;
   padding: 10px;
   cursor: pointer;
@@ -4323,13 +4328,13 @@
 }
 
 .day-tracker-root .hu-trust-card:hover {
-  border-color: #6366f1;
+  border-color: #007AFF;
 }
 
 .day-tracker-root .hu-trust-label {
   font-size: 11px;
   font-weight: 600;
-  color: #64748b;
+  color: #6e6e73;
   display: block;
   margin-bottom: 6px;
 }
@@ -4343,7 +4348,7 @@
 .day-tracker-root .hu-trust-bar-bg {
   flex: 1;
   height: 5px;
-  background: #e2e8f0;
+  background: #e5e5ea;
   border-radius: 3px;
   overflow: hidden;
 }
@@ -4357,7 +4362,7 @@
 .day-tracker-root .hu-trust-val {
   font-size: 12px;
   font-weight: 700;
-  color: #1e293b;
+  color: #1d1d1f;
   min-width: 24px;
   text-align: right;
 }
@@ -4371,7 +4376,7 @@
 .day-tracker-root .hu-trust-edit input[type="range"] {
   flex: 1;
   height: 4px;
-  accent-color: #6366f1;
+  accent-color: #007AFF;
 }
 
 /* ─── Memories ─────────────────────────────────────────────────────────────── */
@@ -4384,8 +4389,8 @@
 }
 
 .day-tracker-root .hu-memory-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: #f9f9fb;
+  border: 1px solid #e5e5ea;
   border-radius: 8px;
   padding: 10px;
   position: relative;
@@ -4394,21 +4399,21 @@
 .day-tracker-root .hu-memory-category {
   font-size: 10px;
   font-weight: 600;
-  color: #6366f1;
+  color: #007AFF;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 
 .day-tracker-root .hu-memory-text {
   font-size: 13px;
-  color: #1e293b;
+  color: #1d1d1f;
   margin: 4px 0;
   line-height: 1.4;
 }
 
 .day-tracker-root .hu-memory-date {
   font-size: 11px;
-  color: #94a3b8;
+  color: #86868b;
 }
 
 .day-tracker-root .hu-memory-delete {
@@ -4431,19 +4436,19 @@
   align-items: center;
   gap: 8px;
   padding: 6px 0;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f2f2f7;
 }
 
 .day-tracker-root .hu-lesson-text {
   flex: 1;
   font-size: 13px;
-  color: #1e293b;
+  color: #1d1d1f;
   line-height: 1.4;
 }
 
 .day-tracker-root .hu-lesson-date {
   font-size: 11px;
-  color: #94a3b8;
+  color: #86868b;
   flex-shrink: 0;
 }
 
@@ -4457,8 +4462,8 @@
 }
 
 .day-tracker-root .hu-goal-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: #f9f9fb;
+  border: 1px solid #e5e5ea;
   border-radius: 8px;
   padding: 10px;
 }
@@ -4478,14 +4483,14 @@
 .day-tracker-root .hu-goal-text {
   font-size: 13px;
   font-weight: 600;
-  color: #1e293b;
+  color: #1d1d1f;
 }
 
 .day-tracker-root .hu-goal-freq {
   font-size: 10px;
   font-weight: 600;
-  color: #6366f1;
-  background: #6366f11a;
+  color: #007AFF;
+  background: #007AFF1a;
   padding: 2px 6px;
   border-radius: 3px;
   flex-shrink: 0;
@@ -4493,7 +4498,7 @@
 
 .day-tracker-root .hu-goal-last {
   font-size: 11px;
-  color: #94a3b8;
+  color: #86868b;
   display: block;
   margin-top: 4px;
 }
@@ -4501,7 +4506,7 @@
 .day-tracker-root .hu-goal-overdue-tag {
   font-size: 10px;
   font-weight: 700;
-  color: #ef4444;
+  color: #FF3B30;
   display: block;
   margin-top: 2px;
 }
@@ -4514,7 +4519,7 @@
 }
 
 .day-tracker-root .hu-goal-done-btn {
-  background: #6366f1;
+  background: #007AFF;
   color: #fff;
   border: none;
   padding: 4px 10px;
@@ -4525,7 +4530,7 @@
 }
 
 .day-tracker-root .hu-goal-done-btn:hover {
-  background: #4f46e5;
+  background: #0062CC;
 }
 
 /* ─── AI Analysis ──────────────────────────────────────────────────────────── */
@@ -4537,8 +4542,8 @@
 }
 
 .day-tracker-root .hu-ai-block {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: #f9f9fb;
+  border: 1px solid #e5e5ea;
   border-radius: 8px;
   padding: 12px;
 }
@@ -4546,7 +4551,7 @@
 .day-tracker-root .hu-ai-block-title {
   font-size: 12px;
   font-weight: 700;
-  color: #6366f1;
+  color: #007AFF;
   margin: 0 0 6px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -4554,7 +4559,7 @@
 
 .day-tracker-root .hu-ai-block p {
   font-size: 13px;
-  color: #1e293b;
+  color: #1d1d1f;
   line-height: 1.5;
   margin: 0;
 }
@@ -4568,7 +4573,7 @@
 }
 
 .day-tracker-root .hu-risk-flag.hu-risk-high {
-  border-color: #ef4444;
+  border-color: #FF3B30;
   background: #fef2f2;
 }
 
@@ -4585,13 +4590,13 @@
 .day-tracker-root .hu-risk-flag-text {
   font-size: 13px;
   font-weight: 600;
-  color: #1e293b;
+  color: #1d1d1f;
   display: block;
 }
 
 .day-tracker-root .hu-risk-evidence {
   font-size: 12px;
-  color: #64748b;
+  color: #6e6e73;
   display: block;
   margin-top: 2px;
 }
@@ -4599,7 +4604,7 @@
 .day-tracker-root .hu-risk-confidence {
   font-size: 10px;
   font-weight: 600;
-  color: #94a3b8;
+  color: #86868b;
   text-transform: uppercase;
   display: block;
   margin-top: 2px;
@@ -4611,7 +4616,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: #f8fafc;
+  background: #f9f9fb;
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 8px;
@@ -4619,7 +4624,7 @@
 
 .day-tracker-root .hu-input {
   padding: 8px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 8px;
   font-size: 13px;
   font-family: inherit;
@@ -4629,7 +4634,7 @@
 
 .day-tracker-root .hu-input:focus {
   outline: none;
-  border-color: #6366f1;
+  border-color: #007AFF;
 }
 
 .day-tracker-root .hu-textarea {
@@ -4639,7 +4644,7 @@
 
 .day-tracker-root .hu-select {
   padding: 8px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #e5e5ea;
   border-radius: 8px;
   font-size: 13px;
   font-family: inherit;
@@ -4660,23 +4665,23 @@
 
 .day-tracker-root .hu-inline-add-btn {
   background: none;
-  border: 1px dashed #cbd5e1;
+  border: 1px dashed #c7c7cc;
   padding: 6px 12px;
   border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
-  color: #6366f1;
+  color: #007AFF;
   cursor: pointer;
   font-family: inherit;
 }
 
 .day-tracker-root .hu-inline-add-btn:hover {
-  border-color: #6366f1;
-  background: #6366f10a;
+  border-color: #007AFF;
+  background: #007AFF0a;
 }
 
 .day-tracker-root .hu-ai-btn {
-  background: #6366f1;
+  background: #007AFF;
   color: #fff;
   border: none;
   padding: 6px 14px;
@@ -4688,18 +4693,18 @@
 }
 
 .day-tracker-root .hu-ai-btn:hover {
-  background: #4f46e5;
+  background: #0062CC;
 }
 
 .day-tracker-root .hu-ai-btn:disabled {
-  background: #94a3b8;
+  background: #86868b;
   cursor: not-allowed;
 }
 
 .day-tracker-root .hu-inline-delete {
   background: none;
   border: none;
-  color: #94a3b8;
+  color: #86868b;
   font-size: 16px;
   cursor: pointer;
   padding: 2px 4px;
@@ -4708,7 +4713,7 @@
 }
 
 .day-tracker-root .hu-inline-delete:hover {
-  color: #ef4444;
+  color: #FF3B30;
 }
 
 .day-tracker-root .hu-slider-row {
@@ -4719,20 +4724,20 @@
 
 .day-tracker-root .hu-slider-row input[type="range"] {
   flex: 1;
-  accent-color: #6366f1;
+  accent-color: #007AFF;
 }
 
 .day-tracker-root .hu-slider-row span {
   font-size: 13px;
   font-weight: 600;
-  color: #1e293b;
+  color: #1d1d1f;
   min-width: 32px;
   text-align: right;
 }
 
 .day-tracker-root .hu-muted {
   font-size: 13px;
-  color: #94a3b8;
+  color: #86868b;
   margin: 4px 0;
 }
 
@@ -4741,19 +4746,19 @@
 .day-tracker-root .hu-empty {
   text-align: center;
   padding: 24px;
-  color: #94a3b8;
+  color: #86868b;
   font-size: 14px;
 }
 
 .day-tracker-root .hu-empty-start {
   text-align: center;
   padding: 40px 20px;
-  color: #64748b;
+  color: #6e6e73;
 }
 
 .day-tracker-root .hu-empty-start h3 {
   margin: 0 0 8px;
-  color: #1e293b;
+  color: #1d1d1f;
 }
 
 .day-tracker-root .hu-empty-start p {
@@ -4769,11 +4774,11 @@
   justify-content: center;
   height: 100%;
   text-align: center;
-  color: #94a3b8;
+  color: #86868b;
 }
 
 .day-tracker-root .hu-no-selection h3 {
-  color: #64748b;
+  color: #6e6e73;
   margin: 0 0 8px;
 }
 
@@ -4794,7 +4799,7 @@
 .day-tracker-root .hu-delete-person-btn {
   background: none;
   border: 1px solid #fca5a5;
-  color: #ef4444;
+  color: #FF3B30;
   padding: 8px 20px;
   border-radius: 8px;
   font-size: 13px;
@@ -4832,7 +4837,7 @@
 .day-tracker-root .hu-modal-title {
   font-size: 18px;
   font-weight: 700;
-  color: #1e293b;
+  color: #1d1d1f;
   margin: 0 0 16px;
 }
 
@@ -4857,7 +4862,7 @@
 .day-tracker-root .hu-label {
   font-size: 12px;
   font-weight: 600;
-  color: #64748b;
+  color: #6e6e73;
 }
 
 .day-tracker-root .hu-modal-actions {
