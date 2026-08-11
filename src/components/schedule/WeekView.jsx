@@ -86,7 +86,7 @@ function computeLayout(timedTasks, localData) {
     const ld = localData[task.id];
     const timeStr = ld?.time || task.scheduled_time;
     const top = Math.max(0, timeToTop(timeStr));
-    const height = minutesToTop(ld?.durationMin ?? 60);
+    const height = minutesToTop(ld?.durationMin ?? task.duration_minutes ?? 60);
     return { task, top, height, bottom: top + Math.max(MIN_HEIGHT, height) };
   });
   items.sort((a, b) => a.top - b.top);
@@ -225,7 +225,7 @@ export default function WeekView({ date, tasks, completions, onToggle, onDropTas
     const ld = localData[task.id];
     const timeStr = ld?.time || task.scheduled_time;
     const top = isValidTime(timeStr) ? timeToTop(timeStr) : 0;
-    const height = minutesToTop(ld?.durationMin ?? 60);
+    const height = minutesToTop(ld?.durationMin ?? task.duration_minutes ?? 60);
     const startDayIdx = ld?.dayStr
       ? days.findIndex(d => format(d, "yyyy-MM-dd") === ld.dayStr)
       : getDayIdxFromX(e.clientX);
