@@ -113,6 +113,7 @@ function TimedTaskBlock({ task, color, completing, onToggle, onRemove, onPointer
   const rightPct = ((totalCols - col - 1) / totalCols) * 100;
   return (
     <motion.div
+      title={task.name}
       style={{ top: top + 1, height: Math.max(MIN_HEIGHT, height - 3), zIndex: 5 + col, position: "absolute", left: `calc(${leftPct}% + 2px)`, right: `calc(${rightPct}% + 2px)`, touchAction: 'none' }}
       className={`rounded border-l-2 shadow-sm select-none overflow-visible ${color}`}
       initial={{ opacity: 0, scale: 0.95 }}
