@@ -122,6 +122,25 @@ export default function CombinedCalendarView({ onDaySelect }) {
     if (t.frequency === "daily") return true;
     if (t.frequency === "weekdays") return isWeekday;
     if (t.frequency === "weekends") return !isWeekday;
+    if (t.frequency === "weekly") {
+      if (!t.scheduled_date) return false;
+      const start = new Date(t.scheduled_date);
+      const current = new Date(dateStr);
+      const diffDays = Math.round((current - start) / 86400000);
+      return diffDays >= 0 && diffDays % 7 === 0;
+    }
+    if (t.frequency === "biweekly") {
+      if (!t.scheduled_date) return false;
+      const start = new Date(t.scheduled_date);
+      const current = new Date(dateStr);
+      const diffDays = Math.round((current - start) / 86400000);
+      return diffDays >= 0 && diffDays % 14 === 0;
+    }
+    if (t.frequency === "monthly") {
+      if (!t.scheduled_date) return false;
+      const startDay = new Date(t.scheduled_date).getDate();
+      return new Date(dateStr).getDate() === startDay && new Date(dateStr) >= new Date(t.scheduled_date);
+    }
     if (t.frequency === dow) return true;
     return false;
   };
