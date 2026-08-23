@@ -838,7 +838,7 @@ export async function sendOneOffPrompt(prompt) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-sonnet-5',
+      model: 'claude-opus-4-6',
       max_tokens: 2048,
       messages: [{ role: 'user', content: prompt }],
     }),
@@ -879,7 +879,7 @@ async function _agenticLoop(history, systemPrompt) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-5',
+        model: 'claude-opus-4-6',
         max_tokens: 2048,
         system: systemPrompt,
         tools: TOOLS,
@@ -1203,7 +1203,7 @@ ${gymContext}`;
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-5',
+        model: 'claude-opus-4-6',
         max_tokens: 2048,
         system: systemPrompt,
         tools: GYM_TOOLS,
@@ -1295,7 +1295,7 @@ ch_trigger_reason: if trigger is true, brief explanation why. Empty string if no
     const response = await fetch('/api/claude', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-5', max_tokens: 1024, messages: reqMessages }),
+      body: JSON.stringify({ model: 'claude-opus-4-6', max_tokens: 1024, messages: reqMessages }),
     });
     if (response.status === 529 || response.status === 503 || response.status === 429) {
       if (attempt < MAX_RETRIES) { await new Promise(r => setTimeout(r, 1500 * (attempt + 1))); continue; }

@@ -788,7 +788,7 @@ SCHEDULE PLANNING RULES:
           ...(hasPdf && { 'anthropic-beta': 'pdfs-2024-09-25' }),
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-5',
+          model: 'claude-opus-4-6',
           max_tokens: 4096,
           system: systemPrompt,
           messages,
