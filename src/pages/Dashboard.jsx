@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Plus, Flag, Trash2, Pencil, Check, Bell, Timer, Play, Pause, RotateCcw, SkipForward, Settings2, ChevronDown, ChevronUp, X, BookOpen, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Flag, Trash2, Pencil, Check, Bell, Timer, Play, Pause, RotateCcw, SkipForward, Settings2, ChevronDown, ChevronUp, X, BookOpen, GripVertical } from "lucide-react";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
@@ -758,13 +759,17 @@ export default function Dashboard() {
   // Sort books by user-defined order
   const sortedBooks = [...books].sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999));
 
-  const moveBook = (index, direction) => {
-    const swapIndex = index + direction;
-    if (swapIndex < 0 || swapIndex >= sortedBooks.length) return;
-    const bookA = sortedBooks[index];
-    const bookB = sortedBooks[swapIndex];
-    updateBookMutation.mutate({ id: bookA.id, data: { order: swapIndex } });
-    updateBookMutation.mutate({ id: bookB.id, data: { order: index } });
+  const handleBookDragEnd = (result) => {
+    if (!result.destination || result.source.index === result.destination.index) return;
+    const reordered = Array.from(sortedBooks);
+    const [moved] = reordered.splice(result.source.index, 1);
+    reordered.splice(result.destination.index, 0, moved);
+    // Update order for all affected books
+    reordered.forEach((book, i) => {
+      if (book.order !== i) {
+        updateBookMutation.mutate({ id: book.id, data: { order: i } });
+      }
+    });
   };
 
   return (
@@ -1022,8 +1027,10 @@ export default function Dashboard() {
             </Button>
           </div>
 
-          <div className="space-y-3">
-            <AnimatePresence>
+          <DragDropContext onDragEnd={handleBookDragEnd}>
+            <Droppable droppableId="books-list">
+              {(provided) => (
+                <div className="space-y-3" ref={provided.innerRef} {...provided.droppableProps}>
               {sortedBooks.map((book, index) => {
                 const pct = book.total_pages > 0 ? Math.round((book.current_page / book.total_pages) * 100) : 0;
                 const statusLabel = pct === 0 ? "To Read" : pct >= 100 ? "Finished" : "Reading";
@@ -1032,31 +1039,23 @@ export default function Dashboard() {
                   : "text-[hsl(211,100%,50%)] bg-[hsl(211,100%,50%)]/[0.08] border-[hsl(211,100%,50%)]/20";
 
                 return (
-                  <motion.div
-                    key={book.id}
-                    layout
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    className="p-4 bg-white border border-[hsl(220,13%,93%)] rounded-2xl hover:shadow-md transition-all group"
-                  >
+                  <Draggable key={book.id} draggableId={book.id} index={index}>
+                    {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      className={cn(
+                        "p-4 bg-white border border-[hsl(220,13%,93%)] rounded-2xl hover:shadow-md transition-all group",
+                        snapshot.isDragging && "shadow-lg ring-2 ring-[hsl(211,100%,50%)]/20"
+                      )}
+                    >
                     <div className="flex items-start gap-3">
-                      {/* Reorder buttons */}
-                      <div className="flex flex-col gap-0.5 flex-shrink-0 pt-0.5">
-                        <button
-                          onClick={() => moveBook(index, -1)}
-                          disabled={index === 0}
-                          className="p-1 rounded-md hover:bg-[hsl(220,14%,96%)] disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                        >
-                          <ArrowUp className="w-3.5 h-3.5 text-[hsl(220,9%,46%)]" />
-                        </button>
-                        <button
-                          onClick={() => moveBook(index, 1)}
-                          disabled={index === sortedBooks.length - 1}
-                          className="p-1 rounded-md hover:bg-[hsl(220,14%,96%)] disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
-                        >
-                          <ArrowDown className="w-3.5 h-3.5 text-[hsl(220,9%,46%)]" />
-                        </button>
+                      {/* Drag handle */}
+                      <div
+                        {...provided.dragHandleProps}
+                        className="flex-shrink-0 pt-1 cursor-grab active:cursor-grabbing touch-manipulation"
+                      >
+                        <GripVertical className="w-4 h-4 text-[hsl(220,9%,70%)]" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
@@ -1103,10 +1102,16 @@ export default function Dashboard() {
                         </Button>
                       </div>
                     </div>
-                  </motion.div>
+                    </div>
+                    )}
+                  </Draggable>
                 );
               })}
-            </AnimatePresence>
+              {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
             {books.length === 0 && (
               <div className="text-center py-10 text-[hsl(220,9%,55%)]">
                 <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-30" />
@@ -1114,7 +1119,6 @@ export default function Dashboard() {
                 <p className="text-sm mt-1">Add your first book to start tracking your reading.</p>
               </div>
             )}
-          </div>
         </div>
       )}
 
