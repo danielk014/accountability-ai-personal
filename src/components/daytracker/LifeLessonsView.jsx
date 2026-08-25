@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { supabaseStorage } from '@/api/supabaseStorage';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { supabaseStorage, isStorageReady } from '@/api/supabaseStorage';
 import { getUserPrefix } from '@/lib/userStore';
 
 const STORAGE_KEY_SUFFIX = 'dt_life_lessons_v1';
@@ -52,9 +52,21 @@ export default function LifeLessonsView() {
 
   const titleRef = useRef(null);
 
-  useEffect(() => {
+  // Load lessons once storage is hydrated — prevents race condition
+  // where component mounts before Supabase data is loaded into cache
+  const loadFromStorage = useCallback(() => {
     setLessons(loadLessons());
   }, []);
+
+  useEffect(() => {
+    if (isStorageReady()) {
+      loadFromStorage();
+    }
+    // Also listen for hydration completing (in case we mounted before it finished)
+    const handler = () => loadFromStorage();
+    window.addEventListener('supabase-storage-ready', handler);
+    return () => window.removeEventListener('supabase-storage-ready', handler);
+  }, [loadFromStorage]);
 
   function resetForm() {
     setForm({ title: '', lesson: '', context: '', category: 'General', source: '' });

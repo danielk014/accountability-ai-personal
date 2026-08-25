@@ -277,6 +277,7 @@ export const supabaseDB = {
     ChapterSummaryEntry: createEntityStore('ChapterSummaryEntry'),
     Flashcard:           createEntityStore('Flashcard'),
     LearningObjective:   createEntityStore('LearningObjective'),
+    Book:                createEntityStore('Book'),
   },
   auth: authStore,
 }

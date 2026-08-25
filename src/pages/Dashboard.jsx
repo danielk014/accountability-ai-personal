@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Plus, Flag, Trash2, Pencil, Check, Bell, Timer, Play, Pause, RotateCcw, SkipForward, Settings2, ChevronDown, ChevronUp, X } from "lucide-react";
+import { Plus, Flag, Trash2, Pencil, Check, Bell, Timer, Play, Pause, RotateCcw, SkipForward, Settings2, ChevronDown, ChevronUp, X, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
@@ -98,6 +98,96 @@ function TodoFormDialog({ open, onOpenChange, onSubmit, item }) {
               onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))}
               className="rounded-xl"
             />
+          </div>
+          <DialogFooter className="pt-2">
+            <Button type="button" variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" className="rounded-xl bg-[hsl(211,100%,50%)] hover:bg-[hsl(211,100%,45%)]">
+              {item ? "Save" : "Add"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Book Form Dialog ────────────────────────────────────────────────────────
+function BookFormDialog({ open, onOpenChange, onSubmit, item }) {
+  const [form, setForm] = useState({
+    title: item?.title || "",
+    author: item?.author || "",
+    current_page: item?.current_page || 0,
+    total_pages: item?.total_pages || 0,
+  });
+
+  React.useEffect(() => {
+    setForm({
+      title: item?.title || "",
+      author: item?.author || "",
+      current_page: item?.current_page || 0,
+      total_pages: item?.total_pages || 0,
+    });
+  }, [item, open]);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!form.title.trim()) return;
+    onSubmit({
+      title: form.title.trim(),
+      author: form.author.trim(),
+      current_page: Number(form.current_page) || 0,
+      total_pages: Number(form.total_pages) || 0,
+    });
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="rounded-2xl">
+        <DialogHeader>
+          <DialogTitle>{item ? "Edit Book" : "Add Book"}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          <div>
+            <label className="text-xs font-medium text-[hsl(220,9%,46%)] mb-1 block">Title</label>
+            <Input
+              className="rounded-xl"
+              value={form.title}
+              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+              placeholder="Book title"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-[hsl(220,9%,46%)] mb-1 block">Author</label>
+            <Input
+              className="rounded-xl"
+              value={form.author}
+              onChange={e => setForm(f => ({ ...f, author: e.target.value }))}
+              placeholder="Author name"
+            />
+          </div>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="text-xs font-medium text-[hsl(220,9%,46%)] mb-1 block">Current Page</label>
+              <Input
+                className="rounded-xl"
+                type="number"
+                min="0"
+                value={form.current_page}
+                onChange={e => setForm(f => ({ ...f, current_page: e.target.value }))}
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-xs font-medium text-[hsl(220,9%,46%)] mb-1 block">Total Pages</label>
+              <Input
+                className="rounded-xl"
+                type="number"
+                min="0"
+                value={form.total_pages}
+                onChange={e => setForm(f => ({ ...f, total_pages: e.target.value }))}
+              />
+            </div>
           </div>
           <DialogFooter className="pt-2">
             <Button type="button" variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -400,9 +490,12 @@ function isUpcomingInFiveMinutes(scheduledTime) {
 }
 
 export default function Dashboard() {
+  const [activeTab, setActiveTab] = useState("home");
   const [showHabitForm, setShowHabitForm] = useState(false);
   const [showTodoForm, setShowTodoForm] = useState(false);
   const [editingTodo, setEditingTodo] = useState(null);
+  const [showBookForm, setShowBookForm] = useState(false);
+  const [editingBook, setEditingBook] = useState(null);
   const [showPomodoro, setShowPomodoro] = useState(() => {
     try { return localStorage.getItem('pomo_open_v1') === 'true'; } catch { return false; }
   });
@@ -630,6 +723,49 @@ export default function Dashboard() {
     }
   };
 
+  // ── Books ──────────────────────────────────────────────────────────────
+  const { data: books = [] } = useQuery({
+    queryKey: ["books", user?.email],
+    queryFn: () => user?.email ? base44.entities.Book.filter({ created_by: user.email }) : [],
+  });
+
+  const createBookMutation = useMutation({
+    mutationFn: (data) => base44.entities.Book.create(data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["books"] }); toast.success("Book added!"); },
+    onError: (err) => toast.error("Failed to add book: " + err.message),
+  });
+
+  const updateBookMutation = useMutation({
+    mutationFn: ({ id, data }) => base44.entities.Book.update(id, data),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["books"] }); setEditingBook(null); },
+    onError: (err) => toast.error("Failed to update book: " + err.message),
+  });
+
+  const deleteBookMutation = useMutation({
+    mutationFn: (id) => base44.entities.Book.delete(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["books"] }),
+    onError: (err) => toast.error("Failed to delete book: " + err.message),
+  });
+
+  const handleBookSubmit = (data) => {
+    if (editingBook) {
+      updateBookMutation.mutate({ id: editingBook.id, data });
+    } else {
+      createBookMutation.mutate(data);
+    }
+  };
+
+  // Group books: reading first, then to-read, then finished
+  const sortedBooks = [...books].sort((a, b) => {
+    const statusOrder = (book) => {
+      const pct = book.total_pages > 0 ? book.current_page / book.total_pages : 0;
+      if (pct > 0 && pct < 1) return 0; // reading
+      if (pct === 0) return 1; // to-read
+      return 2; // finished
+    };
+    return statusOrder(a) - statusOrder(b);
+  });
+
   return (
     <div className="max-w-2xl mx-auto px-5 py-10">
       <GreetingHeader
@@ -639,6 +775,29 @@ export default function Dashboard() {
         completedToday={completedToday}
       />
 
+      {/* ── Tabs ── */}
+      <div className="flex gap-1 mb-8 p-1 bg-[hsl(220,14%,96%)] rounded-2xl">
+        {[
+          { key: "home", label: "Home" },
+          { key: "books", label: "Books", icon: BookOpen },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200",
+              activeTab === tab.key
+                ? "bg-white text-[hsl(220,13%,10%)] shadow-sm"
+                : "text-[hsl(220,9%,46%)] hover:text-[hsl(220,13%,10%)]"
+            )}
+          >
+            {tab.icon && <tab.icon className="w-4 h-4" />}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "home" && <>
       {/* ── Pomodoro Timer ── */}
       <div className="mb-8">
         <button
@@ -838,6 +997,107 @@ export default function Dashboard() {
       <div className="mb-8 bg-white border border-[hsl(220,13%,93%)] rounded-2xl overflow-hidden" style={{ minHeight: 180 }}>
         <RemindersPanel />
       </div>
+      </>}
+
+      {/* ── Books Tab ── */}
+      {activeTab === "books" && (
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-semibold text-[hsl(220,13%,10%)] flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-[hsl(211,100%,50%)]" />
+              Books to Read
+              {books.length > 0 && (
+                <span className="text-xs font-semibold text-[hsl(220,9%,55%)] bg-[hsl(220,14%,94%)] rounded-full px-2 py-0.5">{books.length}</span>
+              )}
+            </h2>
+            <Button
+              onClick={() => { setEditingBook(null); setShowBookForm(true); }}
+              variant="outline"
+              size="sm"
+              className="rounded-xl border-[hsl(211,100%,85%)] text-[hsl(211,100%,50%)] hover:bg-[hsl(211,100%,97%)]"
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Add
+            </Button>
+          </div>
+
+          <div className="space-y-3">
+            <AnimatePresence>
+              {sortedBooks.map(book => {
+                const pct = book.total_pages > 0 ? Math.round((book.current_page / book.total_pages) * 100) : 0;
+                const statusLabel = pct === 0 ? "To Read" : pct >= 100 ? "Finished" : "Reading";
+                const statusColor = pct === 0 ? "text-[hsl(220,9%,55%)] bg-[hsl(220,14%,96%)] border-[hsl(220,13%,93%)]"
+                  : pct >= 100 ? "text-[#34C759] bg-[#34C759]/[0.08] border-[#34C759]/20"
+                  : "text-[hsl(211,100%,50%)] bg-[hsl(211,100%,50%)]/[0.08] border-[hsl(211,100%,50%)]/20";
+
+                return (
+                  <motion.div
+                    key={book.id}
+                    layout
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="p-4 bg-white border border-[hsl(220,13%,93%)] rounded-2xl hover:shadow-md transition-all group"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold text-sm text-[hsl(220,13%,10%)] truncate">{book.title}</p>
+                          <span className={cn("text-xs px-2 py-0.5 rounded-full border flex-shrink-0", statusColor)}>
+                            {statusLabel}
+                          </span>
+                        </div>
+                        {book.author && (
+                          <p className="text-xs text-[hsl(220,9%,55%)] mb-2">by {book.author}</p>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-2 bg-[hsl(220,14%,96%)] rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${Math.min(pct, 100)}%`,
+                                background: pct >= 100
+                                  ? "linear-gradient(90deg, #34C759, #30D158)"
+                                  : "linear-gradient(90deg, hsl(211,100%,50%), hsl(211,100%,60%))",
+                              }}
+                            />
+                          </div>
+                          <span className="text-xs font-medium text-[hsl(220,9%,46%)] tabular-nums flex-shrink-0 w-10 text-right">
+                            {pct}%
+                          </span>
+                        </div>
+                        {book.total_pages > 0 && (
+                          <p className="text-xs text-[hsl(220,9%,55%)] mt-1 tabular-nums">
+                            {book.current_page} / {book.total_pages} pages
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingBook(book); setShowBookForm(true); }}>
+                          <Pencil className="w-4 h-4 text-[hsl(220,9%,55%)]" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                          if (!window.confirm(`Delete "${book.title}"?`)) return;
+                          deleteBookMutation.mutate(book.id);
+                        }}>
+                          <Trash2 className="w-4 h-4 text-[#FF3B30]/70" />
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+            {books.length === 0 && (
+              <div className="text-center py-10 text-[hsl(220,9%,55%)]">
+                <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                <p className="text-base font-medium">No books yet</p>
+                <p className="text-sm mt-1">Add your first book to start tracking your reading.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <TaskFormDialog
         open={showHabitForm}
@@ -851,6 +1111,13 @@ export default function Dashboard() {
         onOpenChange={setShowTodoForm}
         onSubmit={handleTodoSubmit}
         item={editingTodo}
+      />
+
+      <BookFormDialog
+        open={showBookForm}
+        onOpenChange={setShowBookForm}
+        onSubmit={handleBookSubmit}
+        item={editingBook}
       />
     </div>
   );
