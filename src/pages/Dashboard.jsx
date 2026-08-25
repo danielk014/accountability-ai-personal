@@ -759,17 +759,24 @@ export default function Dashboard() {
   // Sort books by user-defined order
   const sortedBooks = [...books].sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999));
 
-  const handleBookDragEnd = (result) => {
+  const handleBookDragEnd = async (result) => {
     if (!result.destination || result.source.index === result.destination.index) return;
     const reordered = Array.from(sortedBooks);
     const [moved] = reordered.splice(result.source.index, 1);
     reordered.splice(result.destination.index, 0, moved);
-    // Update order for all affected books
-    reordered.forEach((book, i) => {
+
+    // Optimistic update: immediately update the cache so UI doesn't jump
+    const updatedBooks = reordered.map((book, i) => ({ ...book, order: i }));
+    queryClient.setQueryData(["books", user?.email], updatedBooks);
+
+    // Persist to DB in background (no refetch until all done)
+    const toUpdate = reordered.filter((book, i) => book.order !== i);
+    for (const [i, book] of reordered.entries()) {
       if (book.order !== i) {
-        updateBookMutation.mutate({ id: book.id, data: { order: i } });
+        try { await base44.entities.Book.update(book.id, { order: i }); } catch {}
       }
-    });
+    }
+    queryClient.invalidateQueries({ queryKey: ["books"] });
   };
 
   return (
@@ -1030,7 +1037,7 @@ export default function Dashboard() {
           <DragDropContext onDragEnd={handleBookDragEnd}>
             <Droppable droppableId="books-list">
               {(provided) => (
-                <div className="space-y-3" ref={provided.innerRef} {...provided.droppableProps}>
+                <div className="flex flex-col gap-3" ref={provided.innerRef} {...provided.droppableProps}>
               {sortedBooks.map((book, index) => {
                 const pct = book.total_pages > 0 ? Math.round((book.current_page / book.total_pages) * 100) : 0;
                 const statusLabel = pct === 0 ? "To Read" : pct >= 100 ? "Finished" : "Reading";
@@ -1044,9 +1051,10 @@ export default function Dashboard() {
                     <div
                       ref={provided.innerRef}
                       {...provided.draggableProps}
+                      style={provided.draggableProps.style}
                       className={cn(
-                        "p-4 bg-white border border-[hsl(220,13%,93%)] rounded-2xl hover:shadow-md transition-all group",
-                        snapshot.isDragging && "shadow-lg ring-2 ring-[hsl(211,100%,50%)]/20"
+                        "p-4 bg-white border border-[hsl(220,13%,93%)] rounded-2xl group",
+                        snapshot.isDragging ? "shadow-lg ring-2 ring-[hsl(211,100%,50%)]/20 z-50" : "hover:shadow-md"
                       )}
                     >
                     <div className="flex items-start gap-3">
