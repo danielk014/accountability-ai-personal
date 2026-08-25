@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Plus, Flag, Trash2, Pencil, Check, Bell, Timer, Play, Pause, RotateCcw, SkipForward, Settings2, ChevronDown, ChevronUp, X, BookOpen } from "lucide-react";
+import { Plus, Flag, Trash2, Pencil, Check, Bell, Timer, Play, Pause, RotateCcw, SkipForward, Settings2, ChevronDown, ChevronUp, X, BookOpen, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
@@ -751,20 +751,21 @@ export default function Dashboard() {
     if (editingBook) {
       updateBookMutation.mutate({ id: editingBook.id, data });
     } else {
-      createBookMutation.mutate(data);
+      createBookMutation.mutate({ ...data, order: books.length });
     }
   };
 
-  // Group books: reading first, then to-read, then finished
-  const sortedBooks = [...books].sort((a, b) => {
-    const statusOrder = (book) => {
-      const pct = book.total_pages > 0 ? book.current_page / book.total_pages : 0;
-      if (pct > 0 && pct < 1) return 0; // reading
-      if (pct === 0) return 1; // to-read
-      return 2; // finished
-    };
-    return statusOrder(a) - statusOrder(b);
-  });
+  // Sort books by user-defined order
+  const sortedBooks = [...books].sort((a, b) => (a.order ?? 9999) - (b.order ?? 9999));
+
+  const moveBook = (index, direction) => {
+    const swapIndex = index + direction;
+    if (swapIndex < 0 || swapIndex >= sortedBooks.length) return;
+    const bookA = sortedBooks[index];
+    const bookB = sortedBooks[swapIndex];
+    updateBookMutation.mutate({ id: bookA.id, data: { order: swapIndex } });
+    updateBookMutation.mutate({ id: bookB.id, data: { order: index } });
+  };
 
   return (
     <div className="max-w-2xl mx-auto px-5 py-10">
@@ -1023,7 +1024,7 @@ export default function Dashboard() {
 
           <div className="space-y-3">
             <AnimatePresence>
-              {sortedBooks.map(book => {
+              {sortedBooks.map((book, index) => {
                 const pct = book.total_pages > 0 ? Math.round((book.current_page / book.total_pages) * 100) : 0;
                 const statusLabel = pct === 0 ? "To Read" : pct >= 100 ? "Finished" : "Reading";
                 const statusColor = pct === 0 ? "text-[hsl(220,9%,55%)] bg-[hsl(220,14%,96%)] border-[hsl(220,13%,93%)]"
@@ -1040,6 +1041,23 @@ export default function Dashboard() {
                     className="p-4 bg-white border border-[hsl(220,13%,93%)] rounded-2xl hover:shadow-md transition-all group"
                   >
                     <div className="flex items-start gap-3">
+                      {/* Reorder buttons */}
+                      <div className="flex flex-col gap-0.5 flex-shrink-0 pt-0.5">
+                        <button
+                          onClick={() => moveBook(index, -1)}
+                          disabled={index === 0}
+                          className="p-1 rounded-md hover:bg-[hsl(220,14%,96%)] disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ArrowUp className="w-3.5 h-3.5 text-[hsl(220,9%,46%)]" />
+                        </button>
+                        <button
+                          onClick={() => moveBook(index, 1)}
+                          disabled={index === sortedBooks.length - 1}
+                          className="p-1 rounded-md hover:bg-[hsl(220,14%,96%)] disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5 text-[hsl(220,9%,46%)]" />
+                        </button>
+                      </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <p className="font-semibold text-sm text-[hsl(220,13%,10%)] truncate">{book.title}</p>
@@ -1078,6 +1096,7 @@ export default function Dashboard() {
                         </Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
                           if (!window.confirm(`Delete "${book.title}"?`)) return;
+                          if (!window.confirm("This is permanent and cannot be undone. Delete anyway?")) return;
                           deleteBookMutation.mutate(book.id);
                         }}>
                           <Trash2 className="w-4 h-4 text-[#FF3B30]/70" />
