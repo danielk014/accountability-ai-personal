@@ -939,21 +939,17 @@ function OverviewTab({ fin, selectedMonth }) {
   const currentYear = selectedMonth.slice(0, 4);
   const byYear  = arr => (arr || []).filter(e => e.month && e.month.startsWith(currentYear));
 
-  // Monthly view: selected month only
-  // Yearly view:
-  //   - Income: sum of all income actually entered across every month of this year (no ×12)
-  //   - Recurring: selected month's recurring ×12 (they repeat, so this is the annual projection)
-  //   - Wishlist/One-time: summed across all months of this year (variable, don't project)
   const incomeItems  = byMonth(fin.income_sources);
   const income       = yearly ? sum(byYear(fin.income_sources))    : sum(incomeItems);
   const recurring    = yearly ? sum(byMonth(fin.recurring_expenses)) * 12 : sum(byMonth(fin.recurring_expenses));
-  const wishlist     = yearly ? sum(byYear(fin.wishlist_expenses))  : sum(byMonth(fin.wishlist_expenses));
+  const wishlist     = yearly ? sum(byMonth(fin.wishlist_expenses)) * 12 : sum(byMonth(fin.wishlist_expenses));
   const oneTime      = yearly ? sum(byYear(fin.one_time_expenses || [])) : sum(byMonth(fin.one_time_expenses));
-  const totalExp     = recurring + oneTime;
+  const totalExp     = recurring + wishlist + oneTime;
   const savings      = income - totalExp;
   const baseIncome   = sum(incomeItems);
+  const baseExp      = sum(byMonth(fin.recurring_expenses)) + sum(byMonth(fin.wishlist_expenses)) + sum(byMonth(fin.one_time_expenses));
   const rate = baseIncome > 0
-    ? (((baseIncome - sum(byMonth(fin.recurring_expenses)) - sum(byMonth(fin.one_time_expenses))) / baseIncome) * 100).toFixed(1)
+    ? (((baseIncome - baseExp) / baseIncome) * 100).toFixed(1)
     : 0;
 
   return (
@@ -983,7 +979,7 @@ function OverviewTab({ fin, selectedMonth }) {
             <span className="text-sm font-bold text-rose-500 whitespace-nowrap ml-2">-${fmt(recurring)}</span>
           </div>
           <div className="flex justify-between items-center py-2.5 border-b border-slate-100">
-            <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingDown className="w-4 h-4 text-violet-500" />{yearly ? `Optional (${currentYear})` : "Optional Spending"}</span>
+            <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingDown className="w-4 h-4 text-violet-500" />{yearly ? "Optional (×12)" : "Optional Spending"}</span>
             <span className="text-sm font-bold text-violet-500 whitespace-nowrap ml-2">-${fmt(wishlist)}</span>
           </div>
           <div className={cn("flex justify-between items-center rounded-xl p-4 mt-2", savings >= 0 ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200")}>
@@ -994,13 +990,29 @@ function OverviewTab({ fin, selectedMonth }) {
             <span className={cn("text-xl font-extrabold", savings >= 0 ? "text-emerald-600" : "text-red-600")}>{savings < 0 ? "-" : ""}${fmt(Math.abs(savings))}</span>
           </div>
           {(() => {
-            const savedItems = (fin.savings_deposits || []).filter(e => yearly ? e.month?.startsWith(currentYear) : e.month === selectedMonth);
-            const savedTotal = sum(savedItems);
-            if (savedTotal <= 0) return null;
+            let savedTotal;
+            if (yearly) {
+              // Sum each month's actual surplus (income - all expenses) across the year
+              const months = [...new Set([
+                ...(fin.income_sources || []).map(e => e.month),
+                ...(fin.recurring_expenses || []).map(e => e.month),
+                ...(fin.wishlist_expenses || []).map(e => e.month),
+                ...(fin.one_time_expenses || []).map(e => e.month),
+              ].filter(m => m && m.startsWith(currentYear)))];
+              savedTotal = months.reduce((total, m) => {
+                const mIncome = sum((fin.income_sources || []).filter(e => e.month === m));
+                const mRecurring = sum((fin.recurring_expenses || []).filter(e => e.month === m));
+                const mWishlist = sum((fin.wishlist_expenses || []).filter(e => e.month === m));
+                const mOneTime = sum((fin.one_time_expenses || []).filter(e => e.month === m));
+                return total + (mIncome - mRecurring - mWishlist - mOneTime);
+              }, 0);
+            } else {
+              savedTotal = sum(incomeItems) - baseExp;
+            }
             return (
               <div className="flex justify-between items-center py-2.5 border-b border-slate-100 mt-1">
                 <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><Wallet className="w-4 h-4 text-emerald-400" />{yearly ? `Saved (${currentYear})` : "Saved This Month"}</span>
-                <span className="text-sm font-bold text-emerald-600 whitespace-nowrap ml-2">${fmt(savedTotal)}</span>
+                <span className={cn("text-sm font-bold whitespace-nowrap ml-2", savedTotal >= 0 ? "text-emerald-600" : "text-red-500")}>{savedTotal < 0 ? "-" : ""}${fmt(Math.abs(savedTotal))}</span>
               </div>
             );
           })()}
@@ -1410,11 +1422,11 @@ function SummaryCards({ fin, selectedMonth }) {
   const byMonth   = arr => (arr || []).filter(e => e.month === selectedMonth);
   const income    = sum(byMonth(fin.income_sources));
   const recurring = sum(byMonth(fin.recurring_expenses));
+  const wishlist  = sum(byMonth(fin.wishlist_expenses));
   const oneTime   = sum(byMonth(fin.one_time_expenses));
-  const totalExp  = recurring + oneTime;
-  const savings   = income - totalExp;
-  const rate      = income > 0 ? ((savings / income) * 100).toFixed(0) : 0;
-  const saved     = sum(byMonth(fin.savings_deposits));
+  const totalExp  = recurring + wishlist + oneTime;
+  const saved     = income - totalExp;
+  const rate      = income > 0 ? ((saved / income) * 100).toFixed(0) : 0;
 
   const cards = [
     { label: "Income",        value: `$${fmtWhole(income)}`,    color: "text-emerald-600", icon: TrendingUp,   iconColor: "text-emerald-400" },
