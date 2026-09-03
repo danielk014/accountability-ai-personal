@@ -944,12 +944,11 @@ function OverviewTab({ fin, selectedMonth }) {
   const recurring    = yearly ? sum(byMonth(fin.recurring_expenses)) * 12 : sum(byMonth(fin.recurring_expenses));
   const wishlist     = sum(byMonth(fin.wishlist_expenses));
   const oneTime      = yearly ? sum(byYear(fin.one_time_expenses || [])) : sum(byMonth(fin.one_time_expenses));
-  const totalExp     = recurring + wishlist + oneTime;
+  const totalExp     = recurring + oneTime;
   const savings      = income - totalExp;
   const baseIncome   = sum(incomeItems);
-  const baseExp      = sum(byMonth(fin.recurring_expenses)) + sum(byMonth(fin.wishlist_expenses)) + sum(byMonth(fin.one_time_expenses));
   const rate = baseIncome > 0
-    ? (((baseIncome - baseExp) / baseIncome) * 100).toFixed(1)
+    ? (((baseIncome - sum(byMonth(fin.recurring_expenses)) - sum(byMonth(fin.one_time_expenses))) / baseIncome) * 100).toFixed(1)
     : 0;
 
   return (
@@ -990,29 +989,13 @@ function OverviewTab({ fin, selectedMonth }) {
             <span className={cn("text-xl font-extrabold", savings >= 0 ? "text-emerald-600" : "text-red-600")}>{savings < 0 ? "-" : ""}${fmt(Math.abs(savings))}</span>
           </div>
           {(() => {
-            let savedTotal;
-            if (yearly) {
-              // Sum each month's actual surplus (income - all expenses) across the year
-              const months = [...new Set([
-                ...(fin.income_sources || []).map(e => e.month),
-                ...(fin.recurring_expenses || []).map(e => e.month),
-                ...(fin.wishlist_expenses || []).map(e => e.month),
-                ...(fin.one_time_expenses || []).map(e => e.month),
-              ].filter(m => m && m.startsWith(currentYear)))];
-              savedTotal = months.reduce((total, m) => {
-                const mIncome = sum((fin.income_sources || []).filter(e => e.month === m));
-                const mRecurring = sum((fin.recurring_expenses || []).filter(e => e.month === m));
-                const mWishlist = sum((fin.wishlist_expenses || []).filter(e => e.month === m));
-                const mOneTime = sum((fin.one_time_expenses || []).filter(e => e.month === m));
-                return total + (mIncome - mRecurring - mWishlist - mOneTime);
-              }, 0);
-            } else {
-              savedTotal = sum(incomeItems) - baseExp;
-            }
+            const savedItems = (fin.savings_deposits || []).filter(e => yearly ? e.month?.startsWith(currentYear) : e.month === selectedMonth);
+            const savedTotal = sum(savedItems);
+            if (savedTotal <= 0) return null;
             return (
               <div className="flex justify-between items-center py-2.5 border-b border-slate-100 mt-1">
                 <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><Wallet className="w-4 h-4 text-emerald-400" />{yearly ? `Saved (${currentYear})` : "Saved This Month"}</span>
-                <span className={cn("text-sm font-bold whitespace-nowrap ml-2", savedTotal >= 0 ? "text-emerald-600" : "text-red-500")}>{savedTotal < 0 ? "-" : ""}${fmt(Math.abs(savedTotal))}</span>
+                <span className="text-sm font-bold text-emerald-600 whitespace-nowrap ml-2">${fmt(savedTotal)}</span>
               </div>
             );
           })()}
@@ -1422,11 +1405,11 @@ function SummaryCards({ fin, selectedMonth }) {
   const byMonth   = arr => (arr || []).filter(e => e.month === selectedMonth);
   const income    = sum(byMonth(fin.income_sources));
   const recurring = sum(byMonth(fin.recurring_expenses));
-  const wishlist  = sum(byMonth(fin.wishlist_expenses));
   const oneTime   = sum(byMonth(fin.one_time_expenses));
-  const totalExp  = recurring + wishlist + oneTime;
-  const saved     = income - totalExp;
-  const rate      = income > 0 ? ((saved / income) * 100).toFixed(0) : 0;
+  const totalExp  = recurring + oneTime;
+  const savings   = income - totalExp;
+  const rate      = income > 0 ? ((savings / income) * 100).toFixed(0) : 0;
+  const saved     = sum(byMonth(fin.savings_deposits));
 
   const cards = [
     { label: "Income",        value: `$${fmtWhole(income)}`,    color: "text-emerald-600", icon: TrendingUp,   iconColor: "text-emerald-400" },
