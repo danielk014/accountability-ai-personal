@@ -942,7 +942,7 @@ function OverviewTab({ fin, selectedMonth }) {
   const incomeItems  = byMonth(fin.income_sources);
   const income       = yearly ? sum(byYear(fin.income_sources))    : sum(incomeItems);
   const recurring    = yearly ? sum(byMonth(fin.recurring_expenses)) * 12 : sum(byMonth(fin.recurring_expenses));
-  const wishlist     = yearly ? sum(byMonth(fin.wishlist_expenses)) * 12 : sum(byMonth(fin.wishlist_expenses));
+  const wishlist     = sum(byMonth(fin.wishlist_expenses));
   const oneTime      = yearly ? sum(byYear(fin.one_time_expenses || [])) : sum(byMonth(fin.one_time_expenses));
   const totalExp     = recurring + wishlist + oneTime;
   const savings      = income - totalExp;
@@ -979,7 +979,7 @@ function OverviewTab({ fin, selectedMonth }) {
             <span className="text-sm font-bold text-rose-500 whitespace-nowrap ml-2">-${fmt(recurring)}</span>
           </div>
           <div className="flex justify-between items-center py-2.5 border-b border-slate-100">
-            <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingDown className="w-4 h-4 text-violet-500" />{yearly ? "Optional (×12)" : "Optional Spending"}</span>
+            <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingDown className="w-4 h-4 text-violet-500" />{yearly ? "Optional" : "Optional Spending"}</span>
             <span className="text-sm font-bold text-violet-500 whitespace-nowrap ml-2">-${fmt(wishlist)}</span>
           </div>
           <div className={cn("flex justify-between items-center rounded-xl p-4 mt-2", savings >= 0 ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200")}>
