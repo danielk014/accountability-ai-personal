@@ -38,7 +38,7 @@ function taskAppliesOnDate(task, date) {
   return false;
 }
 
-export default function TimeActivityChart({ tasks, completions = [] }) {
+export default function TimeActivityChart({ tasks, completions = [], completedTodos = [] }) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [expandedDay, setExpandedDay] = useState(null);
   const weekStart = startOfWeek(subWeeks(new Date(), -weekOffset), { weekStartsOn: 1 });
@@ -51,13 +51,21 @@ export default function TimeActivityChart({ tasks, completions = [] }) {
 
     // Get completed tasks for this day
     const dayCompletions = completions.filter(c => c.completed_date === dayStr);
-    const completedTaskCount = dayCompletions.length;
+
+    // Count completed todos for this day
+    const dayTodos = completedTodos.filter(t => {
+      const ts = t.completed_at || t.created_at || "";
+      return ts.startsWith(dayStr);
+    });
+
+    const completedTaskCount = dayCompletions.length + dayTodos.length;
 
     return {
       day: dayName,
       date: dayStr,
       tasks: completedTaskCount,
       completions: dayCompletions,
+      todos: dayTodos,
     };
   });
 

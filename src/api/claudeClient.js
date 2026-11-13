@@ -4,7 +4,9 @@ import { addReminder, getReminders, deleteReminder } from '@/lib/reminderEngine'
 
 const BASE_SYSTEM_TEMPLATE = `You are the user's ride-or-die best friend and accountability buddy. Be warm, real, and encouraging. Talk exactly like a close friend texting — casual, direct, no fluff. Never sound like a chatbot or assistant. No bullet points, no headers, no markdown formatting whatsoever. Just write naturally like you're having a real conversation. Keep it short and punchy unless they need depth.
 
-You have tools to directly manage the user's data. When they ask you to add, edit, delete, or schedule anything — sleep entries, tasks, habits, calendar events, people, or context — use your tools to do it immediately without asking for confirmation unless critical information is missing. After using a tool, briefly confirm what you did in a casual way.
+Be honest and challenge the user's assumptions when needed. Don't just hype or agree with everything — if their spending seems out of control, their income expectations are unrealistic, or their plans have obvious gaps, say so directly but kindly. A good friend tells the truth even when it's uncomfortable. Push back when something doesn't add up.
+
+You have tools to directly manage the user's data. When they ask you to add, edit, delete, or schedule anything — sleep entries, tasks, habits, calendar events, people, or context — use your tools to do it immediately without asking for confirmation unless critical information is missing. After using a tool, confirm what you actually created or changed by stating the specific details (e.g. "added 'Gym' as a daily habit at 08:00" or "logged 7.5 hours of sleep for Monday"). If a tool returns an error or something doesn't work, be honest and tell the user it failed — never pretend an action succeeded when it didn't.
 
 IMPORTANT — Tasks vs To-Do items:
 - Use create_task ONLY for recurring habits (daily, weekdays, etc.) or scheduled calendar events (frequency='once' with a date). Examples: "add a daily workout habit", "schedule a dentist appointment on Friday".
@@ -652,6 +654,15 @@ export async function buildSystemPrompt() {
       // Use per-model personality if set, fall back to legacy ai_personality
       const chatPersonality = profile.model_personalities?.chat || profile.ai_personality;
       if (chatPersonality) lines.push(`## How to Talk to Me\n${chatPersonality}`);
+
+      // Nudge AI to ask about empty context sections
+      const emptyContextSections = [];
+      if (!profile.context_about?.length) emptyContextSections.push("About Me");
+      if (!profile.context_work?.length) emptyContextSections.push("Work & Schedule");
+      if (!profile.context_goals?.length) emptyContextSections.push("Goals & Plans");
+      if (emptyContextSections.length > 0) {
+        lines.push(`## Missing Context\nThe user hasn't filled in: ${emptyContextSections.join(', ')}. Early in the conversation, naturally ask about these to get to know them better. Don't ask all at once — weave it in over time.`);
+      }
     }
 
     if (projects.length > 0) {
@@ -720,18 +731,24 @@ export async function buildSystemPrompt() {
       if (finRaw) {
         const fin = JSON.parse(finRaw);
         const sumAmts = arr => arr.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
-        const fmtAmt = n => (parseFloat(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const curr = fin.currency || 'EUR';
+        const currSymbol = { EUR: '\u20AC', USD: '$', GBP: '\u00A3', TRY: '\u20BA' }[curr] || '\u20AC';
+        const loc = { EUR: 'de-DE', USD: 'en-US', GBP: 'en-GB', TRY: 'tr-TR' }[curr] || 'de-DE';
+        const fmtAmt = n => (parseFloat(n) || 0).toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const income = sumAmts(fin.income_sources || []);
         const recurring = sumAmts(fin.recurring_expenses || []);
-        const wishlist = sumAmts(fin.wishlist_expenses || []);
-        const savings = income - recurring - wishlist;
+        const fines = sumAmts(fin.fines_expenses || []);
+        const oneTime = sumAmts(fin.one_time_expenses || []);
+        const totalExp = recurring + fines + oneTime;
+        const savings = income - totalExp;
         const rate = income > 0 ? ((savings / income) * 100).toFixed(1) : '0.0';
         if (income > 0 || recurring > 0) {
-          let finText = `Income: $${fmtAmt(income)}/mo`;
-          if ((fin.income_sources || []).length > 0) finText += ` (${fin.income_sources.map(s => `${s.name}: $${fmtAmt(s.amount)}`).join(', ')})`;
-          if (recurring > 0) finText += `\nFixed Expenses: $${fmtAmt(recurring)}/mo — ${(fin.recurring_expenses || []).map(e => `${e.name}: $${fmtAmt(e.amount)}`).join(', ')}`;
-          if (wishlist > 0) finText += `\nOptional Spending: $${fmtAmt(wishlist)}/mo — ${(fin.wishlist_expenses || []).map(e => `${e.name}: $${fmtAmt(e.amount)}`).join(', ')}`;
-          finText += `\nMonthly Savings: $${fmtAmt(savings)} (${rate}% savings rate)`;
+          let finText = `Income: ${currSymbol}${fmtAmt(income)}/mo`;
+          if ((fin.income_sources || []).length > 0) finText += ` (${fin.income_sources.map(s => `${s.name}: ${currSymbol}${fmtAmt(s.amount)}`).join(', ')})`;
+          if (recurring > 0) finText += `\nFixed Expenses: ${currSymbol}${fmtAmt(recurring)}/mo — ${(fin.recurring_expenses || []).map(e => `${e.name}: ${currSymbol}${fmtAmt(e.amount)}`).join(', ')}`;
+          if (fines > 0) finText += `\nFines/Must-Pay: ${currSymbol}${fmtAmt(fines)} — ${(fin.fines_expenses || []).map(e => `${e.name}: ${currSymbol}${fmtAmt(e.amount)}`).join(', ')}`;
+          if (oneTime > 0) finText += `\nOne-time Payments: ${currSymbol}${fmtAmt(oneTime)} — ${(fin.one_time_expenses || []).map(e => `${e.name}: ${currSymbol}${fmtAmt(e.amount)}`).join(', ')}`;
+          finText += `\nMonthly Savings: ${currSymbol}${fmtAmt(savings)} (${rate}% savings rate)`;
           lines.push(`## My Finances\n${finText}`);
         }
       }

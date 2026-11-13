@@ -19,7 +19,7 @@ export default function BirthdayPicker({ value, onChange, className = "" }) {
   // Parse stored value → Date (or default to today)
   const parsed = value ? new Date(value + "T00:00:00") : null;
 
-  const [viewYear, setViewYear] = useState(() => parsed?.getFullYear() ?? new Date().getFullYear());
+  const [viewYear, setViewYear] = useState(() => parsed?.getFullYear() ?? 1995);
   const [viewMonth, setViewMonth] = useState(() => parsed?.getMonth() ?? new Date().getMonth());
 
   // Keep view in sync if value changes externally

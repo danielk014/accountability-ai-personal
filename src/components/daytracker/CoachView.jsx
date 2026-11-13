@@ -269,14 +269,20 @@ function CoachView() {
         for (const change of data.scheduleChanges) {
           if (change.action === 'add') {
             const dateBlocks = loadBlocks(change.date);
-            dateBlocks.push(change.block);
-            saveBlocks(change.date, dateBlocks);
-            blockCount++;
+            const blockDup = dateBlocks.some(b => b.text?.toLowerCase().trim() === change.block.text?.toLowerCase().trim());
+            if (!blockDup) {
+              dateBlocks.push(change.block);
+              saveBlocks(change.date, dateBlocks);
+              blockCount++;
+            }
           } else if (change.action === 'add_task') {
             const dateTasks = loadDailyTasks(change.date);
-            dateTasks.push(change.task);
-            saveDailyTasks(change.date, dateTasks);
-            taskCount++;
+            const taskDup = dateTasks.some(t => t.name?.toLowerCase().trim() === change.task.name?.toLowerCase().trim());
+            if (!taskDup) {
+              dateTasks.push(change.task);
+              saveDailyTasks(change.date, dateTasks);
+              taskCount++;
+            }
           } else if (change.action === 'remove') {
             const dateBlocks = loadBlocks(change.date);
             const filtered = dateBlocks.filter(b => !b.text.toLowerCase().includes(change.matchText.toLowerCase()));

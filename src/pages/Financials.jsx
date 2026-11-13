@@ -18,7 +18,7 @@ import { loadConversations, saveConversation, deleteConversation, newConversatio
 const getStorageKey = () => `${getUserPrefix()}accountable_financials_v2`;
 const getChatKey    = () => `${getUserPrefix()}accountable_financials_chat`;
 
-const EMPTY_FIN = () => ({ income_sources: [], recurring_expenses: [], wishlist_expenses: [], one_time_expenses: [], savings_deposits: [] });
+const EMPTY_FIN = () => ({ income_sources: [], recurring_expenses: [], wishlist_expenses: [], one_time_expenses: [], savings_deposits: [], fines_expenses: [], savings_withdrawals: [], currency: "EUR" });
 
 // Tag any items that predate the month-aware system with the current month
 function _migrateItems(fin) {
@@ -26,11 +26,13 @@ function _migrateItems(fin) {
   const tag = items => (items || []).map(item => item.month ? item : { ...item, month: now });
   return {
     ...fin,
-    income_sources:     tag(fin.income_sources),
-    recurring_expenses: tag(fin.recurring_expenses),
-    wishlist_expenses:  tag(fin.wishlist_expenses),
-    one_time_expenses:  tag(fin.one_time_expenses),
-    savings_deposits:   tag(fin.savings_deposits),
+    income_sources:      tag(fin.income_sources),
+    recurring_expenses:  tag(fin.recurring_expenses),
+    wishlist_expenses:   tag(fin.wishlist_expenses),
+    one_time_expenses:   tag(fin.one_time_expenses),
+    savings_deposits:    tag(fin.savings_deposits),
+    fines_expenses:      tag(fin.fines_expenses || []),
+    savings_withdrawals: tag(fin.savings_withdrawals || []),
   };
 }
 
@@ -57,11 +59,14 @@ function loadFin() {
     };
     const merged = {
       ...empty,
-      income_sources:    mergeArr(local.income_sources, remote.income_sources),
-      recurring_expenses:mergeArr(local.recurring_expenses, remote.recurring_expenses),
-      wishlist_expenses: mergeArr(local.wishlist_expenses, remote.wishlist_expenses),
-      one_time_expenses: mergeArr(local.one_time_expenses, remote.one_time_expenses),
-      savings_deposits:  mergeArr(local.savings_deposits, remote.savings_deposits),
+      income_sources:     mergeArr(local.income_sources, remote.income_sources),
+      recurring_expenses: mergeArr(local.recurring_expenses, remote.recurring_expenses),
+      wishlist_expenses:  mergeArr(local.wishlist_expenses, remote.wishlist_expenses),
+      one_time_expenses:  mergeArr(local.one_time_expenses, remote.one_time_expenses),
+      savings_deposits:   mergeArr(local.savings_deposits, remote.savings_deposits),
+      fines_expenses:     mergeArr(local.fines_expenses || [], remote.fines_expenses || []),
+      savings_withdrawals:mergeArr(local.savings_withdrawals || [], remote.savings_withdrawals || []),
+      currency:           remote.currency || local.currency || "EUR",
     };
     const result = _migrateItems(merged);
     // Persist the merged version so both sources stay in sync
@@ -129,13 +134,24 @@ function autoPopulateMonthly(fin, month) {
   }
   const recurring = autoPopulateCategory(fin.recurring_expenses, month);
   const wishlist  = autoPopulateCategory(fin.wishlist_expenses, month);
-  if (income === fin.income_sources && recurring === fin.recurring_expenses && wishlist === fin.wishlist_expenses) return fin;
-  return { ...fin, income_sources: income, recurring_expenses: recurring, wishlist_expenses: wishlist };
+  const fines     = autoPopulateCategory(fin.fines_expenses || [], month);
+  if (income === fin.income_sources && recurring === fin.recurring_expenses && wishlist === fin.wishlist_expenses && fines === (fin.fines_expenses || [])) return fin;
+  return { ...fin, income_sources: income, recurring_expenses: recurring, wishlist_expenses: wishlist, fines_expenses: fines };
 }
 
+// ── Currency config ───────────────────────────────────────────────────────────
+const CURRENCY_CONFIG = {
+  EUR: { symbol: "\u20AC", locale: "de-DE" },
+  USD: { symbol: "$", locale: "en-US" },
+  GBP: { symbol: "\u00A3", locale: "en-GB" },
+  TRY: { symbol: "\u20BA", locale: "tr-TR" },
+};
+function getCurrencyInfo(fin) { return CURRENCY_CONFIG[fin?.currency] || CURRENCY_CONFIG.EUR; }
+const cs = (fin) => getCurrencyInfo(fin).symbol;
+
 // ── Number / date helpers ──────────────────────────────────────────────────────
-const fmt = (n) => (parseFloat(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtWhole = (n) => (parseFloat(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+const fmt = (n, fin) => { const { locale } = getCurrencyInfo(fin); return (parseFloat(n) || 0).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+const fmtWhole = (n, fin) => { const { locale } = getCurrencyInfo(fin); return (parseFloat(n) || 0).toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 }); };
 const sum = (arr) => arr.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
 function ordinal(n) {
   const s = ["th","st","nd","rd"], v = n % 100;
@@ -292,30 +308,32 @@ function DayPicker({ value, onChange, label = "Set date" }) {
 function buildFinancialSystemPrompt(fin, selectedMonth) {
   const m = selectedMonth || toYYYYMM(new Date());
   const byMonth = arr => (arr || []).filter(e => e.month === m);
+  const sym = cs(fin);
   const income    = sum(byMonth(fin.income_sources));
   const recurring = sum(byMonth(fin.recurring_expenses));
+  const fines     = sum(byMonth(fin.fines_expenses || []));
   const wishlist  = sum(byMonth(fin.wishlist_expenses));
   const oneTimeItems = byMonth(fin.one_time_expenses);
   const oneTime   = sum(oneTimeItems);
-  const totalExpenses = recurring + oneTime;
+  const totalExpenses = recurring + oneTime + fines;
   const savings = income - totalExpenses;
   const rate = income > 0 ? ((savings / income) * 100).toFixed(1) : '0.0';
-  const fmtItem = (i) => `${i.name}: $${fmt(i.amount)}${i.day ? ` (due ${ordinal(i.day)})` : ""}`;
+  const fmtItem = (i) => `${i.name}: ${sym}${fmt(i.amount, fin)}${i.day ? ` (due ${ordinal(i.day)})` : ""}`;
 
   const savedItems = byMonth(fin.savings_deposits);
   const savedTotal = sum(savedItems);
-  const allTimeSaved = sum(fin.savings_deposits || []);
+  const allTimeSaved = sum(fin.savings_deposits || []) - sum(fin.savings_withdrawals || []);
 
-  return `You are a sharp financial advisor who blends the wisdom of Warren Buffett, Charlie Munger, and Dave Ramsey. From Buffett and Munger: long-term thinking, compounding, only buy what you understand, patience over speculation, moats, and rational decision-making. From Ramsey: zero debt, baby steps, gazelle intensity on paying off debt, emergency fund first, live below your means, and no debt is good debt except maybe a mortgage. When the user has debt, channel Ramsey's urgency. When talking about investing and wealth building, bring in Buffett and Munger's principles. Be direct and specific — use the user's real numbers when you respond. Talk like a smart, no-nonsense person, not a report. No markdown headers, no bullet lists, no bold text. Just straight talk in natural sentences. Use the tools immediately when asked to change financial data.
+  return `You are a sharp financial advisor who blends the wisdom of Warren Buffett, Charlie Munger, and Dave Ramsey. From Buffett and Munger: long-term thinking, compounding, only buy what you understand, patience over speculation, moats, and rational decision-making. From Ramsey: zero debt, baby steps, gazelle intensity on paying off debt, emergency fund first, live below your means, and no debt is good debt except maybe a mortgage. When the user has debt, channel Ramsey's urgency. When talking about investing and wealth building, bring in Buffett and Munger's principles. Be direct and specific — use the user's real numbers when you respond. Challenge unrealistic assumptions about income or spending honestly. Talk like a smart, no-nonsense person, not a report. No markdown headers, no bullet lists, no bold text. Just straight talk in natural sentences. Use the tools immediately when asked to change financial data. After using a tool, confirm what you changed by stating the item name, amount, and category. If something fails, say so honestly.
 
 SCREENSHOT/IMAGE HANDLING: When the user uploads a screenshot or photo (receipt, bank statement, transaction list, bill, invoice, etc.), you MUST:
 1. Read and extract ALL expenses/transactions visible in the image
 2. For each one, immediately use the add_expense tool to add it to their finances
-3. Choose the right category: "recurring" for monthly bills, "one_time" for individual purchases, "wishlist" for optional items they're considering
+3. Choose the right category: "recurring" for monthly bills, "one_time" for individual purchases, "wishlist" for optional items they're considering, "fines" for penalties/tickets/fines
 4. Confirm what you added with the amounts
 5. If you can't read something clearly, ask for clarification rather than guessing
 
-Viewing month: ${monthLabel(m)}. User's finances for this month: income $${fmt(income)} (${byMonth(fin.income_sources).map(fmtItem).join(", ") || "none"}), recurring expenses $${fmt(recurring)} (${byMonth(fin.recurring_expenses).map(fmtItem).join(", ") || "none"}), optional/wishlist (NOT spent, considering) $${fmt(wishlist)} (${byMonth(fin.wishlist_expenses).map(fmtItem).join(", ") || "none"}), one-time payments $${fmt(oneTime)} (${oneTimeItems.map(fmtItem).join(", ") || "none"}), net surplus $${fmt(savings)} (${rate}% savings rate). Savings deposits this month: $${fmt(savedTotal)} (${savedItems.map(fmtItem).join(", ") || "none"}). Total saved all time: $${fmt(allTimeSaved)}.
+Viewing month: ${monthLabel(m)}. Currency: ${fin.currency || 'EUR'}. User's finances for this month: income ${sym}${fmt(income, fin)} (${byMonth(fin.income_sources).map(fmtItem).join(", ") || "none"}), recurring expenses ${sym}${fmt(recurring, fin)} (${byMonth(fin.recurring_expenses).map(fmtItem).join(", ") || "none"}), fines/must-pay ${sym}${fmt(fines, fin)} (${byMonth(fin.fines_expenses || []).map(fmtItem).join(", ") || "none"}), one-time payments ${sym}${fmt(oneTime, fin)} (${oneTimeItems.map(fmtItem).join(", ") || "none"}), optional/wishlist (NOT spent, considering) ${sym}${fmt(wishlist, fin)} (${byMonth(fin.wishlist_expenses).map(fmtItem).join(", ") || "none"}), net surplus ${sym}${fmt(savings, fin)} (${rate}% savings rate). Savings deposits this month: ${sym}${fmt(savedTotal, fin)} (${savedItems.map(fmtItem).join(", ") || "none"}). Total saved all time: ${sym}${fmt(allTimeSaved, fin)}.
 
 Current date: ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
 }
@@ -337,13 +355,13 @@ const FINANCIAL_TOOLS = [
   },
   {
     name: "add_expense",
-    description: "Add a new expense. Use category 'recurring' for essential monthly costs, 'wishlist' for optional/nice-to-have, 'one_time' for a one-off payment this month.",
+    description: "Add a new expense. Use category 'recurring' for essential monthly costs, 'wishlist' for optional/nice-to-have, 'one_time' for a one-off payment this month, 'fines' for mandatory penalties/tickets/fines.",
     input_schema: {
       type: "object",
       properties: {
         name:     { type: "string", description: "Name of the expense (e.g. 'Dinner', 'Netflix')" },
-        amount:   { type: "number", description: "Amount in dollars" },
-        category: { type: "string", enum: ["recurring", "wishlist", "one_time"], description: "recurring = essential monthly, wishlist = optional monthly, one_time = single payment this month" },
+        amount:   { type: "number", description: "Amount" },
+        category: { type: "string", enum: ["recurring", "wishlist", "one_time", "fines"], description: "recurring = essential monthly, wishlist = optional, one_time = single payment, fines = mandatory penalties/tickets" },
         day:      { type: "number", description: "Day of month when due (1-31), optional" },
       },
       required: ["name", "amount", "category"],
@@ -410,6 +428,19 @@ const FINANCIAL_TOOLS = [
     },
   },
   {
+    name: "withdraw_savings",
+    description: "Record a savings withdrawal — money taken out of savings.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name:   { type: "string", description: "Reason for withdrawal (e.g. 'Emergency car repair')" },
+        amount: { type: "number", description: "Amount withdrawn" },
+        day:    { type: "number", description: "Day of month (1-31), optional" },
+      },
+      required: ["name", "amount"],
+    },
+  },
+  {
     name: "list_financials",
     description: "List all current income sources, expenses, and savings deposits.",
     input_schema: { type: "object", properties: {} },
@@ -429,6 +460,8 @@ function executeFinancialTool(name, input, update, selectedMonth) {
       const item = { id: uid(), name: input.name, amount: parseFloat(input.amount), day: input.day || null, month };
       if (input.category === "one_time") {
         update({ one_time_expenses: [...(fin.one_time_expenses || []), item] });
+      } else if (input.category === "fines") {
+        update({ fines_expenses: [...(fin.fines_expenses || []), item] });
       } else {
         const key = input.category === "wishlist" ? "wishlist_expenses" : "recurring_expenses";
         update({ [key]: [...fin[key], item] });
@@ -442,12 +475,13 @@ function executeFinancialTool(name, input, update, selectedMonth) {
       return { success: true, deleted: match.name };
     }
     case "delete_expense": {
-      const match = [...fin.recurring_expenses, ...fin.wishlist_expenses, ...(fin.one_time_expenses || [])].find(e => e.name.toLowerCase().includes(input.name.toLowerCase()));
+      const match = [...fin.recurring_expenses, ...fin.wishlist_expenses, ...(fin.one_time_expenses || []), ...(fin.fines_expenses || [])].find(e => e.name.toLowerCase().includes(input.name.toLowerCase()));
       if (!match) return { error: `No expense found matching "${input.name}"` };
       update({
         recurring_expenses: fin.recurring_expenses.filter(e => e.id !== match.id),
         wishlist_expenses:  fin.wishlist_expenses.filter(e => e.id !== match.id),
         one_time_expenses:  (fin.one_time_expenses || []).filter(e => e.id !== match.id),
+        fines_expenses:     (fin.fines_expenses || []).filter(e => e.id !== match.id),
       });
       return { success: true, deleted: match.name };
     }
@@ -480,6 +514,11 @@ function executeFinancialTool(name, input, update, selectedMonth) {
         update({ one_time_expenses: (fin.one_time_expenses || []).map(e => e.id === matched.id ? applyUpdate(e) : e) });
         return { success: true, updated: matched.name };
       }
+      matched = (fin.fines_expenses || []).find(e => e.name.toLowerCase().includes(needle));
+      if (matched) {
+        update({ fines_expenses: (fin.fines_expenses || []).map(e => e.id === matched.id ? applyUpdate(e) : e) });
+        return { success: true, updated: matched.name };
+      }
       return { error: `No income or expense found matching "${input.name}"` };
     }
     case "add_savings_deposit": {
@@ -493,8 +532,13 @@ function executeFinancialTool(name, input, update, selectedMonth) {
       update({ savings_deposits: (fin.savings_deposits || []).filter(s => s.id !== match.id) });
       return { success: true, deleted: match.name };
     }
+    case "withdraw_savings": {
+      const item = { id: uid(), name: input.name, amount: parseFloat(input.amount), day: input.day || null, month };
+      update({ savings_withdrawals: [...(fin.savings_withdrawals || []), item] });
+      return { success: true, added: { name: item.name, amount: item.amount, type: "withdrawal" } };
+    }
     case "list_financials":
-      return { income_sources: fin.income_sources, recurring_expenses: fin.recurring_expenses, wishlist_expenses: fin.wishlist_expenses, one_time_expenses: fin.one_time_expenses || [], savings_deposits: fin.savings_deposits || [] };
+      return { income_sources: fin.income_sources, recurring_expenses: fin.recurring_expenses, wishlist_expenses: fin.wishlist_expenses, one_time_expenses: fin.one_time_expenses || [], fines_expenses: fin.fines_expenses || [], savings_deposits: fin.savings_deposits || [], savings_withdrawals: fin.savings_withdrawals || [] };
     default:
       return { error: `Unknown tool: ${name}` };
   }
@@ -549,14 +593,36 @@ async function financialAgenticLoop(history, fin, update, selectedMonth) {
 }
 
 // ── Inline add row ─────────────────────────────────────────────────────────────
-function AddRow({ placeholder, onAdd, dayLabel = "Day", month, showRecurring = false }) {
+function AddRow({ placeholder, onAdd, dayLabel = "Day", month, showRecurring = false, fin }) {
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
   const [day, setDay] = useState(null);
   const [recurring, setRecurring] = useState(false);
+  const sym = cs(fin);
 
   const submit = () => {
     if (!name.trim() || !amount) return;
+    // Duplicate detection across all categories for this month
+    if (fin) {
+      const allItems = [
+        ...(fin.income_sources || []),
+        ...(fin.recurring_expenses || []),
+        ...(fin.wishlist_expenses || []),
+        ...(fin.one_time_expenses || []),
+        ...(fin.fines_expenses || []),
+        ...(fin.savings_deposits || []),
+      ].filter(e => e.month === month);
+      const duplicate = allItems.find(e =>
+        e.name.toLowerCase().trim() === name.trim().toLowerCase() &&
+        Math.abs((parseFloat(e.amount) || 0) - parseFloat(amount)) < 0.01
+      );
+      if (duplicate) {
+        const confirmed = window.confirm(
+          `"${duplicate.name}" already exists with amount ${sym}${fmt(duplicate.amount, fin)} this month. Add anyway?`
+        );
+        if (!confirmed) return;
+      }
+    }
     const item = { id: uid(), name: name.trim(), amount: parseFloat(amount), day: day || null, month: month || toYYYYMM(new Date()) };
     if (showRecurring) item.recurring = recurring;
     onAdd(item);
@@ -573,7 +639,7 @@ function AddRow({ placeholder, onAdd, dayLabel = "Day", month, showRecurring = f
         className="flex-1 min-w-[140px] text-sm rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-200 bg-white"
       />
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">{sym}</span>
         <input
           type="number"
           min="0"
@@ -617,7 +683,7 @@ function AddRow({ placeholder, onAdd, dayLabel = "Day", month, showRecurring = f
 }
 
 // ── Editable item row ──────────────────────────────────────────────────────────
-function ItemRow({ item, onDelete, onUpdate, dayLabel = "Due", showPerMonth = true }) {
+function ItemRow({ item, onDelete, onUpdate, dayLabel = "Due", showPerMonth = true, fin }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(item.name);
   const [amount, setAmount] = useState(item.amount);
@@ -648,7 +714,7 @@ function ItemRow({ item, onDelete, onUpdate, dayLabel = "Due", showPerMonth = tr
         <input value={name} onChange={e => setName(e.target.value)}
           className="flex-1 min-w-[120px] text-sm rounded-lg border border-indigo-200 px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
         <div className="relative">
-          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">{cs(fin)}</span>
           <input type="number" min="0" step="0.01" value={amount} onChange={e => setAmount(e.target.value)}
             className="w-24 pl-5 pr-2 py-1.5 text-sm rounded-lg border border-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-200" />
         </div>
@@ -678,9 +744,14 @@ function ItemRow({ item, onDelete, onUpdate, dayLabel = "Due", showPerMonth = tr
             {dayLabel} {ordinal(item.day)}
           </span>
         )}
+        {item.target_date && (
+          <span className="flex-shrink-0 text-xs px-2 py-0.5 rounded-full bg-violet-100 text-violet-500 font-medium hidden sm:inline">
+            Target: {item.target_date}
+          </span>
+        )}
       </div>
       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-        <span className="text-sm font-semibold text-slate-800 whitespace-nowrap">${fmt(item.amount)}{showPerMonth && <span className="text-slate-400 font-normal text-xs">/mo</span>}</span>
+        <span className="text-sm font-semibold text-slate-800 whitespace-nowrap">{cs(fin)}{fmt(item.amount, fin)}{showPerMonth && <span className="text-slate-400 font-normal text-xs">/mo</span>}</span>
         <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           <button onClick={() => setEditing(true)} className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"><Pencil className="w-3.5 h-3.5" /></button>
           {confirmingDelete ? (
@@ -719,6 +790,7 @@ function IncomeTab({ fin, update, selectedMonth }) {
                 <ItemRow
                   key={item.id}
                   item={item}
+                  fin={fin}
                   dayLabel="Received"
                   onDelete={id => update(prev => ({ income_sources: prev.income_sources.filter(s => s.id !== id) }))}
                   onUpdate={updated => update(prev => ({ income_sources: prev.income_sources.map(s => s.id === updated.id ? updated : s) }))}
@@ -726,7 +798,7 @@ function IncomeTab({ fin, update, selectedMonth }) {
               ))}
               <div className="flex items-center justify-between py-3 font-semibold text-sm">
                 <span className="text-slate-600">Total Income</span>
-                <span className="text-emerald-600 text-base">${fmt(sum(items))}</span>
+                <span className="text-emerald-600 text-base">{cs(fin)}{fmt(sum(items), fin)}</span>
               </div>
             </div>
           )}
@@ -735,6 +807,7 @@ function IncomeTab({ fin, update, selectedMonth }) {
             dayLabel="Received"
             month={selectedMonth}
             showRecurring={true}
+            fin={fin}
             onAdd={item => update(prev => ({ income_sources: [...prev.income_sources, item] }))}
           />
           <div className="pb-4" />
@@ -747,11 +820,14 @@ function IncomeTab({ fin, update, selectedMonth }) {
 // ── EXPENSES TAB ──────────────────────────────────────────────────────────────
 function ExpensesTab({ fin, update, selectedMonth }) {
   const recurringItems = fin.recurring_expenses.filter(e => e.month === selectedMonth);
+  const finesItems     = (fin.fines_expenses || []).filter(e => e.month === selectedMonth);
   const wishlistItems  = fin.wishlist_expenses.filter(e => e.month === selectedMonth);
   const oneTimeItems   = (fin.one_time_expenses || []).filter(e => e.month === selectedMonth);
   const recurringTotal = sum(recurringItems);
+  const finesTotal     = sum(finesItems);
   const wishlistTotal  = sum(wishlistItems);
   const oneTimeTotal   = sum(oneTimeItems);
+  const sym = cs(fin);
 
   return (
     <div className="space-y-6">
@@ -770,19 +846,21 @@ function ExpensesTab({ fin, update, selectedMonth }) {
                 <ItemRow
                   key={item.id}
                   item={item}
+                  fin={fin}
                   onDelete={id => update(prev => ({ recurring_expenses: prev.recurring_expenses.filter(e => e.id !== id) }))}
                   onUpdate={u => update(prev => ({ recurring_expenses: prev.recurring_expenses.map(e => e.id === u.id ? u : e) }))}
                 />
               ))}
               <div className="flex items-center justify-between py-3 font-semibold text-sm border-t border-slate-100">
                 <span className="text-slate-600">Total Recurring</span>
-                <span className="text-rose-500 text-base">${fmt(recurringTotal)}</span>
+                <span className="text-rose-500 text-base">{sym}{fmt(recurringTotal, fin)}</span>
               </div>
             </div>
           )}
           <AddRow
             placeholder="e.g. Rent, Netflix, Gym membership..."
             month={selectedMonth}
+            fin={fin}
             onAdd={item => update(prev => ({ recurring_expenses: [...prev.recurring_expenses, item] }))}
           />
           <div className="pb-4" />
@@ -807,6 +885,7 @@ function ExpensesTab({ fin, update, selectedMonth }) {
                 <ItemRow
                   key={item.id}
                   item={item}
+                  fin={fin}
                   showPerMonth={false}
                   dayLabel="On"
                   onDelete={id => update(prev => ({ one_time_expenses: (prev.one_time_expenses || []).filter(e => e.id !== id) }))}
@@ -815,7 +894,7 @@ function ExpensesTab({ fin, update, selectedMonth }) {
               ))}
               <div className="flex items-center justify-between py-3 font-semibold text-sm border-t border-slate-100">
                 <span className="text-slate-600">Total One-time</span>
-                <span className="text-sky-600 text-base">${fmt(oneTimeTotal)}</span>
+                <span className="text-sky-600 text-base">{sym}{fmt(oneTimeTotal, fin)}</span>
               </div>
             </div>
           )}
@@ -823,7 +902,50 @@ function ExpensesTab({ fin, update, selectedMonth }) {
             placeholder="e.g. Doctor visit, Car repair, Clothing..."
             dayLabel="Day"
             month={selectedMonth}
+            fin={fin}
             onAdd={item => update(prev => ({ one_time_expenses: [...(prev.one_time_expenses || []), item] }))}
+          />
+          <div className="pb-4" />
+        </div>
+      </div>
+
+      {/* Fines / Must-Pay */}
+      <div className="bg-white rounded-2xl border border-amber-200 overflow-hidden">
+        <div className="px-6 py-5 border-b border-amber-100">
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-amber-800 text-base">Fines / Must-Pay</h3>
+            <span className="text-xs px-2 py-0.5 bg-amber-100 text-amber-600 rounded-full font-medium">mandatory</span>
+          </div>
+          <p className="text-xs text-slate-400 mt-0.5">Traffic fines, parking tickets, penalties, installments…</p>
+        </div>
+        <div className="px-6 pb-2">
+          {finesItems.length === 0 ? (
+            <div className="py-8 text-center text-slate-400 text-sm">No fines for {monthLabel(selectedMonth)}</div>
+          ) : (
+            <div>
+              {finesItems.map(item => (
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  fin={fin}
+                  showPerMonth={false}
+                  dayLabel="Due"
+                  onDelete={id => update(prev => ({ fines_expenses: (prev.fines_expenses || []).filter(e => e.id !== id) }))}
+                  onUpdate={u => update(prev => ({ fines_expenses: (prev.fines_expenses || []).map(e => e.id === u.id ? u : e) }))}
+                />
+              ))}
+              <div className="flex items-center justify-between py-3 font-semibold text-sm border-t border-amber-100">
+                <span className="text-slate-600">Total Fines</span>
+                <span className="text-amber-600 text-base">{sym}{fmt(finesTotal, fin)}</span>
+              </div>
+            </div>
+          )}
+          <AddRow
+            placeholder="e.g. Vespa fine, Parking ticket..."
+            dayLabel="Due"
+            month={selectedMonth}
+            fin={fin}
+            onAdd={item => update(prev => ({ fines_expenses: [...(prev.fines_expenses || []), item] }))}
           />
           <div className="pb-4" />
         </div>
@@ -834,9 +956,9 @@ function ExpensesTab({ fin, update, selectedMonth }) {
         <div className="px-6 py-5 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-slate-800 text-base">Wishlist / Optional</h3>
-            <span className="text-xs px-2 py-0.5 bg-violet-100 text-violet-600 rounded-full font-medium">optional</span>
+            <span className="text-xs px-2 py-0.5 bg-violet-100 text-violet-600 rounded-full font-medium">not counted as spending</span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">Nice-to-haves — dining out, shopping, hobbies, travel…</p>
+          <p className="text-xs text-slate-400 mt-0.5">Things you want but haven't committed to — these don't count as expenses</p>
         </div>
         <div className="px-6 pb-2">
           {wishlistItems.length === 0 ? (
@@ -847,19 +969,22 @@ function ExpensesTab({ fin, update, selectedMonth }) {
                 <ItemRow
                   key={item.id}
                   item={item}
+                  fin={fin}
+                  showPerMonth={false}
                   onDelete={id => update(prev => ({ wishlist_expenses: prev.wishlist_expenses.filter(e => e.id !== id) }))}
                   onUpdate={u => update(prev => ({ wishlist_expenses: prev.wishlist_expenses.map(e => e.id === u.id ? u : e) }))}
                 />
               ))}
               <div className="flex items-center justify-between py-3 font-semibold text-sm border-t border-slate-100">
-                <span className="text-slate-600">Total Optional</span>
-                <span className="text-violet-500 text-base">${fmt(wishlistTotal)}</span>
+                <span className="text-slate-600">Total Wishlist</span>
+                <span className="text-violet-500 text-base">{sym}{fmt(wishlistTotal, fin)}</span>
               </div>
             </div>
           )}
           <AddRow
-            placeholder="e.g. Dining out, Spotify, Weekend trips..."
+            placeholder="e.g. New laptop, Vacation, Nose job..."
             month={selectedMonth}
+            fin={fin}
             onAdd={item => update(prev => ({ wishlist_expenses: [...prev.wishlist_expenses, item] }))}
           />
           <div className="pb-4" />
@@ -873,16 +998,19 @@ function ExpensesTab({ fin, update, selectedMonth }) {
 function SavingsTab({ fin, update, selectedMonth }) {
   const items = (fin.savings_deposits || []).filter(s => s.month === selectedMonth);
   const total = sum(items);
+  const withdrawalItems = (fin.savings_withdrawals || []).filter(s => s.month === selectedMonth);
+  const withdrawalTotal = sum(withdrawalItems);
+  const sym = cs(fin);
 
-  // Calculate total saved across all months
-  const allTimeSavings = sum(fin.savings_deposits || []);
+  // Calculate total saved across all months (deposits - withdrawals)
+  const allTimeSavings = sum(fin.savings_deposits || []) - sum(fin.savings_withdrawals || []);
 
   return (
     <div className="space-y-6">
       {/* Total saved banner */}
       <div className={cn("rounded-2xl p-6 border", allTimeSavings > 0 ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-200")}>
         <p className="text-sm font-medium text-slate-500">Total Saved (All Time)</p>
-        <p className={cn("text-3xl font-extrabold mt-1", allTimeSavings > 0 ? "text-emerald-600" : "text-slate-400")}>${fmt(allTimeSavings)}</p>
+        <p className={cn("text-3xl font-extrabold mt-1", allTimeSavings > 0 ? "text-emerald-600" : "text-slate-400")}>{sym}{fmt(allTimeSavings, fin)}</p>
         {allTimeSavings > 0 && (
           <p className="text-xs text-emerald-500 mt-1">Across {new Set((fin.savings_deposits || []).map(d => d.month)).size} month(s)</p>
         )}
@@ -907,6 +1035,7 @@ function SavingsTab({ fin, update, selectedMonth }) {
                 <ItemRow
                   key={item.id}
                   item={item}
+                  fin={fin}
                   dayLabel="On"
                   showPerMonth={false}
                   onDelete={id => update(prev => ({ savings_deposits: (prev.savings_deposits || []).filter(s => s.id !== id) }))}
@@ -915,7 +1044,7 @@ function SavingsTab({ fin, update, selectedMonth }) {
               ))}
               <div className="flex items-center justify-between py-3 font-semibold text-sm border-t border-slate-100">
                 <span className="text-slate-600">Total This Month</span>
-                <span className="text-emerald-600 text-base">${fmt(total)}</span>
+                <span className="text-emerald-600 text-base">{sym}{fmt(total, fin)}</span>
               </div>
             </div>
           )}
@@ -923,7 +1052,47 @@ function SavingsTab({ fin, update, selectedMonth }) {
             placeholder="e.g. Emergency fund, 401k, Index fund..."
             dayLabel="Date"
             month={selectedMonth}
+            fin={fin}
             onAdd={item => update(prev => ({ savings_deposits: [...(prev.savings_deposits || []), item] }))}
+          />
+          <div className="pb-4" />
+        </div>
+      </div>
+
+      {/* Withdrawals */}
+      <div className="bg-white rounded-2xl border border-rose-200 overflow-hidden">
+        <div className="px-6 py-5 border-b border-rose-100">
+          <h3 className="font-semibold text-rose-700 text-base">Withdrawals</h3>
+          <p className="text-xs text-slate-400 mt-0.5">Money taken out of savings in {monthLabel(selectedMonth)}</p>
+        </div>
+        <div className="px-6 pb-2">
+          {withdrawalItems.length === 0 ? (
+            <div className="py-8 text-center text-slate-400 text-sm">No withdrawals for {monthLabel(selectedMonth)}</div>
+          ) : (
+            <div>
+              {withdrawalItems.map(item => (
+                <ItemRow
+                  key={item.id}
+                  item={item}
+                  fin={fin}
+                  dayLabel="On"
+                  showPerMonth={false}
+                  onDelete={id => update(prev => ({ savings_withdrawals: (prev.savings_withdrawals || []).filter(s => s.id !== id) }))}
+                  onUpdate={updated => update(prev => ({ savings_withdrawals: (prev.savings_withdrawals || []).map(s => s.id === updated.id ? updated : s) }))}
+                />
+              ))}
+              <div className="flex items-center justify-between py-3 font-semibold text-sm border-t border-rose-100">
+                <span className="text-slate-600">Total Withdrawn</span>
+                <span className="text-rose-500 text-base">-{sym}{fmt(withdrawalTotal, fin)}</span>
+              </div>
+            </div>
+          )}
+          <AddRow
+            placeholder="e.g. Emergency expense, Moved to checking..."
+            dayLabel="Date"
+            month={selectedMonth}
+            fin={fin}
+            onAdd={item => update(prev => ({ savings_withdrawals: [...(prev.savings_withdrawals || []), item] }))}
           />
           <div className="pb-4" />
         </div>
@@ -938,17 +1107,18 @@ function OverviewTab({ fin, selectedMonth }) {
   const byMonth = arr => (arr || []).filter(e => e.month === selectedMonth);
   const currentYear = selectedMonth.slice(0, 4);
   const byYear  = arr => (arr || []).filter(e => e.month && e.month.startsWith(currentYear));
+  const sym = cs(fin);
 
   const incomeItems  = byMonth(fin.income_sources);
   const income       = yearly ? sum(byYear(fin.income_sources))    : sum(incomeItems);
   const recurring    = yearly ? sum(byMonth(fin.recurring_expenses)) * 12 : sum(byMonth(fin.recurring_expenses));
-  const wishlist     = sum(byMonth(fin.wishlist_expenses));
+  const fines        = yearly ? sum(byYear(fin.fines_expenses || [])) : sum(byMonth(fin.fines_expenses));
   const oneTime      = yearly ? sum(byYear(fin.one_time_expenses || [])) : sum(byMonth(fin.one_time_expenses));
-  const totalExp     = recurring + oneTime;
+  const totalExp     = recurring + oneTime + fines;
   const savings      = income - totalExp;
   const baseIncome   = sum(incomeItems);
   const rate = baseIncome > 0
-    ? (((baseIncome - sum(byMonth(fin.recurring_expenses)) - sum(byMonth(fin.one_time_expenses))) / baseIncome) * 100).toFixed(1)
+    ? (((baseIncome - sum(byMonth(fin.recurring_expenses)) - sum(byMonth(fin.one_time_expenses)) - sum(byMonth(fin.fines_expenses || []))) / baseIncome) * 100).toFixed(1)
     : 0;
 
   return (
@@ -971,22 +1141,30 @@ function OverviewTab({ fin, selectedMonth }) {
         <div className="space-y-3">
           <div className="flex justify-between items-center py-2.5 border-b border-slate-100">
             <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingUp className="w-4 h-4 text-emerald-500" />{yearly ? `Income (${currentYear})` : "Total Income"}</span>
-            <span className="text-sm font-bold text-emerald-600 whitespace-nowrap ml-2">+${fmt(income)}</span>
+            <span className="text-sm font-bold text-emerald-600 whitespace-nowrap ml-2">+{sym}{fmt(income, fin)}</span>
           </div>
           <div className="flex justify-between items-center py-2.5 border-b border-slate-100">
             <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingDown className="w-4 h-4 text-rose-500" />{yearly ? "Recurring (×12)" : "Fixed Expenses"}</span>
-            <span className="text-sm font-bold text-rose-500 whitespace-nowrap ml-2">-${fmt(recurring)}</span>
+            <span className="text-sm font-bold text-rose-500 whitespace-nowrap ml-2">-{sym}{fmt(recurring, fin)}</span>
           </div>
-          <div className="flex justify-between items-center py-2.5 border-b border-slate-100">
-            <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingDown className="w-4 h-4 text-violet-500" />{yearly ? "Optional" : "Optional Spending"}</span>
-            <span className="text-sm font-bold text-violet-500 whitespace-nowrap ml-2">-${fmt(wishlist)}</span>
-          </div>
+          {oneTime > 0 && (
+            <div className="flex justify-between items-center py-2.5 border-b border-slate-100">
+              <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingDown className="w-4 h-4 text-sky-500" />{yearly ? `One-time (${currentYear})` : "One-time Payments"}</span>
+              <span className="text-sm font-bold text-sky-500 whitespace-nowrap ml-2">-{sym}{fmt(oneTime, fin)}</span>
+            </div>
+          )}
+          {fines > 0 && (
+            <div className="flex justify-between items-center py-2.5 border-b border-slate-100">
+              <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><TrendingDown className="w-4 h-4 text-amber-500" />{yearly ? `Fines (${currentYear})` : "Fines / Must-Pay"}</span>
+              <span className="text-sm font-bold text-amber-500 whitespace-nowrap ml-2">-{sym}{fmt(fines, fin)}</span>
+            </div>
+          )}
           <div className={cn("flex justify-between items-center rounded-xl p-4 mt-2", savings >= 0 ? "bg-emerald-50 border border-emerald-200" : "bg-red-50 border border-red-200")}>
             <div>
               <p className={cn("font-bold text-sm", savings >= 0 ? "text-emerald-700" : "text-red-600")}>{savings >= 0 ? `${yearly ? "Yearly" : "Monthly"} surplus` : `${yearly ? "Yearly" : "Monthly"} deficit`}</p>
-              {sum(fin.income_sources) > 0 && <p className="text-xs text-slate-400 mt-0.5">{savings >= 0 ? `${rate}% savings rate` : "Spending exceeds income"}</p>}
+              {sum(fin.income_sources) > 0 && <p className="text-xs text-slate-400 mt-0.5">{savings >= 0 ? `${rate}% savings rate` : `${rate}% savings rate`}</p>}
             </div>
-            <span className={cn("text-xl font-extrabold", savings >= 0 ? "text-emerald-600" : "text-red-600")}>{savings < 0 ? "-" : ""}${fmt(Math.abs(savings))}</span>
+            <span className={cn("text-xl font-extrabold", savings >= 0 ? "text-emerald-600" : "text-red-600")}>{savings < 0 ? "-" : ""}{sym}{fmt(Math.abs(savings), fin)}</span>
           </div>
           {(() => {
             const savedItems = (fin.savings_deposits || []).filter(e => yearly ? e.month?.startsWith(currentYear) : e.month === selectedMonth);
@@ -995,7 +1173,7 @@ function OverviewTab({ fin, selectedMonth }) {
             return (
               <div className="flex justify-between items-center py-2.5 border-b border-slate-100 mt-1">
                 <span className="text-sm text-slate-500 flex items-center gap-2 flex-shrink-0"><Wallet className="w-4 h-4 text-emerald-400" />{yearly ? `Saved (${currentYear})` : "Saved This Month"}</span>
-                <span className="text-sm font-bold text-emerald-600 whitespace-nowrap ml-2">${fmt(savedTotal)}</span>
+                <span className="text-sm font-bold text-emerald-600 whitespace-nowrap ml-2">{sym}{fmt(savedTotal, fin)}</span>
               </div>
             );
           })()}
@@ -1028,7 +1206,7 @@ function OverviewTab({ fin, selectedMonth }) {
                 <span className="text-slate-600 truncate">{s.name}</span>
                 {s.day && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-600 font-medium flex-shrink-0 hidden sm:inline">Received {ordinal(s.day)}</span>}
               </div>
-              <span className="font-semibold text-slate-800 whitespace-nowrap flex-shrink-0">${fmt(s.amount)}</span>
+              <span className="font-semibold text-slate-800 whitespace-nowrap flex-shrink-0">{sym}{fmt(s.amount, fin)}</span>
             </div>
           ))}
         </div>
@@ -1403,19 +1581,21 @@ function AdvisorTab({ fin, update, selectedMonth }) {
 // ── TOP SUMMARY CARDS ──────────────────────────────────────────────────────────
 function SummaryCards({ fin, selectedMonth }) {
   const byMonth   = arr => (arr || []).filter(e => e.month === selectedMonth);
+  const sym       = cs(fin);
   const income    = sum(byMonth(fin.income_sources));
   const recurring = sum(byMonth(fin.recurring_expenses));
   const oneTime   = sum(byMonth(fin.one_time_expenses));
-  const totalExp  = recurring + oneTime;
+  const finesAmt  = sum(byMonth(fin.fines_expenses || []));
+  const totalExp  = recurring + oneTime + finesAmt;
   const savings   = income - totalExp;
   const rate      = income > 0 ? ((savings / income) * 100).toFixed(0) : 0;
   const saved     = sum(byMonth(fin.savings_deposits));
 
   const cards = [
-    { label: "Income",        value: `$${fmtWhole(income)}`,    color: "text-emerald-600", icon: TrendingUp,   iconColor: "text-emerald-400" },
-    { label: "Expenses",      value: `$${fmtWhole(totalExp)}`,  color: "text-rose-500",    icon: TrendingDown, iconColor: "text-rose-400" },
-    { label: "Saved",         value: `$${fmtWhole(saved)}`,     color: "text-emerald-600", icon: Wallet,       iconColor: "text-emerald-400" },
-    { label: "Savings Rate",  value: `${Math.max(0, rate)}%`,   color: "text-slate-700",   icon: Wallet,       iconColor: "text-slate-400" },
+    { label: "Income",        value: `${sym}${fmtWhole(income, fin)}`,    color: "text-emerald-600", icon: TrendingUp,   iconColor: "text-emerald-400" },
+    { label: "Expenses",      value: `${sym}${fmtWhole(totalExp, fin)}`,  color: "text-rose-500",    icon: TrendingDown, iconColor: "text-rose-400" },
+    { label: "Saved",         value: `${sym}${fmtWhole(saved, fin)}`,     color: "text-emerald-600", icon: Wallet,       iconColor: "text-emerald-400" },
+    { label: "Savings Rate",  value: `${rate}%`,   color: parseFloat(rate) >= 0 ? "text-emerald-600" : "text-rose-500",   icon: Wallet,       iconColor: "text-slate-400" },
   ];
 
   return (
@@ -1460,11 +1640,14 @@ export default function Financials() {
           return [...map.values()];
         };
         const merged = {
-          income_sources:    mergeArr(prev.income_sources,             loaded.income_sources),
-          recurring_expenses:mergeArr(prev.recurring_expenses,         loaded.recurring_expenses),
-          wishlist_expenses: mergeArr(prev.wishlist_expenses,          loaded.wishlist_expenses),
-          one_time_expenses: mergeArr(prev.one_time_expenses || [],    loaded.one_time_expenses || []),
-          savings_deposits:  mergeArr(prev.savings_deposits || [],     loaded.savings_deposits || []),
+          income_sources:      mergeArr(prev.income_sources,             loaded.income_sources),
+          recurring_expenses:  mergeArr(prev.recurring_expenses,         loaded.recurring_expenses),
+          wishlist_expenses:   mergeArr(prev.wishlist_expenses,          loaded.wishlist_expenses),
+          one_time_expenses:   mergeArr(prev.one_time_expenses || [],    loaded.one_time_expenses || []),
+          savings_deposits:    mergeArr(prev.savings_deposits || [],     loaded.savings_deposits || []),
+          fines_expenses:      mergeArr(prev.fines_expenses || [],       loaded.fines_expenses || []),
+          savings_withdrawals: mergeArr(prev.savings_withdrawals || [],  loaded.savings_withdrawals || []),
+          currency:            loaded.currency || prev.currency || "EUR",
         };
         // After remote data arrives, auto-populate recurring expenses for the
         // currently-viewed month if it still has none.
@@ -1495,11 +1678,14 @@ export default function Financials() {
     setFin(prev => {
       const patch = typeof patchOrFn === 'function' ? patchOrFn(prev) : patchOrFn;
       const next = {
-        income_sources:    prev.income_sources,
-        recurring_expenses:prev.recurring_expenses,
-        wishlist_expenses: prev.wishlist_expenses,
-        one_time_expenses: prev.one_time_expenses || [],
-        savings_deposits:  prev.savings_deposits || [],
+        income_sources:      prev.income_sources,
+        recurring_expenses:  prev.recurring_expenses,
+        wishlist_expenses:   prev.wishlist_expenses,
+        one_time_expenses:   prev.one_time_expenses || [],
+        savings_deposits:    prev.savings_deposits || [],
+        fines_expenses:      prev.fines_expenses || [],
+        savings_withdrawals: prev.savings_withdrawals || [],
+        currency:            prev.currency || "EUR",
         ...patch,
       };
       saveFin(next);
@@ -1515,7 +1701,23 @@ export default function Financials() {
           <h1 className="text-2xl font-bold text-slate-800">Financials</h1>
           <p className="text-slate-400 text-sm mt-1">Track income and expenses by month</p>
         </div>
-        <MonthNavigator value={selectedMonth} onChange={setSelectedMonth} />
+        <div className="flex items-center gap-3">
+          <select
+            value={fin.currency || "EUR"}
+            onChange={e => {
+              const next = { ...fin, currency: e.target.value };
+              setFin(next);
+              saveFin(next);
+            }}
+            className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+          >
+            <option value="EUR">EUR</option>
+            <option value="USD">USD</option>
+            <option value="GBP">GBP</option>
+            <option value="TRY">TRY</option>
+          </select>
+          <MonthNavigator value={selectedMonth} onChange={setSelectedMonth} />
+        </div>
       </div>
 
       {/* Summary cards */}

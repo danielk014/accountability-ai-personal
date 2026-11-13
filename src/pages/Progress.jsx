@@ -146,7 +146,7 @@ export default function Progress() {
 
       {tab === "activity" && (
         <div className="space-y-8">
-          <TimeActivityChart tasks={tasks} completions={recentCompletions} />
+          <TimeActivityChart tasks={tasks} completions={recentCompletions} completedTodos={completedTodos} />
 
         </div>
       )}

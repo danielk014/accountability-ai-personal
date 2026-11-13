@@ -2048,9 +2048,6 @@ export default function Gym() {
           ) : (
             <p className="text-sm text-slate-400 italic mt-2">Log in Bodyweight tab</p>
           )}
-          <div className="flex gap-1 mt-2">
-            <span className="text-xs px-2 py-0.5 rounded-lg font-medium bg-indigo-100 text-indigo-700">kg</span>
-          </div>
         </div>
 
         {/* Total Exercises */}

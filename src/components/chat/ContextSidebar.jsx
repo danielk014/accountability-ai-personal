@@ -45,7 +45,7 @@ function TextSection({ section, items, onAdd, onDelete, onUpdate }) {
           </div>
           <div className="text-left">
             <p className="text-sm font-semibold text-slate-700">{section.label}</p>
-            <p className="text-xs text-slate-400">{items.length > 0 ? `${items.length} saved` : "Nothing saved yet"}</p>
+            <p className="text-xs text-slate-400">{items.length > 0 ? `${items.length} saved` : "Fill in for better advice"}</p>
           </div>
         </div>
         {open ? <ChevronUp className="w-3.5 h-3.5 text-slate-300" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-300" />}
@@ -53,6 +53,11 @@ function TextSection({ section, items, onAdd, onDelete, onUpdate }) {
 
       {open && (
         <div className="px-4 pb-4 space-y-2">
+          {items.length === 0 && (
+            <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
+              Fill this in so the AI can give you more personalized advice and remember your context.
+            </p>
+          )}
           {items.map((item, i) => (
             editIdx === i ? (
               <div key={i} className="space-y-1.5">
