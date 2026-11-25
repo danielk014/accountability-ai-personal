@@ -691,6 +691,16 @@ function ItemRow({ item, onDelete, onUpdate, dayLabel = "Due", showPerMonth = tr
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const confirmTimerRef = React.useRef(null);
 
+  // Keep local state in sync with incoming prop changes (e.g. Supabase merge,
+  // auto-populate, or external edits) so the edit form always starts fresh.
+  React.useEffect(() => {
+    if (!editing) {
+      setName(item.name);
+      setAmount(item.amount);
+      setDay(item.day || "");
+    }
+  }, [item.name, item.amount, item.day, editing]);
+
   const handleDeleteClick = () => {
     if (confirmingDelete) {
       clearTimeout(confirmTimerRef.current);
@@ -753,7 +763,7 @@ function ItemRow({ item, onDelete, onUpdate, dayLabel = "Due", showPerMonth = tr
       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
         <span className="text-sm font-semibold text-slate-800 whitespace-nowrap">{cs(fin)}{fmt(item.amount, fin)}{showPerMonth && <span className="text-slate-400 font-normal text-xs">/mo</span>}</span>
         <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-          <button onClick={() => setEditing(true)} className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"><Pencil className="w-3.5 h-3.5" /></button>
+          <button onClick={() => { setName(item.name); setAmount(item.amount); setDay(item.day || ""); setEditing(true); }} className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"><Pencil className="w-3.5 h-3.5" /></button>
           {confirmingDelete ? (
             <button onClick={handleDeleteClick} className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-100 text-red-500 text-xs font-medium transition">
               Sure?
